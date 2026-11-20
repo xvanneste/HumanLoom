@@ -12,7 +12,7 @@ assert bpy.app.version[:2] == (5, 2), "Cette mise à jour cible Blender 5.2 uniq
 package = "bl_ext.user_default.human_modeling"
 addon = importlib.import_module(package)
 addon.unregister()
-for suffix in ("proportions", "anatomy", "landmark_sets", "measurements", "character_presets", "geometry_quality", "surface_fix", "body_profiles", "age_shapes", "skin_relief"):
+for suffix in ("proportions", "anatomy", "landmark_sets", "measurements", "character_presets", "geometry_quality", "surface_fix", "body_profiles", "age_shapes", "skin_relief", "groom_fibers", "groom"):
     module_name = package + "." + suffix
     if module_name in sys.modules:
         importlib.reload(sys.modules[module_name])

@@ -1,8 +1,8 @@
 schema_version = "1.0.0"
 id = "human_modeling"
-version = "0.14.0"
-name = "Human Modeling"
-tagline = "Create and edit a realistic human base"
+version = "0.15.0"
+name = "HumanLoom"
+tagline = "Create editable humans with native hair and body grooming"
 maintainer = "BlenderDev"
 type = "add-on"
 tags = ["Add Mesh", "Modeling"]

@@ -1,38 +1,46 @@
-# Groom : état et points d'entrée
+# HumanLoom 0.15 - Cheveux et pilosité
 
-Les sources expérimentales sont versionnées dans `tools/`. La branche `codex/groom` part de la même base complète que la branche de modélisation. Les fichiers `.blend` générés et leurs rapports restent dans `validation/`, hors Git.
+Le groom est intégré à l'extension, exclusivement dans Blender 5.2. Le code de production est dans `extension/groom.py` et `extension/groom_fibers.py`. Il ne dépend pas des scripts de prototype ni des fichiers de validation.
 
-## Cheveux natifs
+## Utilisation
 
-- `tools/hair_prototype20.py` : construction des guides, surface d'attache et pile de modificateurs.
-- `tools/build_hair20.py` : génération de la scène et des premiers rendus.
-- `tools/validate_hair20.py`, `tools/validate_dense_hair20.py`, `tools/reopen_hair20.py` : contrôles des guides, de l'interpolation et de la réouverture.
+Sélectionner un corps HumanLoom, puis ouvrir **Humain > HumanLoom · Cheveux et pilosité**. Onze zones indépendantes sont disponibles : cheveux, sourcils, barbe, moustache, torse, abdomen, dos, bras, jambes, aisselles et pubis.
 
-Le prototype utilise des Hair Curves éditables et les groupes natifs Blender 5.2, avec attache sur la surface, UV de racine, interpolation et Hair Dynamics. L'implantation, la stabilité entre subdivisions et les collisions complètes restent à finaliser. Aucun système de particules historique n'est utilisé pour ce prototype.
+Les boutons Court, Long, Bouclé, Crépu et Barbe courte ajoutent des points de départ procéduraux. **Pilosité adulte** ajoute les neuf zones communes ; aisselles et pubis sont des ajouts explicites. Ces boutons préservent les couches déjà présentes. Pour changer une coiffure existante, modifier ses réglages et reconstruire ses guides. La présence des couches n'est déduite ni du sexe, ni de l'âge, ni d'une origine du personnage.
 
-## Nature de fibre
+Chaque zone possède longueur de contour, nature de fibre, variation de longueur, irrégularité, direction, nombre de guides, densité par m², quantité d'aperçu, rayon, graine, couleur, proportion de fibres grises et rugosité.
 
-- `tools/hair_nature21.py` : forme de repos et réglages de nature de fibre.
-- `tools/build_nature21.py`, `tools/check_nature21.py`, `tools/render_fibers21.py` : scène comparative et contrôles.
+**Appliquer matière / densité / dynamique** conserve les guides sculptés. Les changements de longueur, nature, direction, graine ou nombre de guides nécessitent **Reconstruire les guides** : cette opération remplace la sculpture de la zone et peut être annulée dans Blender.
 
-`build_nature21.py` attend la scène produite par `build_hair20.py`. La nature des fibres est un modèle artistique documenté dans `Recherche-scientifique-cheveux.md`, pas une mesure biologique individuelle.
+**Sélectionner les guides** permet ensuite d'utiliser Curves Sculpt. **Peindre la densité** sélectionne le groupe de poids correspondant sur le corps et entre en Weight Paint. Revenir en Object Mode après peinture. La reconstruction conserve ce masque et rééchantillonne les guides dedans. Un masque entièrement vide provoque un message et conserve le groom précédent.
 
-## Physique
+Le JSON transfère les **réglages procéduraux**, sans les positions sculptées ni les poids peints. Enregistrer le `.blend` pour conserver le groom complet. L'import refuse de remplacer une couche existante ; la supprimer explicitement ou utiliser un autre personnage. Les matériaux sont indépendants entre personnages.
 
-- `tools/hair_physics22.py` : configuration du banc de physique.
-- `tools/build_physics22.py`, `tools/validate_physics_profile22.py`, `tools/finalize_physics22.py` : construction, vérification et préparation de la scène.
-- `tools/diagnose_xpbd22.py`, `tools/inspect_bake22.py` : diagnostics du solveur et du cache.
+## Blender 5.2 natif
 
-Le banc teste une configuration limitée de guides ; il ne vaut pas validation d'une coiffure dense complète. Consulter les résultats locaux dans `validation/physique-cheveux-22/` lorsqu'ils sont disponibles.
+Les objets sont des Hair Curves attachés par UV, avec indices de triangles et coordonnées barycentriques d'origine. La pile utilise **Interpolate Hair Curves**, **Hair Dynamics**, **Set Hair Curve Profile** et **Principled Hair BSDF**. Aucun système de particules historique n'est créé. Les groupes natifs et leurs dépendances sont rendus locaux pour conserver la portabilité du fichier.
 
-## Exécution isolée
+Les objets restent enfants du corps. Les clés de forme du corps ne sont pas réécrites. Le mode normal **Suivre le corps** est distinct du mode **XPBD expérimental**, qui simule les guides avant interpolation. Sous-pas, itérations, souplesse, souplesse des racines et collision de surface sont accessibles. Revenir à la première image après une modification ; les caches et bakes restent gérés par Blender.
 
-Depuis la racine du dépôt, avec Blender 5.2 installé :
+La nature de fibre utilise une courbure et une torsion intrinsèques au repos, indépendantes du diamètre et de la couleur. Les préréglages sont des choix artistiques et ne classent pas des populations. Les paramètres natifs de souplesse ne sont pas des modules de Young. Voir `Recherche-scientifique-cheveux.md` pour le contexte et les sources.
+
+## Vérifications et limites
+
+- `tools/validate_groom25.py` : onze zones, 66 cas d'attache sur six combinaisons de morphologie, âge et corpulence ; corps préservé, guides éditables, reconstruction sans doublon, entrées invalides refusées.
+- `tools/validate_groom_workflow25.py` : matière sans perte de sculpture, export/import JSON, deux personnages indépendants, transformations du parent et simulation native XPBD.
+- `tools/validate_groom_reopen25.py` : réouverture, dépendances locales et stabilité des réglages.
+- `tools/render_groom25.py` : scène complète et rendus comparatifs.
+
+Les résultats sont produits dans `validation/groom-25/`, hors Git. Les premiers 66 cas mesurent environ **2,65 mm** d'écart maximal d'attache de cage, sur la zone pubienne. Ce contrôle ne certifie pas l'absence de pénétration de tous les segments ou de toutes les mèches interpolées. Les masques et les coiffures procédurales sont des points de départ artistiques à affiner.
+
+Le banc XPBD teste 20 guides droits de 6 cm pendant 16 images, avec gravité et sans collision, avec un allongement maximal inférieur à 0,1 %. Il ne valide ni un matériau biologique, ni les cheveux longs, ni les boucles serrées, ni les collisions complexes. Ces usages restent expérimentaux et doivent être contrôlés dans la scène de destination. Les combinaisons de densité et de détail trop coûteuses sont refusées avant reconstruction.
+
+## Reproduction
+
+Depuis la racine du dépôt, dans un processus isolé :
 
 ```powershell
-& 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe' --background --factory-startup --offline-mode --threads 4 --python-exit-code 1 --python tools/build_hair20.py
+& 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe' --background --factory-startup --offline-mode --threads 4 --python-exit-code 1 --python tools/validate_groom25.py
 ```
 
-Lire chaque script avant exécution et adapter ses éventuels chemins locaux. Les constructeurs travaillent dans une scène isolée ; ne pas les lancer dans une scène utilisateur à conserver.
-
-Les sourcils, la barbe, la moustache et les poils corporels restent à développer et à intégrer à partir de masques et de directions propres à chaque région. L'intégration de ces prototypes au panneau de l'extension n'est pas encore livrée.
+Utiliser la même commande pour les autres scripts. Les constructeurs recréent leur scène ; ne pas les exécuter dans une scène utilisateur à conserver. Les anciens prototypes `hair_prototype20.py`, `hair_nature21.py` et `hair_physics22.py` restent disponibles comme historique, sans remplacer les contrôles de l'intégration 0.15.

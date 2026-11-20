@@ -1,13 +1,13 @@
 # HumanLoom - Générateur humain pour Blender 5.2
 
-Générateur humain en développement : modélisation du corps et du visage, morphologies et âges, puis groom natif Blender. Extension actuelle **0.14.0**, schéma de formes **9**. Cible exclusive : **Blender 5.2**, conformément au manifeste de l'extension. Le nom affiché par la version actuelle de l'extension reste « Human Modeling » ; le projet communautaire porte désormais le nom **HumanLoom**.
+Générateur humain en développement : modélisation du corps et du visage, morphologies et âges, groom natif Blender. Cette branche fournit **HumanLoom 0.15.0**, schéma de formes **9**, avec cheveux et pilosité intégrés à l'interface. Cible exclusive : **Blender 5.2**. L'identifiant d'extension `human_modeling` est conservé pour permettre la mise à jour des installations et des scènes existantes.
 
 ## Organisation
 
 - `extension/` : extension installable, interface, opérateurs, mesures et contrôles de morphologie.
 - `extension/data/realistic.blend` : base géométrique nécessaire au fonctionnement, incluse dans Git. Provenance et crédits dans `extension/CREDITS.md`.
 - `tools/` : constructeurs, diagnostics, migrations, validations et rendus de développement. Les prototypes de groom s'y trouvent également.
-- `docs/groom.md` : état et reproduction des prototypes de cheveux, nature de fibre et physique.
+- `docs/groom.md` : utilisation du groom intégré, vérifications et limites.
 - `unreal/HumanReferenceStudy/` : configuration et scripts du projet d'étude des références Unreal.
 - Documents à la racine : audits, recherches, spécifications et plan d'implémentation.
 
@@ -42,7 +42,7 @@ Installer l'archive produite dans Blender 5.2 via l'installation d'extensions de
 Pour exécuter un outil Blender, lire son en-tête et ses dépendances avant de le lancer. Les scripts de construction peuvent recréer une scène ou produire un candidat : les utiliser en processus isolé, pas dans une scène utilisateur ouverte.
 
 ```powershell
-& 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe' --background --factory-startup --offline-mode --threads 4 --python-exit-code 1 --python tools/validate_controls.py
+& 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe' --background --factory-startup --offline-mode --threads 4 --python-exit-code 1 --python tools/validate_groom25.py
 ```
 
 Les outils Blender utilisent `bpy` et, selon le script, NumPy fourni avec Blender. Les assembleurs de planches s'exécutent avec un Python distinct disposant de Pillow ; le dossier PDF utilise aussi ReportLab, pypdf et pypdfium2. Des outils historiques comportent des chemins locaux à adapter.
@@ -51,7 +51,7 @@ Les outils Blender utilisent `bpy` et, selon le script, NumPy fourni avec Blende
 
 La géométrie et les prototypes restent en revue. Les planches de comparaison du 20 novembre 2026 montrent notamment un dosage insuffisant des extrêmes de corpulence et de la projection abdominale, surtout sur le corps masculin. Les scripts `render_corpulence24.py` et `assemble_corpulence24.py` reproduisent cette comparaison sans corriger les formes.
 
-Le groom est expérimental et n'est pas encore intégré à l'interface de l'extension. Le rig n'est pas livré. Les recherches biologiques guident des contrôles artistiques ; elles ne constituent pas une calibration clinique des personnages.
+Le groom 0.15 est intégré au panneau **Humain > HumanLoom · Cheveux et pilosité**. Les coiffures procédurales restent des points de départ à affiner en Curves Sculpt. La physique XPBD est expérimentale ; son banc court ne valide pas toutes les coiffures ni les collisions complexes. Le rig n'est pas livré. Les recherches biologiques guident des contrôles artistiques ; elles ne constituent pas une calibration clinique des personnages.
 
 ## Dépôt et licence
 
