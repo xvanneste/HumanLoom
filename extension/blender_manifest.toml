@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "human_modeling"
-version = "0.15.1"
+version = "0.15.2"
 name = "HumanLoom"
 tagline = "Create editable humans with native hair and body grooming"
 maintainer = "BlenderDev"

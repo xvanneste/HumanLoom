@@ -16,7 +16,7 @@ from .groom_fibers import fiber
 REGIONS=(('SCALP','Cheveux',''),('BROWS','Sourcils',''),('BEARD','Barbe',''),('MOUSTACHE','Moustache',''),('CHEST','Torse',''),('ABDOMEN','Abdomen',''),('BACK','Dos',''),('ARMS','Bras',''),('LEGS','Jambes',''),('AXILLA','Aisselles',''),('PUBIC','Pubis',''))
 LABELS={i:label for i,label,_ in REGIONS}
 DEFAULTS={
- 'SCALP':(.055,850,700000.,.000045), 'BROWS':(.009,240,4500000.,.000035),
+ 'SCALP':(.055,850,1800000.,.000045), 'BROWS':(.009,240,4500000.,.000035),
  'BEARD':(.025,500,950000.,.000050), 'MOUSTACHE':(.014,240,2000000.,.000045),
  'CHEST':(.014,420,45000.,.000025), 'ABDOMEN':(.013,280,40000.,.000025),
  'BACK':(.012,350,25000.,.000022), 'ARMS':(.009,550,35000.,.000020),
@@ -387,14 +387,14 @@ class HL_GroomSettings(bpy.types.PropertyGroup):
     style:bpy.props.EnumProperty(name='Direction',items=(('SWEPT','Vers l’arrière',''),('PARTED','Avec raie',''),('UPRIGHT','Dressé','')))
     seed:bpy.props.IntProperty(name='Graine',default=2026,min=0,max=2147483647)
     guides:bpy.props.IntProperty(name='Guides éditables',default=850,min=20,max=3000)
-    density:bpy.props.FloatProperty(name='Densité au rendu / m²',default=700000,min=0,max=8000000,description='Densité complète utilisée au rendu ; le viewport en affiche la fraction choisie')
+    density:bpy.props.FloatProperty(name='Densité au rendu / m²',default=1800000,min=0,max=8000000,description='Densité complète utilisée au rendu ; 1 800 000 / m² = 180 cheveux / cm² avant modulation par le masque')
     viewport:bpy.props.FloatProperty(name='Viewport (% du rendu)',default=.3,min=0,max=1,subtype='FACTOR',description='Fraction de mèches affichées dans le viewport ; aucun effet sur la densité au rendu')
     radius:bpy.props.FloatProperty(name='Rayon à la racine',default=.000045,min=.000005,max=.00015,unit='LENGTH',precision=6)
     color:bpy.props.FloatVectorProperty(name='Couleur',subtype='COLOR',size=3,min=0,max=1,default=(.035,.012,.006))
     roughness:bpy.props.FloatProperty(name='Rugosité',default=.4,min=.05,max=1)
     grey:bpy.props.FloatProperty(name='Cheveux gris',default=0,min=0,max=1,subtype='FACTOR')
     visible:bpy.props.BoolProperty(name='Visible',default=True)
-    physics:bpy.props.EnumProperty(name='Dynamique',items=(('ANIMATION','Suivre le corps',''),('XPBD','XPBD expérimental','')))
+    physics:bpy.props.EnumProperty(name='Dynamique',items=(('ANIMATION','Suivi sans physique','Suit le corps sans simuler la gravité'),('XPBD','XPBD expérimental','Simule les guides avec gravité ; appliquer puis lire la timeline depuis sa première image')))
     substeps:bpy.props.IntProperty(name='Sous-pas',default=8,min=1,max=32)
     iterations:bpy.props.IntProperty(name='Itérations',default=1024,min=16,max=32768)
     bendiness:bpy.props.FloatProperty(name='Souplesse',default=.2,min=0,max=1)
@@ -436,6 +436,26 @@ class HL_OT_groom_apply(bpy.types.Operator):
         if not hair:return {'CANCELLED'}
         try:appearance(hair,state(hair.hl_groom))
         except (ValueError,RuntimeError,KeyError) as error:self.report({'ERROR'},str(error));return {'CANCELLED'}
+        return {'FINISHED'}
+
+
+class HL_OT_groom_density(bpy.types.Operator):
+    bl_idname='humanloom.groom_density';bl_label='Densité des cheveux';bl_options={'REGISTER','UNDO'}
+    bl_description='Applique une densité de cheveux sans remplacer les guides sculptés ni le niveau d’aperçu'
+    preset:bpy.props.EnumProperty(items=(('SPARSE','Clairsemé','70 cheveux/cm²'),('NORMAL','Normal','180 cheveux/cm²'),('DENSE','Dense','250 cheveux/cm²')),default='NORMAL')
+    @classmethod
+    def poll(cls,context):return HL_OT_groom_build.poll(context) and find(body_from(context),'SCALP') is not None
+    def execute(self,context):
+        hair=find(body_from(context),'SCALP')
+        density={'SPARSE':700000.,'NORMAL':1800000.,'DENSE':2500000.}[self.preset]
+        try:
+            points=max(len(c.points) for c in hair.data.curves)
+            budget=(hair.get('hl_mask_area_m2',0.)*density+len(hair.data.curves))*points
+            fraction=input_value(hair.modifiers['HumanLoom · densité'],'Viewport Amount')
+            if budget>40000000 or budget*fraction>12000000:raise ValueError('Réduisez la quantité d’aperçu ou choisissez une densité inférieure.')
+            set_input(hair.modifiers['HumanLoom · densité'],'Density',density)
+        except (ValueError,RuntimeError,KeyError) as error:self.report({'ERROR'},str(error));return {'CANCELLED'}
+        hair.hl_groom.density=density;hair.update_tag()
         return {'FINISHED'}
 
 
@@ -560,6 +580,11 @@ class HL_PT_groom(bpy.types.Panel):
         for name in ('guides','radius','seed'):layout.prop(cfg,name)
         quality=layout.box();quality.label(text='Viewport et rendu')
         quality.prop(cfg,'density');quality.prop(cfg,'viewport',slider=True)
+        if body.hl_groom_region=='SCALP':
+            quality.label(text=f'Densité nominale : {cfg.density/10000:.0f} cheveux / cm²')
+            row=quality.row(align=True)
+            for preset,label in (('SPARSE','Clairsemé'),('NORMAL','Normal'),('DENSE','Dense')):
+                row.operator('humanloom.groom_density',text=label).preset=preset
         quality.prop(body,'hl_groom_quality_all')
         row=quality.row(align=True)
         for preset,label in (('LIGHT','Léger'),('BALANCED','Équilibré'),('FULL','Complet')):
@@ -569,10 +594,13 @@ class HL_PT_groom(bpy.types.Panel):
         box=layout.box();box.label(text='Matériau des fibres')
         for name in ('color','grey','roughness','visible'):box.prop(cfg,name)
         box=layout.box();box.prop(cfg,'physics')
+        mode=input_value(hair.modifiers['HumanLoom · suivi 5.2'],'Mode')
+        box.label(text='Actif : gravité XPBD' if mode=='Physics (Experimental)' else 'Actif : suivi du corps, sans gravité',icon='INFO')
         if cfg.physics=='XPBD':
             box.label(text='Simulation native expérimentale',icon='INFO')
             for name in ('substeps','iterations','bendiness','root_bendiness','collisions'):box.prop(cfg,name)
             box.label(text='Revenir à la première image après changement')
+            box.label(text='Puis lire la timeline pour calculer la chute')
         layout.operator('humanloom.groom_apply',text='Appliquer matière / densité / dynamique')
         layout.label(text='Longueur, nature, direction : reconstruire',icon='INFO')
         layout.operator('humanloom.groom_build',text='Reconstruire les guides (remplace la sculpture)')
@@ -582,7 +610,7 @@ class HL_PT_groom(bpy.types.Panel):
         row=layout.row(align=True);row.operator('humanloom.groom_export',text='Exporter réglages');row.operator('humanloom.groom_import',text='Importer réglages')
 
 
-CLASSES=(HL_GroomSettings,HL_OT_groom_build,HL_OT_groom_select,HL_OT_groom_apply,HL_OT_groom_quality,HL_OT_groom_paint,HL_OT_groom_remove,HL_OT_groom_preset,HL_OT_groom_export,HL_OT_groom_import,HL_PT_groom)
+CLASSES=(HL_GroomSettings,HL_OT_groom_build,HL_OT_groom_select,HL_OT_groom_apply,HL_OT_groom_density,HL_OT_groom_quality,HL_OT_groom_paint,HL_OT_groom_remove,HL_OT_groom_preset,HL_OT_groom_export,HL_OT_groom_import,HL_PT_groom)
 
 
 def register():
