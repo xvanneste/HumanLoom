@@ -1,0 +1,36 @@
+# Python and local editors
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Generated review scenes, renders, reports and historical working copies
+/validation/
+*.log
+*.blend1
+*.blend2
+*.blend@
+/dist/
+/build/
+*.zip
+
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Unreal generated data and imported third-party references
+**/Binaries/
+**/Intermediate/
+**/Saved/
+**/DerivedDataCache/
+**/Content/ReferenceImports/
+**/Content/ReferenceGeometry/

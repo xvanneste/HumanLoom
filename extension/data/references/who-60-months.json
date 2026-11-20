@@ -1,0 +1,17 @@
+{
+  "id": "who_child_growth_standards_60_months",
+  "age_months": 60,
+  "statistic": "Published rounded 50th percentile",
+  "unit": "cm",
+  "accessed": "2026-11-19",
+  "F": {"height": 109.4, "head_circumference": 49.9},
+  "M": {"height": 110.0, "head_circumference": 50.7},
+  "sources": {
+    "height_F": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/hfa-girls-2-5-percentiles.pdf?sfvrsn=adc3b954_7",
+    "height_M": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/hfa-boys-2-5-percentiles.pdf?sfvrsn=c5967382_7",
+    "head_F": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/head-circumference-for-age/hcfa_girls_0_5_percentiles.pdf",
+    "head_M": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/head-circumference-for-age/sft_hcfa_boys_p_0_5.pdf"
+  },
+  "source_rows": {"height_F": "60 months, page 2", "height_M": "60 months, page 2", "head_F": "60 months, page 3", "head_M": "60 months, page 2"},
+  "scope": "Two marginal population statistics. Their combination does not define a joint percentile or certify an individual anatomy. A mesh head section remains a technical surrogate pending protocol validation."
+}

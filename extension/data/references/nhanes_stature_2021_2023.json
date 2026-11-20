@@ -1,0 +1,46 @@
+{
+  "id": "nhanes_2021_2023_stature_table_7",
+  "title": "NCHS, Anthropometric Reference Data, August 2021–August 2023",
+  "population": "United States, adults age 20 and older",
+  "survey_period": "2021-08/2023-08",
+  "published": "2025-06-25",
+  "accessed": "2026-11-18",
+  "doi": "10.15620/cdc/174595",
+  "source_url": "https://stacks.cdc.gov/view/cdc/174595/cdc_174595_DS1.pdf",
+  "table": 7,
+  "printed_page": 8,
+  "pdf_page": 14,
+  "unit": "cm",
+  "method": "Manual transcription of published weighted percentiles. Missing estimates retained as null.",
+  "rights": "Public domain, source report copyright information.",
+  "groups": {
+    "20_29": {
+      "M": {"P05": 162.0, "P50": 176.1, "P95": 188.1},
+      "F": {"P05": 153.2, "P50": 163.3, "P95": 174.6}
+    },
+    "30_39": {
+      "M": {"P05": 163.6, "P50": 176.4, "P95": 187.1},
+      "F": {"P05": 150.1, "P50": 162.8, "P95": 172.9}
+    },
+    "40_49": {
+      "M": {"P05": 162.3, "P50": 176.2, "P95": 189.9},
+      "F": {"P05": 149.8, "P50": 162.0, "P95": 172.1}
+    },
+    "50_59": {
+      "M": {"P05": 163.0, "P50": 174.5, "P95": 185.6},
+      "F": {"P05": 150.4, "P50": 160.8, "P95": 172.4}
+    },
+    "60_69": {
+      "M": {"P05": 161.8, "P50": 175.0, "P95": 186.6},
+      "F": {"P05": 149.6, "P50": 160.4, "P95": 171.2}
+    },
+    "70_79": {
+      "M": {"P05": 159.5, "P50": 172.7, "P95": 184.1},
+      "F": {"P05": 148.6, "P50": 157.9, "P95": 168.2}
+    },
+    "80_PLUS": {
+      "M": {"P05": 158.3, "P50": 169.9, "P95": null},
+      "F": {"P05": 143.7, "P50": 156.9, "P95": null}
+    }
+  }
+}

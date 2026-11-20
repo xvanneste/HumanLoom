@@ -1,0 +1,15 @@
+{
+  "id": "who_growth_reference_2007_180_months",
+  "age_months": 180,
+  "statistic": "Published rounded 50th percentile",
+  "unit": "cm",
+  "accessed": "2026-11-19",
+  "F": {"height": 161.7},
+  "M": {"height": 169.0},
+  "sources": {
+    "height_F": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/height-for-age-(5-19-years)/hfa-girls-5-19years-per.pdf?sfvrsn=d89b86f2_4",
+    "height_M": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/height-for-age-(5-19-years)/hfa-boys-5-19years-per.pdf?sfvrsn=56a734fa_4"
+  },
+  "source_rows": "15:0, 180 months, page 5",
+  "scope": "Stature reference only. Other regional dimensions are not calibrated by this table."
+}

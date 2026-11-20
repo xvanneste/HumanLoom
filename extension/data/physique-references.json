@@ -1,0 +1,14 @@
+{
+  "model": "global-physique-0.13",
+  "calibration": "Artistic surface amplitudes informed by regional anatomy; no fitted population coefficients, clinical body-fat percentages or individual scans",
+  "compartments": ["skeletal frame", "regional tissue coverage", "skeletal muscle volume", "surface definition"],
+  "sources": [
+    {"url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5466169/", "use": "Whole-body and regional 3D-scan/DXA methodology; landmark measurement limitations", "population": "39 adults calibration; 37 external field validation"},
+    {"url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10348601/", "use": "Separate trunk and appendicular regions", "population": "161 adults, ages 18-56"},
+    {"url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6341104/", "use": "Distinguish total amount from arm/leg/trunk distribution", "population": "362499 UK Biobank participants"},
+    {"url": "https://pubmed.ncbi.nlm.nih.gov/10904038/", "use": "Separate skeletal muscle from adipose tissue; qualitative regional/age considerations only", "population": "468 adults ages 18-88", "limitation": "Erratum listed; no numerical coefficients transcribed"},
+    {"url": "https://openstax.org/books/anatomy-and-physiology-2e/pages/8-1-the-pectoral-girdle", "use": "Clavicle and scapular landmarks"},
+    {"url": "https://openstax.org/books/anatomy-and-physiology-2e/pages/8-3-the-pelvic-girdle-and-pelvis", "use": "Pelvic landmarks"},
+    {"url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DXX_J.htm", "use": "Future compartment calibration only", "limitation": "Eligible ages 8-59; not a calibration for 5 or 75 years"}
+  ]
+}

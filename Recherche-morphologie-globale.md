@@ -1,0 +1,28 @@
+# Morphologie globale : correction de l'approche 0.12
+
+19 novembre 2026. La revue de la 0.12 montre une amplification surtout abdominale, un thorax et des bras insuffisamment modifiés, et une minceur qui ne révèle pas les structures sous-jacentes. L'absence de croisements ne valide pas cette morphologie. Cette passe remplace les critères de silhouette du lot précédent.
+
+## Références examinées et conséquences
+
+| Source et domaine | Constat utilisable | Application au générateur et limite |
+| --- | --- | --- |
+| [Ng et collègues, 2016, scans 3D et DXA](https://pmc.ncbi.nlm.nih.gov/articles/PMC5466169/) : 39 adultes pour calibration, 37 pour validation de terrain | Les modèles distinguent corps entier, bras, jambes et tronc. Le placement des repères produit des écarts systématiques de mesure. | Mesurer séparément chaque région ; ne pas déduire une composition interne d'un ventre ou d'un IMC. L'inversion des équations prédictives ne donne pas une forme unique. |
+| [3D Body shape for regional and appendicular body composition estimation](https://pmc.ncbi.nlm.nih.gov/articles/PMC10348601/) : 161 adultes, 18–56 ans, 60 hommes et 101 femmes | Segmentation des deux bras, deux jambes et du tronc, comparée aux compartiments DXA. | Un réglage global doit modifier les membres autant que le tronc, avec des intensités différentes. Ce jeu ne fournit pas de coefficients pédiatriques ou de sénescence. |
+| [Étude de répartition de graisse, 2019](https://pmc.ncbi.nlm.nih.gov/articles/PMC6341104/) : 362 499 participants UK Biobank | La proportion de graisse des bras, jambes et tronc varie ; des effets génétiques et liés au sexe sont étudiés. | Quantité totale et répartition sont distinctes. Conserver les correctifs régionaux et éviter une unique silhouette obligatoire par sexe. Aucune équation génétique n'est reprise. |
+| [Comparaison échographie/plis cutanés, femmes de poids normatif](https://pmc.ncbi.nlm.nih.gov/articles/PMC9739157/) | Les sites incluent triceps, biceps, sous-scapulaire, pectoral, abdomen, supra-iliaque, cuisse et mollet. Les méthodes ne donnent pas des épaisseurs interchangeables. | Couvrir aussi poitrine, dos et membres. Ne pas appliquer la mesure d'un pli cutané comme déplacement direct de la surface. |
+| [Janssen et collègues, IRM, 468 adultes de 18–88 ans](https://pubmed.ncbi.nlm.nih.gov/10904038/) | Masse et répartition musculaires sont examinées selon âge, sexe, taille et poids. Un erratum est signalé. | Garder la musculature distincte de la graisse et différencier haut/bas du corps. Aucun coefficient numérique n'est transcrit sans résolution de l'erratum. |
+| [OpenStax, ceinture scapulaire](https://openstax.org/books/anatomy-and-physiology-2e/pages/8-1-the-pectoral-girdle) et [bassin](https://openstax.org/books/anatomy-and-physiology-2e/pages/8-3-the-pelvic-girdle-and-pelvis) | Position et forme des clavicules, omoplates, crêtes iliaques et épines iliaques. | Conserver le cadre osseux et augmenter son contraste lorsque les tissus de couverture diminuent. Les positions sur notre base doivent être contrôlées visuellement ; ces chapitres ne donnent pas les millimètres de déplacement de notre peau. |
+| [Atlas de l'éditeur, structures palpables du dos](https://downloads.lww.com/wolterskluwer_vitalstream_com/sample-content/9780781785051_Tank/samples/10752-01_Ch01_final.pdf) | Repérage de C7, épine et angle inférieur de l'omoplate, côtes, crête iliaque et reliefs dorsaux. | Référence de localisation pour le modelé dorsal. Aucune image ni géométrie de cet atlas n'est incorporée. |
+| [NHANES DXA 2017–2018](https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DXX_J.htm) | Compartiments graisse, tissus maigres et contenu minéral osseux ; éligibilité de 8 à 59 ans et exclusions publiées. | Base possible de calibration future par régions. Ce cycle ne valide ni l'enfant de 5 ans ni le senior de 75 ans. |
+
+## Construction retenue
+
+La corpulence globale agit sur thorax, dos, flancs, bassin, bras, avant-bras, cuisses, mollets, cou et tissus de la partie inférieure du visage. Le ventre est une région parmi les autres. Les mains, pieds, articulations et contours orbitaires restent protégés.
+
+La minceur a son propre pôle de déformation. Elle réduit les tissus autour des axes des membres et du tronc, sans réduire uniformément le squelette. Les clavicules, rebords costaux, omoplates et repères du bassin gagnent en contraste par rapport aux zones voisines. Les tissus de couverture et les volumes musculaires déterminent leur visibilité ; il ne s'agit pas de faire sortir des os de la peau. Les faibles muscles restent un réglage séparé.
+
+La musculature conserve des groupes identifiables : deltoïdes, pectoraux, dorsaux, bras, paroi abdominale, fessiers, cuisses et mollets. La définition est atténuée lorsque la couverture graisseuse augmente. « Fitness » demeure un point de départ artistique, sans inférence de santé ou de performance.
+
+Le nouveau champ est calculé par intégration d'un déplacement continu autour des axes corporels. Cette méthode évite le retrait artificiel d'une bande complète du thorax, qui avait été utilisé en 0.12 pour supprimer les croisements des aisselles. Les contrôles géométriques restent obligatoires : une propriété continue du champ ne garantit pas l'absence d'intersections du maillage discret.
+
+Les amplitudes de cette passe restent des choix de modélisation informés par les structures et compartiments documentés. Aucun scan individuel, modèle statistique ou coefficient de population n'est présenté comme intégré. La validation visuelle exige des corps entiers et des gros plans anatomiques, en plus des mesures et tests de collision.

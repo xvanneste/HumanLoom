@@ -1,0 +1,14 @@
+schema_version = "1.0.0"
+id = "human_modeling"
+version = "0.14.0"
+name = "Human Modeling"
+tagline = "Create and edit a realistic human base"
+maintainer = "BlenderDev"
+type = "add-on"
+tags = ["Add Mesh", "Modeling"]
+blender_version_min = "5.2.0"
+blender_version_max = "5.3.0"
+license = ["SPDX:GPL-3.0-or-later"]
+
+[permissions]
+files = "Importer et exporter des préréglages et rapports de mesures"
