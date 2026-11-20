@@ -1,6 +1,6 @@
-# Human Modeling - Blender 5.2
+# HumanLoom - Générateur humain pour Blender 5.2
 
-Générateur humain en développement : modélisation du corps et du visage, morphologies et âges, puis groom natif Blender. Extension actuelle **0.14.0**, schéma de formes **9**. Cible exclusive : **Blender 5.2**, conformément au manifeste de l'extension.
+Générateur humain en développement : modélisation du corps et du visage, morphologies et âges, puis groom natif Blender. Extension actuelle **0.14.0**, schéma de formes **9**. Cible exclusive : **Blender 5.2**, conformément au manifeste de l'extension. Le nom affiché par la version actuelle de l'extension reste « Human Modeling » ; le projet communautaire porte désormais le nom **HumanLoom**.
 
 ## Organisation
 
@@ -53,4 +53,8 @@ La géométrie et les prototypes restent en revue. Les planches de comparaison d
 
 Le groom est expérimental et n'est pas encore intégré à l'interface de l'extension. Le rig n'est pas livré. Les recherches biologiques guident des contrôles artistiques ; elles ne constituent pas une calibration clinique des personnages.
 
-Le dépôt est local à sa création. Aucun hébergement ou dépôt distant n'est configuré automatiquement.
+## Dépôt et licence
+
+Dépôt communautaire : [xvanneste/HumanLoom](https://github.com/xvanneste/HumanLoom).
+
+Le code de l'extension est déclaré **GPL-3.0-or-later** dans son manifeste ; le texte de la GPL v3 est inclus dans `LICENSE`. Les assets et références ont leur propre provenance, décrite dans `extension/CREDITS.md`. La publication du dépôt ne signifie pas que les prototypes ou les formes en revue sont validés.
