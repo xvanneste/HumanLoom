@@ -24,6 +24,8 @@ DEFAULTS={
  'PUBIC':(.025,220,220000.,.000035),
 }
 FORMAT='humanloom.groom';SCHEMA=1
+QUALITY_PRESETS=(('CUSTOM','Personnalisé',''),('LIGHT','Léger · 10 %',''),('BALANCED','Équilibré · 30 %',''),('FULL','Complet · 100 %',''))
+QUALITY_AMOUNTS={'LIGHT':.10,'BALANCED':.30,'FULL':1.}
 
 
 def local_tree(tree,memo=None):
@@ -53,6 +55,27 @@ def set_input(mod,name,value,kind=None):
     items=[s for s in mod.node_group.interface.items_tree if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name==name and (kind is None or s.socket_type==kind)]
     if len(items)!=1:raise ValueError('Entrée native absente ou ambiguë : '+name)
     getattr(mod.properties.inputs,items[0].identifier).value=value
+
+
+def input_value(mod,name):
+    socket=next(s for s in mod.node_group.interface.items_tree if s.item_type=='SOCKET' and s.in_out=='INPUT' and s.name==name)
+    return getattr(mod.properties.inputs,socket.identifier).value
+
+
+def check_viewport_budget(hair,fraction):
+    if not math.isfinite(fraction) or not 0<=fraction<=1:raise ValueError('La quantité d’aperçu doit être comprise entre 0 et 100 %.')
+    density=input_value(hair.modifiers['HumanLoom · densité'],'Density')
+    points=max(len(c.points) for c in hair.data.curves)
+    estimated=(hair.get('hl_mask_area_m2',0.)*density+len(hair.data.curves))*points*fraction
+    if estimated>12000000:raise ValueError('Cette quantité d’aperçu dépasse le budget pour cette zone. Choisissez un pourcentage inférieur.')
+
+
+def viewport_quality(hair,fraction):
+    """Change display interpolation only; keep guides, render and XPBD untouched."""
+    check_viewport_budget(hair,fraction)
+    set_input(hair.modifiers['HumanLoom · densité'],'Viewport Amount',fraction)
+    hair.hl_groom.viewport=fraction
+    hair.update_tag()
 
 
 def native(name):
@@ -364,8 +387,8 @@ class HL_GroomSettings(bpy.types.PropertyGroup):
     style:bpy.props.EnumProperty(name='Direction',items=(('SWEPT','Vers l’arrière',''),('PARTED','Avec raie',''),('UPRIGHT','Dressé','')))
     seed:bpy.props.IntProperty(name='Graine',default=2026,min=0,max=2147483647)
     guides:bpy.props.IntProperty(name='Guides éditables',default=850,min=20,max=3000)
-    density:bpy.props.FloatProperty(name='Densité / m²',default=700000,min=0,max=8000000)
-    viewport:bpy.props.FloatProperty(name='Quantité en aperçu',default=.3,min=0,max=1,subtype='FACTOR')
+    density:bpy.props.FloatProperty(name='Densité au rendu / m²',default=700000,min=0,max=8000000,description='Densité complète utilisée au rendu ; le viewport en affiche la fraction choisie')
+    viewport:bpy.props.FloatProperty(name='Viewport (% du rendu)',default=.3,min=0,max=1,subtype='FACTOR',description='Fraction de mèches affichées dans le viewport ; aucun effet sur la densité au rendu')
     radius:bpy.props.FloatProperty(name='Rayon à la racine',default=.000045,min=.000005,max=.00015,unit='LENGTH',precision=6)
     color:bpy.props.FloatVectorProperty(name='Couleur',subtype='COLOR',size=3,min=0,max=1,default=(.035,.012,.006))
     roughness:bpy.props.FloatProperty(name='Rugosité',default=.4,min=.05,max=1)
@@ -414,6 +437,25 @@ class HL_OT_groom_apply(bpy.types.Operator):
         try:appearance(hair,state(hair.hl_groom))
         except (ValueError,RuntimeError,KeyError) as error:self.report({'ERROR'},str(error));return {'CANCELLED'}
         return {'FINISHED'}
+
+
+class HL_OT_groom_quality(bpy.types.Operator):
+    bl_idname='humanloom.groom_quality';bl_label='Appliquer la qualité d’aperçu';bl_options={'REGISTER','UNDO'}
+    bl_description='Allège le viewport en conservant les guides, la densité au rendu et les réglages de dynamique'
+    preset:bpy.props.EnumProperty(name='Qualité',items=QUALITY_PRESETS,default='CUSTOM')
+    all_layers:bpy.props.BoolProperty(name='Toutes les zones',default=False)
+    @classmethod
+    def poll(cls,context):return HL_OT_groom_build.poll(context)
+    def execute(self,context):
+        body=body_from(context);active=find(body,body.hl_groom_region)
+        if active is None:return {'CANCELLED'}
+        amount=active.hl_groom.viewport if self.preset=='CUSTOM' else QUALITY_AMOUNTS[self.preset]
+        targets=[h for h in body.children if h.type=='CURVES' and h.get('hl_groom_region')] if self.all_layers else [active]
+        try:
+            for hair in targets:check_viewport_budget(hair,amount)
+            for hair in targets:viewport_quality(hair,amount)
+        except (ValueError,RuntimeError,KeyError) as error:self.report({'ERROR'},str(error));return {'CANCELLED'}
+        self.report({'INFO'},f'Viewport : {amount:.0%}. Densité au rendu conservée.');return {'FINISHED'}
 
 
 class HL_OT_groom_paint(bpy.types.Operator):
@@ -515,7 +557,15 @@ class HL_PT_groom(bpy.types.Panel):
         cfg=hair.hl_groom
         for name in ('length','nature','variation','frizz') :layout.prop(cfg,name)
         if body.hl_groom_region=='SCALP':layout.prop(cfg,'style')
-        for name in ('guides','density','viewport','radius','seed'):layout.prop(cfg,name)
+        for name in ('guides','radius','seed'):layout.prop(cfg,name)
+        quality=layout.box();quality.label(text='Viewport et rendu')
+        quality.prop(cfg,'density');quality.prop(cfg,'viewport',slider=True)
+        quality.prop(body,'hl_groom_quality_all')
+        row=quality.row(align=True)
+        for preset,label in (('LIGHT','Léger'),('BALANCED','Équilibré'),('FULL','Complet')):
+            op=row.operator('humanloom.groom_quality',text=label);op.preset=preset;op.all_layers=body.hl_groom_quality_all
+        op=quality.operator('humanloom.groom_quality',text='Appliquer mon pourcentage');op.all_layers=body.hl_groom_quality_all
+        quality.label(text='Rendu : densité complète, aperçu indépendant')
         box=layout.box();box.label(text='Matériau des fibres')
         for name in ('color','grey','roughness','visible'):box.prop(cfg,name)
         box=layout.box();box.prop(cfg,'physics')
@@ -532,15 +582,17 @@ class HL_PT_groom(bpy.types.Panel):
         row=layout.row(align=True);row.operator('humanloom.groom_export',text='Exporter réglages');row.operator('humanloom.groom_import',text='Importer réglages')
 
 
-CLASSES=(HL_GroomSettings,HL_OT_groom_build,HL_OT_groom_select,HL_OT_groom_apply,HL_OT_groom_paint,HL_OT_groom_remove,HL_OT_groom_preset,HL_OT_groom_export,HL_OT_groom_import,HL_PT_groom)
+CLASSES=(HL_GroomSettings,HL_OT_groom_build,HL_OT_groom_select,HL_OT_groom_apply,HL_OT_groom_quality,HL_OT_groom_paint,HL_OT_groom_remove,HL_OT_groom_preset,HL_OT_groom_export,HL_OT_groom_import,HL_PT_groom)
 
 
 def register():
     for cls in CLASSES:bpy.utils.register_class(cls)
     bpy.types.Object.hl_groom=bpy.props.PointerProperty(type=HL_GroomSettings)
     bpy.types.Object.hl_groom_region=bpy.props.EnumProperty(name='Zone de pilosité',items=REGIONS)
+    bpy.types.Object.hl_groom_quality_all=bpy.props.BoolProperty(name='Toutes les zones du personnage',default=False)
 
 
 def unregister():
+    del bpy.types.Object.hl_groom_quality_all
     del bpy.types.Object.hl_groom_region;del bpy.types.Object.hl_groom
     for cls in reversed(CLASSES):bpy.utils.unregister_class(cls)

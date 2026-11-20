@@ -10,6 +10,14 @@ Les boutons Court, Long, Bouclé, Crépu et Barbe courte ajoutent des points de 
 
 Chaque zone possède longueur de contour, nature de fibre, variation de longueur, irrégularité, direction, nombre de guides, densité par m², quantité d'aperçu, rayon, graine, couleur, proportion de fibres grises et rugosité.
 
+### Viewport léger et rendu dense (0.15.1)
+
+Le bloc **Viewport et rendu** sépare **Densité au rendu / m²** et **Viewport (% du rendu)**. Le rendu utilise la densité complète, quelle que soit la fraction d'aperçu. Les boutons **Léger** (10 %), **Équilibré** (30 %) et **Complet** (100 %) permettent un choix rapide ; le curseur et **Appliquer mon pourcentage** permettent toute valeur entre 0 et 100 %. À 0 %, les mèches interpolées sont masquées dans le viewport, tout en restant présentes au rendu.
+
+Ces commandes concernent la zone sélectionnée, ou toutes les zones du personnage si la case correspondante est cochée. Elles préservent les guides sculptés, la densité au rendu et les paramètres de simulation. Les pourcentages par zone sont conservés dans le `.blend` et les exports JSON existants. La densité complète s'applique via le bouton de matière / densité / dynamique.
+
+La fraction désigne une densité de distribution, pas un nombre exact imposé de cheveux. Un niveau de subdivision du corps différent entre aperçu et rendu peut aussi modifier légèrement le nombre de mèches échantillonnées. `tools/validate_groom_quality26.py` compare les vrais graphes d'évaluation VIEWPORT et RENDER à résolution de surface identique et vérifie leur indépendance.
+
 **Appliquer matière / densité / dynamique** conserve les guides sculptés. Les changements de longueur, nature, direction, graine ou nombre de guides nécessitent **Reconstruire les guides** : cette opération remplace la sculpture de la zone et peut être annulée dans Blender.
 
 **Sélectionner les guides** permet ensuite d'utiliser Curves Sculpt. **Peindre la densité** sélectionne le groupe de poids correspondant sur le corps et entre en Weight Paint. Revenir en Object Mode après peinture. La reconstruction conserve ce masque et rééchantillonne les guides dedans. Un masque entièrement vide provoque un message et conserve le groom précédent.
