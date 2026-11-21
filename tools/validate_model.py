@@ -8,6 +8,18 @@ import bpy
 from mathutils import Vector
 
 
+def smooth_height(body):
+    """Hauteur monde de la surface lissée évaluée (et non de la cage, que renvoie Object.dimensions)."""
+    graph = bpy.context.evaluated_depsgraph_get()
+    evaluated = body.evaluated_get(graph)
+    mesh = evaluated.to_mesh()
+    try:
+        values = [(evaluated.matrix_world @ vertex.co).z for vertex in mesh.vertices]
+    finally:
+        evaluated.to_mesh_clear()
+    return max(values) - min(values)
+
+
 def main():
     output = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -28,10 +40,10 @@ def main():
         assert len(body.children) == 2
         assert bpy.ops.human_modeling.set_height(height=1.75) == {"FINISHED"}
         bpy.context.view_layer.update()
-        assert abs(body.dimensions.z - 1.75) < 1e-5
+        assert abs(smooth_height(body) - 1.75) < 1e-5
         assert bpy.ops.human_modeling.set_height(height=1.75) == {"FINISHED"}
         bpy.context.view_layer.update()
-        assert abs(body.dimensions.z - 1.75) < 1e-5
+        assert abs(smooth_height(body) - 1.75) < 1e-5
         graph = bpy.context.evaluated_depsgraph_get()
         for eye in body.children:
             evaluated_key = eye.evaluated_get(graph).data.shape_keys.key_blocks["Morphologie"]
@@ -106,7 +118,7 @@ def main():
     reloaded = [obj for obj in bpy.context.scene.objects if obj.get("human_modeling_body")]
     assert len(reloaded) == 5
     bpy.context.view_layer.update()
-    assert all(abs(body.dimensions.z - 1.75) < 1e-5 for body in reloaded)
+    assert all(abs(smooth_height(body) - 1.75) < 1e-5 for body in reloaded)
     print("PASS: five morphologies, height, independent meshes and eyes, subdivision, save/reopen")
 
 

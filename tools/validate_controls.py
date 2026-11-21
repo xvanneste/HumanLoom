@@ -40,12 +40,17 @@ def main():
         keys.key_blocks["Morphologie"].value = sex
         refresh(keys)
         actual = coordinates(body, True)
-        female = np.array([tuple(point.co) for point in keys.key_blocks["Basis"].data])
-        male = np.array([tuple(point.co) for point in keys.key_blocks["Morphologie"].data])
-        expected = (1 - sex) * female + sex * male
-        correction = keys.key_blocks.get("Surface · Paupières internes")
-        if correction:
-            expected += (np.array([point.co[:] for point in correction.data]) - female) * (1-sex)
+        # Attendu : formule générale des shape keys (toutes les clés actives, y compris relief, atlas
+        # et raccords d'âge actifs par défaut), pas seulement le mélange de sexe.
+        def key_points(key):
+            return np.array([tuple(point.co) for point in key.data])
+        expected = key_points(keys.reference_key).copy()
+        for key in keys.key_blocks:
+            if key == keys.reference_key or key.mute or key.vertex_group:
+                continue
+            value = min(max(key.value, key.slider_min), key.slider_max)
+            if value:
+                expected += value * (key_points(key) - key_points(key.relative_key))
         assert np.max(np.abs(actual - expected)) < 1e-6
         for identifier, _ in CONTROLS:
             prop = property_name(identifier)
