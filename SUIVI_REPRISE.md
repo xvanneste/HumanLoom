@@ -320,7 +320,7 @@ Branche de travail : **`codex/natif`** (D-17). Aucun commit sans accord explicit
 3. **Générateur hors ligne du groupe de nœuds v1** : `tools/build_human_nodes.py` (partir de `tools/audit/cproto3_1e4.py`) → `extension/data/human_nodes.blend` ; équivalence < 0,02 mm sur ≥ 25 états, temps avec Subsurf, suppression des couches, déterminisme.
 4. **T-C12 (finir)** : rendu réel du groupe HumanLoom dans le menu Ajouter du graphe Geometry Nodes (enregistrement et asset validés, §4 bis L).
 5. **Tranche verticale native** : création (Ajouter > Humain, F9), modificateur « HL Human », façade D, panneau Propriétés > Objet + barre latérale, UUID, « Dupliquer le personnage », yeux (drivers vers les entrées), cheveux (racines + entrée de longueur), sauvegarde / annulation / animation / fichier rouvert sans l’extension ; critères `DESIGN_NATIF.md` §10.
-6. **Migration schéma 10** (D-10 : forme au neutre inchangée) avec les anciens fichiers `validation/` (sessions 08 à 14) ; **c'est là** que se font les fusions de contrôles (corpulence, lèvres, mâchoire) et le **facteur d'amplitude** (I-45), après T-A1 à T-A3.
+6. **Migration schéma 10** (D-10, D-20 : forme au neutre inchangée ; plan détaillé dans `PLAN_SCHEMA_10.md`) avec les anciens fichiers `validation/` (sessions 08 à 14) ; **c'est là** que se font les fusions de contrôles (corpulence, lèvres, mâchoire) et le **facteur d'amplitude** (I-45), après T-A1 à T-A3.
 7. **Repères et zones automatiques** (I-43) : seins, ventre, nombril, mains, pieds, bouche détaillée ; **prérequis des nouveaux contrôles** (D-16).
 8. **Nouveaux contrôles** (D-16, `AJOUT_CONTROLES.md`) : P1 du tronc (seins, ventre, fessiers, trapèzes) et des proportions des membres, puis P1 du visage, puis préréglages de types de corps/tête ; mode avancé de transformation de région.
 9. **Mapping UV** (I-41) : décider UDIM / une tuile / densité avant toute texture ; **matériau de peau v1** « HL Skin » (réaliste + stylisé, `RECHERCHE_PEAU.md`), matériaux des yeux et des dents.
@@ -357,6 +357,7 @@ Branche de travail : **`codex/natif`** (D-17). Aucun commit sans accord explicit
 | `FEATURE_STATUS.md`, `AUDIT.md`, `BRANCH_ANALYSIS.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `REFERENCE_PLUGINS.md`, `UI_REVIEW.md` | rapports de l'audit |
 | `AJOUT_CONTROLES.md`, `AMPLITUDES_CONTROLES.md`, `REGROUPEMENT_CONTROLES.md` | catalogue des contrôles à ajouter, amplitudes trop faibles (proposition non validée), regroupement des contrôles redondants (interface seulement) |
 | `RECHERCHE_PEAU.md`, `RECHERCHE_MORPHOLOGIE.md`, `RECHERCHE_RIG.md`, `RECHERCHE_PLUGINS.md`, `SYNTHESE_RECHERCHE.md` | recherche documentaire (peau, morphologie, rig, plugins) et synthèse |
+| `PLAN_SCHEMA_10.md` | plan de migration schéma 9 → 10 en lots A à F (proposition à valider) |
 | `docs/audit/` | mesures JSON, captures, rendus, `mesures-noeuds-c.md` |
 | `tools/audit/` | scripts de mesure et de prototypage (README inclus) |
 | `CLAUDE.md` | guide pour les sessions de Claude Code |
