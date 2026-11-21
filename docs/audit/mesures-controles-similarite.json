@@ -1,0 +1,460 @@
+{
+ "controles": {
+  "corpulence": {
+   "label": "Corpulence",
+   "max_mm_plus": 29.84,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 56.7
+  },
+  "shoulders": {
+   "label": "Carrure",
+   "max_mm_plus": 14.0,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 31.1
+  },
+  "waist": {
+   "label": "Tour de taille",
+   "max_mm_plus": 17.97,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 11.3
+  },
+  "hips": {
+   "label": "Largeur du bassin",
+   "max_mm_plus": 17.83,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 6.5
+  },
+  "torso_depth": {
+   "label": "Profondeur du buste",
+   "max_mm_plus": 12.94,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 50.7
+  },
+  "neck": {
+   "label": "Largeur du cou",
+   "max_mm_plus": 14.42,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 16.0
+  },
+  "legs": {
+   "label": "Longueur des jambes",
+   "max_mm_plus": 48.67,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 97.7
+  },
+  "torso": {
+   "label": "Longueur du buste",
+   "max_mm_plus": 28.0,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 62.6
+  },
+  "whole_body": {
+   "label": "Corpulence globale",
+   "max_mm_plus": 34.13,
+   "symetrie_cos_plus_moins": 0.88,
+   "sommets_deplaces_pct": 28.2
+  },
+  "body_mass": {
+   "label": "Volume hérité · 0.12",
+   "max_mm_plus": 93.35,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 26.5
+  },
+  "adiposity": {
+   "label": "Couverture régionale",
+   "max_mm_plus": 45.36,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 35.1
+  },
+  "fat_abdomen": {
+   "label": "Abdomen",
+   "max_mm_plus": 43.52,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 23.9
+  },
+  "fat_flanks": {
+   "label": "Flancs",
+   "max_mm_plus": 25.17,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 13.5
+  },
+  "fat_hips": {
+   "label": "Bassin et fessiers",
+   "max_mm_plus": 27.58,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 6.0
+  },
+  "fat_thighs": {
+   "label": "Cuisses",
+   "max_mm_plus": 14.29,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 8.4
+  },
+  "fat_arms": {
+   "label": "Bras",
+   "max_mm_plus": 14.56,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 12.0
+  },
+  "fat_face": {
+   "label": "Visage",
+   "max_mm_plus": 8.43,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 6.4
+  },
+  "muscles": {
+   "label": "Musculature globale",
+   "max_mm_plus": 27.48,
+   "symetrie_cos_plus_moins": 0.871,
+   "sommets_deplaces_pct": 25.9
+  },
+  "muscles_shoulders": {
+   "label": "Épaules",
+   "max_mm_plus": 17.18,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 6.4
+  },
+  "muscles_chest": {
+   "label": "Pectoraux",
+   "max_mm_plus": 19.48,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 5.2
+  },
+  "muscles_back": {
+   "label": "Dos",
+   "max_mm_plus": 20.7,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 6.8
+  },
+  "muscles_arms": {
+   "label": "Bras",
+   "max_mm_plus": 21.06,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 12.6
+  },
+  "muscles_abdomen": {
+   "label": "Abdomen",
+   "max_mm_plus": 3.34,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 2.3
+  },
+  "muscles_glutes": {
+   "label": "Fessiers",
+   "max_mm_plus": 16.72,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 1.8
+  },
+  "muscles_thighs": {
+   "label": "Cuisses",
+   "max_mm_plus": 23.77,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 4.5
+  },
+  "muscles_calves": {
+   "label": "Mollets",
+   "max_mm_plus": 18.67,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 4.9
+  },
+  "muscle_definition": {
+   "label": "Définition musculaire",
+   "max_mm_plus": 0.48,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 2.1
+  },
+  "head_width": {
+   "label": "Largeur de la tête",
+   "max_mm_plus": 6.39,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 32.4
+  },
+  "head_height": {
+   "label": "Hauteur de la tête",
+   "max_mm_plus": 8.86,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 33.3
+  },
+  "jaw": {
+   "label": "Largeur de la mâchoire",
+   "max_mm_plus": 6.73,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 15.7
+  },
+  "chin": {
+   "label": "Avancée du menton",
+   "max_mm_plus": 4.0,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 7.9
+  },
+  "cheeks": {
+   "label": "Pommettes",
+   "max_mm_plus": 2.97,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 17.2
+  },
+  "nose_length": {
+   "label": "Avancée du nez",
+   "max_mm_plus": 4.99,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 10.8
+  },
+  "nose_width": {
+   "label": "Largeur du nez",
+   "max_mm_plus": 1.78,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 10.3
+  },
+  "mouth": {
+   "label": "Largeur de la bouche",
+   "max_mm_plus": 2.26,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 8.8
+  },
+  "lips": {
+   "label": "Relief des lèvres",
+   "max_mm_plus": 1.5,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 8.8
+  },
+  "eye_spacing": {
+   "label": "Écartement des yeux",
+   "max_mm_plus": 3.0,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 11.9
+  },
+  "eye_height": {
+   "label": "Position verticale des yeux",
+   "max_mm_plus": 2.5,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 11.9
+  },
+  "forehead": {
+   "label": "Hauteur du front",
+   "max_mm_plus": 5.0,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 4.5
+  },
+  "ears_size": {
+   "label": "Taille des oreilles",
+   "max_mm_plus": 4.64,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 9.2
+  },
+  "ears_angle": {
+   "label": "Orientation des oreilles",
+   "max_mm_plus": 4.56,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 8.8
+  },
+  "eyelid_aperture": {
+   "label": "Ouverture des paupières",
+   "max_mm_plus": 0.63,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 4.2
+  },
+  "nose_bridge": {
+   "label": "Relief de l’arête nasale",
+   "max_mm_plus": 3.0,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 10.0
+  },
+  "lip_thickness": {
+   "label": "Épaisseur des lèvres",
+   "max_mm_plus": 1.06,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 7.1
+  },
+  "mouth_corner": {
+   "label": "Hauteur des commissures",
+   "max_mm_plus": 1.99,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 5.1
+  },
+  "jaw_angle": {
+   "label": "Angle de la mâchoire",
+   "max_mm_plus": 3.35,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 9.1
+  },
+  "facial_asymmetry": {
+   "label": "Asymétrie du visage",
+   "max_mm_plus": 1.76,
+   "symetrie_cos_plus_moins": 1.0,
+   "sommets_deplaces_pct": 24.4
+  },
+  "skin_relief": {
+   "label": "Relief de peau âgée",
+   "max_mm_plus": 0.0,
+   "symetrie_cos_plus_moins": 0.0,
+   "sommets_deplaces_pct": 0.0
+  }
+ },
+ "paires_cos_abs_sup_0_6": [
+  {
+   "a": "legs",
+   "b": "torso",
+   "cos": 0.843,
+   "recouvrement_pct_de_a": 64.1
+  },
+  {
+   "a": "waist",
+   "b": "fat_flanks",
+   "cos": 0.822,
+   "recouvrement_pct_de_a": 96.6
+  },
+  {
+   "a": "corpulence",
+   "b": "whole_body",
+   "cos": 0.821,
+   "recouvrement_pct_de_a": 38.8
+  },
+  {
+   "a": "corpulence",
+   "b": "body_mass",
+   "cos": 0.811,
+   "recouvrement_pct_de_a": 34.2
+  },
+  {
+   "a": "jaw",
+   "b": "mouth",
+   "cos": 0.78,
+   "recouvrement_pct_de_a": 56.3
+  },
+  {
+   "a": "jaw",
+   "b": "jaw_angle",
+   "cos": 0.774,
+   "recouvrement_pct_de_a": 54.6
+  },
+  {
+   "a": "nose_length",
+   "b": "nose_bridge",
+   "cos": 0.753,
+   "recouvrement_pct_de_a": 62.0
+  },
+  {
+   "a": "waist",
+   "b": "body_mass",
+   "cos": 0.739,
+   "recouvrement_pct_de_a": 50.1
+  },
+  {
+   "a": "waist",
+   "b": "whole_body",
+   "cos": 0.726,
+   "recouvrement_pct_de_a": 100.0
+  },
+  {
+   "a": "whole_body",
+   "b": "body_mass",
+   "cos": 0.726,
+   "recouvrement_pct_de_a": 75.1
+  },
+  {
+   "a": "adiposity",
+   "b": "fat_abdomen",
+   "cos": 0.707,
+   "recouvrement_pct_de_a": 67.8
+  },
+  {
+   "a": "muscles_abdomen",
+   "b": "muscle_definition",
+   "cos": 0.702,
+   "recouvrement_pct_de_a": 67.9
+  },
+  {
+   "a": "corpulence",
+   "b": "waist",
+   "cos": 0.671,
+   "recouvrement_pct_de_a": 20.0
+  },
+  {
+   "a": "body_mass",
+   "b": "adiposity",
+   "cos": 0.662,
+   "recouvrement_pct_de_a": 82.9
+  },
+  {
+   "a": "head_width",
+   "b": "ears_size",
+   "cos": 0.651,
+   "recouvrement_pct_de_a": 28.3
+  },
+  {
+   "a": "whole_body",
+   "b": "fat_flanks",
+   "cos": 0.649,
+   "recouvrement_pct_de_a": 47.9
+  },
+  {
+   "a": "waist",
+   "b": "adiposity",
+   "cos": 0.635,
+   "recouvrement_pct_de_a": 100.0
+  },
+  {
+   "a": "torso_depth",
+   "b": "muscles_abdomen",
+   "cos": 0.625,
+   "recouvrement_pct_de_a": 4.5
+  },
+  {
+   "a": "lips",
+   "b": "lip_thickness",
+   "cos": 0.611,
+   "recouvrement_pct_de_a": 79.5
+  },
+  {
+   "a": "corpulence",
+   "b": "hips",
+   "cos": 0.607,
+   "recouvrement_pct_de_a": 11.5
+  },
+  {
+   "a": "hips",
+   "b": "fat_hips",
+   "cos": 0.605,
+   "recouvrement_pct_de_a": 85.5
+  },
+  {
+   "a": "corpulence",
+   "b": "adiposity",
+   "cos": 0.602,
+   "recouvrement_pct_de_a": 50.7
+  }
+ ],
+ "amplitude_faible": [
+  [
+   "muscle_definition",
+   0.48
+  ],
+  [
+   "nose_width",
+   1.78
+  ],
+  [
+   "lips",
+   1.5
+  ],
+  [
+   "eyelid_aperture",
+   0.63
+  ],
+  [
+   "lip_thickness",
+   1.06
+  ],
+  [
+   "mouth_corner",
+   1.99
+  ],
+  [
+   "facial_asymmetry",
+   1.76
+  ],
+  [
+   "skin_relief",
+   0.0
+  ]
+ ]
+}

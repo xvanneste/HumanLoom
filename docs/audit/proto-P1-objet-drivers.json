@@ -1,0 +1,104 @@
+{
+ "P1_rewired_variables_and_skipped": {
+  "A": [
+   1092,
+   271
+  ],
+  "B": [
+   1092,
+   271
+  ]
+ },
+ "P1_equality_max_mm_vs_current_system": {
+  "A": 0.0,
+  "B": 602.165818
+ },
+ "P1_invalid_drivers": {
+  "old": 0,
+  "A": 0,
+  "B": 458
+ },
+ "P1_slider_ms_median_p90": {
+  "current_key_props": [
+   14.7,
+   15.6
+  ],
+  "object_props_RNA_path": [
+   14.7,
+   16.4
+  ],
+  "object_props_IDprop_path": [
+   11.2,
+   12.1
+  ]
+ },
+ "P1_rewire_9_bodies_s": 0.75,
+ "P1_12_humans_in_scene_change_one_ms_median": 14.0,
+ "P1_duplicate_A_RNA_path": {
+  "copy_has_own_keys": true,
+  "driver_target_object": "Corps.012",
+  "orig": "Corps.001",
+  "copy": "Corps.012",
+  "changing_copy_moves_copy_mm": 2.266,
+  "changing_copy_moves_original_mm": 0.0
+ },
+ "P1_duplicate_B_IDprop_path": {
+  "copy_has_own_keys": true,
+  "driver_target_object": "Corps.013",
+  "orig": "Corps.002",
+  "copy": "Corps.013",
+  "changing_copy_moves_copy_mm": 0.0,
+  "changing_copy_moves_original_mm": 0.0
+ },
+ "P1_saved_objects": {
+  "old": "Corps",
+  "A": "Corps.001",
+  "B": "Corps.002"
+ },
+ "P5_translation": {
+  "Height": "Hauteur",
+  "Nose Width": "Largeur du nez",
+  "locale": "fr_FR"
+ },
+ "P2_poll_message_set_exists": true,
+ "P6_animation": {
+  "keyframe_ok": [
+   true,
+   true
+  ],
+  "frames_shoulders_age_height": [
+   [
+    1,
+    -1.0,
+    0.0,
+    1.1
+   ],
+   [
+    51,
+    -0.0,
+    1.5,
+    1.69
+   ],
+   [
+    101,
+    1.0,
+    3.0,
+    1.67
+   ]
+  ],
+  "slots": [
+   "OBCorps.014"
+  ],
+  "layers": 1,
+  "fcurves_via_channelbag": [
+   [
+    "hlproto.shoulders",
+    2
+   ],
+   [
+    "hlproto.age",
+    2
+   ]
+  ]
+ }
+}

@@ -1,0 +1,41 @@
+{
+ "model_check_linear_in_key_values_max_err_mm": 0.000896,
+ "reduced_basis_reconstruction_error_40_random_states": {
+  "50": {
+   "max_err_mm": 11.4469,
+   "median_of_max_err_mm": 3.8759,
+   "mean_err_mm": 0.3092
+  },
+  "70": {
+   "max_err_mm": 3.1981,
+   "median_of_max_err_mm": 1.998,
+   "mean_err_mm": 0.153
+  },
+  "100": {
+   "max_err_mm": 1.939,
+   "median_of_max_err_mm": 0.9284,
+   "mean_err_mm": 0.03501
+  },
+  "128": {
+   "max_err_mm": 0.4162,
+   "median_of_max_err_mm": 0.1548,
+   "mean_err_mm": 0.00467
+  },
+  "150": {
+   "max_err_mm": 0.0467,
+   "median_of_max_err_mm": 0.02,
+   "mean_err_mm": 0.00039
+  },
+  "200": {
+   "max_err_mm": 0.0009,
+   "median_of_max_err_mm": 0.0007,
+   "mean_err_mm": 4e-05
+  }
+ },
+ "max_displacement_mm_in_states": 547.1,
+ "file_size_MB": {
+  "body_with_461_shape_keys_uncompressed": 79.3,
+  "plus_150_basis_attributes_uncompressed": 98.5,
+  "plus_150_basis_attributes_compressed": 41.9
+ }
+}

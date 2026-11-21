@@ -1,0 +1,251 @@
+{
+ "fichier": "extension/data/realistic.blend",
+ "objets": {
+  "Corps": {
+   "sommets": 10582,
+   "faces": 10590,
+   "couches_uv": [
+    "UVMap"
+   ],
+   "materiaux": [],
+   "modificateurs": [
+    "DISPLACE"
+   ],
+   "shape_keys": 462,
+   "uv": {
+    "UVMap": {
+     "bornes_uv": [
+      0.0387,
+      8.9487,
+      0.0303,
+      3.9667
+     ],
+     "hors_0_1_pct_boucles": 84.098,
+     "triangles": 21160,
+     "triangles_aire_uv_negative": 10579,
+     "triangles_aire_uv_nulle": 0,
+     "densite_texel_relative_percentiles": {
+      "1": 0.711438,
+      "5": 0.848905,
+      "25": 0.963763,
+      "50": 1.0,
+      "75": 1.038574,
+      "95": 1.233258,
+      "99": 3.183634
+     },
+     "densite_texel_max_sur_min_p5_p95": 1.453,
+     "etirement_rapport_sv_percentiles": {
+      "1": 1.008428,
+      "5": 1.019982,
+      "25": 1.056158,
+      "50": 1.113211,
+      "75": 1.218616,
+      "95": 1.831231,
+      "99": 3.725563
+     },
+     "triangles_etirement_sup_2_pct": 4.23,
+     "utilisation_espace_uv_pct": 948.67,
+     "pixels_couverts_1024": 478635,
+     "pixels_en_chevauchement_pct_des_couverts": 0.0,
+     "ilots": 40,
+     "aretes_de_couture_uv": 1394,
+     "plus_gros_ilots_(faces, aire_3d_m2)": [
+      [
+       1233,
+       0.068
+      ],
+      [
+       1233,
+       0.0679
+      ],
+      [
+       1070,
+       0.0463
+      ],
+      [
+       1070,
+       0.0462
+      ],
+      [
+       400,
+       0.0819
+      ],
+      [
+       400,
+       0.0819
+      ],
+      [
+       368,
+       0.0215
+      ],
+      [
+       368,
+       0.0215
+      ],
+      [
+       319,
+       0.0178
+      ],
+      [
+       319,
+       0.0178
+      ],
+      [
+       231,
+       0.0719
+      ],
+      [
+       231,
+       0.0707
+      ]
+     ],
+     "petits_ilots_moins_de_10_faces": 0,
+     "densite_par_zone_relative_a_la_mediane": {
+      "tete (z > 87 % taille)": 1.017,
+      "bas des jambes (z < 12 %)": 0.993
+     },
+     "triangles_x_positif_vs_negatif": [
+      10580,
+      10580
+     ]
+    }
+   }
+  },
+  "Œil droit": {
+   "sommets": 546,
+   "faces": 544,
+   "couches_uv": [
+    "UVMap"
+   ],
+   "materiaux": [],
+   "modificateurs": [],
+   "shape_keys": 65,
+   "uv": {
+    "UVMap": {
+     "bornes_uv": [
+      0.0202,
+      0.9782,
+      0.0228,
+      0.5069
+     ],
+     "hors_0_1_pct_boucles": 0.0,
+     "triangles": 1088,
+     "triangles_aire_uv_negative": 0,
+     "triangles_aire_uv_nulle": 0,
+     "densite_texel_relative_percentiles": {
+      "1": 0.819639,
+      "5": 0.857368,
+      "25": 0.905258,
+      "50": 1.0,
+      "75": 1.199431,
+      "95": 1.550063,
+      "99": 1.684828
+     },
+     "densite_texel_max_sur_min_p5_p95": 1.808,
+     "etirement_rapport_sv_percentiles": {
+      "1": 1.005987,
+      "5": 1.009606,
+      "25": 1.025965,
+      "50": 1.039435,
+      "75": 1.081478,
+      "95": 1.137611,
+      "99": 1.162485
+     },
+     "triangles_etirement_sup_2_pct": 0.0,
+     "utilisation_espace_uv_pct": 34.74,
+     "pixels_couverts_1024": 351456,
+     "pixels_en_chevauchement_pct_des_couverts": 0.0,
+     "ilots": 2,
+     "aretes_de_couture_uv": 32,
+     "plus_gros_ilots_(faces, aire_3d_m2)": [
+      [
+       288,
+       0.0008
+      ],
+      [
+       256,
+       0.0009
+      ]
+     ],
+     "petits_ilots_moins_de_10_faces": 0,
+     "densite_par_zone_relative_a_la_mediane": {
+      "tete (z > 87 % taille)": 1.315,
+      "bas des jambes (z < 12 %)": 1.346
+     },
+     "triangles_x_positif_vs_negatif": [
+      0,
+      1088
+     ]
+    }
+   }
+  },
+  "Œil gauche": {
+   "sommets": 546,
+   "faces": 544,
+   "couches_uv": [
+    "UVMap"
+   ],
+   "materiaux": [],
+   "modificateurs": [],
+   "shape_keys": 65,
+   "uv": {
+    "UVMap": {
+     "bornes_uv": [
+      0.0202,
+      0.9782,
+      0.0228,
+      0.5069
+     ],
+     "hors_0_1_pct_boucles": 0.0,
+     "triangles": 1088,
+     "triangles_aire_uv_negative": 0,
+     "triangles_aire_uv_nulle": 0,
+     "densite_texel_relative_percentiles": {
+      "1": 0.819533,
+      "5": 0.857292,
+      "25": 0.905391,
+      "50": 1.0,
+      "75": 1.199405,
+      "95": 1.550115,
+      "99": 1.684862
+     },
+     "densite_texel_max_sur_min_p5_p95": 1.808,
+     "etirement_rapport_sv_percentiles": {
+      "1": 1.006131,
+      "5": 1.009494,
+      "25": 1.025986,
+      "50": 1.039162,
+      "75": 1.081535,
+      "95": 1.137614,
+      "99": 1.162401
+     },
+     "triangles_etirement_sup_2_pct": 0.0,
+     "utilisation_espace_uv_pct": 34.74,
+     "pixels_couverts_1024": 351456,
+     "pixels_en_chevauchement_pct_des_couverts": 0.0,
+     "ilots": 2,
+     "aretes_de_couture_uv": 32,
+     "plus_gros_ilots_(faces, aire_3d_m2)": [
+      [
+       288,
+       0.0008
+      ],
+      [
+       256,
+       0.0009
+      ]
+     ],
+     "petits_ilots_moins_de_10_faces": 0,
+     "densite_par_zone_relative_a_la_mediane": {
+      "tete (z > 87 % taille)": 1.315,
+      "bas des jambes (z < 12 %)": 1.346
+     },
+     "triangles_x_positif_vs_negatif": [
+      1088,
+      0
+     ]
+    }
+   }
+  }
+ }
+}

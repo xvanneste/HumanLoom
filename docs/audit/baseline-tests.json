@@ -1,0 +1,424 @@
+[
+ {
+  "test": "check_delivery18",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 4.8,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "check_groom_continuity25",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 40.6,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "check_nature21",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 5.7,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "check_review_scenes23",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 3.6,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_age_dimensions",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 24.5,
+  "args": [
+   "realistic.blend",
+   "age_dimensions"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_age_eye_fit",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 4.9,
+  "args": [
+   "realistic.blend",
+   "age_eye_fit"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_age_geometry",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 4.8,
+  "args": [
+   "realistic.blend",
+   "age_geometry.json"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_age_transitions",
+  "statut": "ÉCHEC",
+  "code": 1,
+  "secondes": 6.4,
+  "args": [
+   "realistic.blend",
+   "realistic.blend",
+   "age_transitions"
+  ],
+  "derniere_erreur": "Error: script failed, file: 'G:\\_dev\\BlenderDev\\HumanLoom\\tools\\audit\\shim.py', exiting."
+ },
+ {
+  "test": "validate_anatomy",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 39.4,
+  "args": [
+   "anatomy"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_atlas14_measurements",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 14.4,
+  "args": [
+   "07"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_atlas14_reopen",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 5.2,
+  "args": [
+   "07"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_body_mass_neutral",
+  "statut": "ÉCHEC",
+  "code": 1,
+  "secondes": 4.9,
+  "args": [
+   "realistic.blend",
+   "body_mass_neutral"
+  ],
+  "derniere_erreur": "Error: script failed, file: 'G:\\_dev\\BlenderDev\\HumanLoom\\tools\\audit\\shim.py', exiting."
+ },
+ {
+  "test": "validate_controls",
+  "statut": "ÉCHEC (fixture)",
+  "code": 1,
+  "secondes": 13.1,
+  "args": [
+   "controls"
+  ],
+  "derniere_erreur": "Error: script failed, file: 'G:\\_dev\\BlenderDev\\HumanLoom\\tools\\audit\\shim.py', exiting.",
+  "cause": "fixture manquante : adult-original.blend (non générée)"
+ },
+ {
+  "test": "validate_delivery12_reopen",
+  "statut": "OK",
+  "secondes": 3.2,
+  "args": [],
+  "note": "I-34 : test mis à jour le 2026-11-21, exécuté dans le clone de référence"
+ },
+ {
+  "test": "validate_delivery13_reopen",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 5.9,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_dense_hair20",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 22.5,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_extended_body",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 64.9,
+  "args": [
+   "extended_body"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_geometry_quality",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 5.2,
+  "args": [
+   "geometry_quality"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_global_physique",
+  "statut": "OK",
+  "secondes": 11.5,
+  "args": [
+   "global_physique"
+  ],
+  "note": "I-34 : test mis à jour le 2026-11-21, exécuté dans le clone de référence"
+ },
+ {
+  "test": "validate_groom25",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 109.5,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_groom28",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 13.5,
+  "args": [],
+  "derniere_erreur": "Error: Réduisez la quantité d’aperçu ou choisissez une densité inférieure."
+ },
+ {
+  "test": "validate_groom_collision29",
+  "statut": "IGNORÉ",
+  "raison": "travail en cours de l'utilisateur (non suivi)"
+ },
+ {
+  "test": "validate_groom_quality26",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 32.5,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_groom_reopen25",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 10.8,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_groom_workflow25",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 13.3,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_hair20",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 22.4,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_landmark_sets",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 5.9,
+  "args": [
+   "landmark_sets"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_mass_render_surface",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 48.5,
+  "args": [
+   "mass_render_surface"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_mass_transitions",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 18.6,
+  "args": [
+   "mass_transitions"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_measurements",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 6.7,
+  "args": [
+   "measurements"
+  ],
+  "derniere_erreur": "Error: Ce percentile n’est pas publié pour ce groupe."
+ },
+ {
+  "test": "validate_model",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 25.8,
+  "args": [
+   "model"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_modeling_batch",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 53.0,
+  "args": [
+   "realistic.blend",
+   "modeling_batch.json",
+   "0.0",
+   "2.0"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_modeling_workflow",
+  "statut": "OK",
+  "note": "réexécuté avec dossier de sortie créé"
+ },
+ {
+  "test": "validate_muscle_workflow",
+  "statut": "OK",
+  "secondes": 3.3,
+  "args": [
+   "realistic.blend",
+   "muscle_workflow"
+  ],
+  "note": "I-34 : test mis à jour le 2026-11-21, exécuté dans le clone de référence"
+ },
+ {
+  "test": "validate_musculature",
+  "statut": "ÉCHEC",
+  "code": 1,
+  "secondes": 3.2,
+  "args": [
+   "realistic.blend",
+   "realistic.blend",
+   "musculature"
+  ],
+  "derniere_erreur": "Error: script failed, file: 'G:\\_dev\\BlenderDev\\HumanLoom\\tools\\audit\\shim.py', exiting."
+ },
+ {
+  "test": "validate_nature21",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 2.6,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_physics_profile22",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 6.2,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_physics_rest21",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 9.3,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_presets",
+  "statut": "ÉCHEC (fixture)",
+  "code": 1,
+  "secondes": 3.2,
+  "args": [
+   "presets"
+  ],
+  "derniere_erreur": "Error: script failed, file: 'G:\\_dev\\BlenderDev\\HumanLoom\\tools\\audit\\shim.py', exiting.",
+  "cause": "fixture manquante : legacy-03.blend (non générée)"
+ },
+ {
+  "test": "validate_regional_compat18",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 5.0,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_regional_muscles18",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 99.7,
+  "args": [
+   "regional_muscles18.json",
+   "regional"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_regional_upgrade18",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 14.3,
+  "args": [],
+  "derniere_erreur": "Error: Not freed memory blocks: 1, total unfreed memory 0.000023 MB"
+ },
+ {
+  "test": "validate_relief_render_surface",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 88.4,
+  "args": [
+   "relief_render_surface"
+  ],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_skin_relief",
+  "statut": "OK",
+  "note": "réexécuté avec dossier de sortie créé"
+ },
+ {
+  "test": "validate_surface_atlas15",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 3.3,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_surface_atlas15_ages",
+  "statut": "OK",
+  "code": 0,
+  "secondes": 6.1,
+  "args": [],
+  "derniere_erreur": ""
+ },
+ {
+  "test": "validate_surface_fix",
+  "statut": "OBSOLÈTE",
+  "raison": "I-34 : dépend d'un ancien asset non reproductible (82 croisements) ; remplacé par validate_geometry_quality"
+ }
+]

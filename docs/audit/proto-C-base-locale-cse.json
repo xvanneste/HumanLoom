@@ -1,0 +1,23 @@
+{
+ "tolerance": 1e-05,
+ "weights_compile_s": 13.8,
+ "groups": 91,
+ "math_nodes_for_weights": 1518,
+ "basis_attributes": 249,
+ "blend_build_s": 409.3,
+ "total_nodes": 5543,
+ "max_error_mm_over_23_states": 0.0037,
+ "median_error_mm": 0.0006,
+ "ms_nodes_only": [
+  33.2,
+  35.3
+ ],
+ "ms_nodes_plus_subsurf1": [
+  63.2,
+  65.7
+ ],
+ "ms_reference_shape_keys_plus_subsurf1": [
+  42.7,
+  49.5
+ ]
+}

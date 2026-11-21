@@ -1,0 +1,27 @@
+{
+ "verts_touched_by_expression": 1227,
+ "additive_error_mm": 4.2e-05,
+ "expression_effect_mm": 6.0,
+ "identity_change_keeps_expression_mm": 7e-06,
+ "with_subsurf_vertices": 42342,
+ "gltf_apply_with_morph": {
+  "result": "FINISHED",
+  "MB": 0.68
+ },
+ "gltf_apply_modifiers": {
+  "result": "FINISHED",
+  "MB": 0.51
+ },
+ "fbx_no_modifiers": {
+  "result": "FINISHED",
+  "MB": 0.79
+ },
+ "fbx_modifiers": {
+  "result": "FINISHED",
+  "MB": 0.65
+ },
+ "fbx_modifiers_reimport": {
+  "verts": 10582,
+  "shape_keys": []
+ }
+}

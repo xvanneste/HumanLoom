@@ -1,0 +1,10 @@
+{
+ "tool_registered": true,
+ "keymap_items": [
+  "Ctrl+Shift+H add human",
+  "Ctrl+Shift+P pie"
+ ],
+ "guarded_poll_without_human": false,
+ "workspace_created": "Character",
+ "asset_browser_area": "ASSETS"
+}

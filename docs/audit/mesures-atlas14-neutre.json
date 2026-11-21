@@ -1,0 +1,330 @@
+{
+ "cles_seulement_actuel": [
+  "HM · Atlas14 · reference",
+  "HM · Atlas14 · reference · correction",
+  "HM · Atlas14 · gain",
+  "HM · Atlas14 · gain · correction",
+  "HM · Atlas14 · perte",
+  "HM · Atlas14 · perte · correction",
+  "HM · Atlas14 · muscle_cancel",
+  "HM · Atlas14 · muscle_cancel · correction",
+  "HM · Atlas14 · muscle_gain",
+  "HM · Atlas14 · muscle_gain · correction",
+  "HM · Atlas14 · muscle_perte",
+  "HM · Atlas14 · muscle_perte · correction",
+  "HM · Atlas14 · fat_muscle",
+  "HM · Atlas14 · fat_muscle · correction",
+  "HM · Atlas14 · thin_low",
+  "HM · Atlas14 · thin_low · correction",
+  "HM · Muscles18 · shoulders",
+  "HM · Muscles18 · shoulders · correction",
+  "HM · Muscles18 · chest",
+  "HM · Muscles18 · chest · correction",
+  "HM · Muscles18 · back",
+  "HM · Muscles18 · back · correction",
+  "HM · Muscles18 · arms",
+  "HM · Muscles18 · arms · correction",
+  "HM · Muscles18 · abdomen",
+  "HM · Muscles18 · abdomen · correction",
+  "HM · Muscles18 · glutes",
+  "HM · Muscles18 · glutes · correction",
+  "HM · Muscles18 · thighs",
+  "HM · Muscles18 · thighs · correction",
+  "HM · Muscles18 · calves",
+  "HM · Muscles18 · calves · correction"
+ ],
+ "cles_seulement_ancien": [],
+ "n_cles": [
+  462,
+  430
+ ],
+ "cas": [
+  {
+   "sex": 0.0,
+   "stage": 0.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.0,
+   "stage": 0.5,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.0,
+   "stage": 1.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.0,
+   "stage": 1.5,
+   "ecart_max_mm": 18.7152,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5
+   }
+  },
+  {
+   "sex": 0.0,
+   "stage": 2.0,
+   "ecart_max_mm": 37.4305,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 1.0
+   }
+  },
+  {
+   "sex": 0.0,
+   "stage": 2.5,
+   "ecart_max_mm": 18.7152,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5
+   }
+  },
+  {
+   "sex": 0.0,
+   "stage": 3.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.25,
+   "stage": 0.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.25,
+   "stage": 0.5,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.25,
+   "stage": 1.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.25,
+   "stage": 1.5,
+   "ecart_max_mm": 16.2078,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.125
+   }
+  },
+  {
+   "sex": 0.25,
+   "stage": 2.0,
+   "ecart_max_mm": 32.4155,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 1.0,
+    "HM · Atlas14 · reference · correction": 0.25
+   }
+  },
+  {
+   "sex": 0.25,
+   "stage": 2.5,
+   "ecart_max_mm": 16.2078,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.125
+   }
+  },
+  {
+   "sex": 0.25,
+   "stage": 3.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.5,
+   "stage": 0.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.5,
+   "stage": 0.5,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.5,
+   "stage": 1.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.5,
+   "stage": 1.5,
+   "ecart_max_mm": 13.7299,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.25
+   }
+  },
+  {
+   "sex": 0.5,
+   "stage": 2.0,
+   "ecart_max_mm": 27.4599,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 1.0,
+    "HM · Atlas14 · reference · correction": 0.5
+   }
+  },
+  {
+   "sex": 0.5,
+   "stage": 2.5,
+   "ecart_max_mm": 13.7299,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.25
+   }
+  },
+  {
+   "sex": 0.5,
+   "stage": 3.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.75,
+   "stage": 0.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.75,
+   "stage": 0.5,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.75,
+   "stage": 1.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 0.75,
+   "stage": 1.5,
+   "ecart_max_mm": 11.2612,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.375
+   }
+  },
+  {
+   "sex": 0.75,
+   "stage": 2.0,
+   "ecart_max_mm": 22.5223,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 1.0,
+    "HM · Atlas14 · reference · correction": 0.75
+   }
+  },
+  {
+   "sex": 0.75,
+   "stage": 2.5,
+   "ecart_max_mm": 11.2612,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.375
+   }
+  },
+  {
+   "sex": 0.75,
+   "stage": 3.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 1.0,
+   "stage": 0.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 1.0,
+   "stage": 0.5,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 1.0,
+   "stage": 1.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  },
+  {
+   "sex": 1.0,
+   "stage": 1.5,
+   "ecart_max_mm": 8.8735,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.5
+   }
+  },
+  {
+   "sex": 1.0,
+   "stage": 2.0,
+   "ecart_max_mm": 17.747,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 1.0,
+    "HM · Atlas14 · reference · correction": 1.0
+   }
+  },
+  {
+   "sex": 1.0,
+   "stage": 2.5,
+   "ecart_max_mm": 8.8735,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {
+    "HM · Atlas14 · reference": 0.5,
+    "HM · Atlas14 · reference · correction": 0.5
+   }
+  },
+  {
+   "sex": 1.0,
+   "stage": 3.0,
+   "ecart_max_mm": 0.0,
+   "ecart_sans_cles_nouvelles_mm": 0.0,
+   "cles_nouvelles_actives": {}
+  }
+ ]
+}

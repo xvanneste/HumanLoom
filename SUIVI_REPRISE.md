@@ -1,0 +1,369 @@
+# SUIVI_REPRISE — Document de reprise pour toute session IA
+
+Dernière mise à jour : 2026-11-21. **Lire ce document en premier.** Il résume l'état du projet, ce qui est décidé, ce qui a été testé (avec verdict et preuve), ce qui est écarté, ce qui reste à faire. Objectif : ne pas refaire un test déjà fait et ne pas tourner en rond.
+
+## 0. Mode d'emploi (règles pour la session qui reprend)
+
+1. Avant de tester quoi que ce soit : chercher l'ID du test dans §4. Si un verdict ✅/❌ existe, **ne pas le refaire** sauf si le code a changé ; citer l'ID.
+2. Après un nouveau test : ajouter une ligne (ID suivant, question, méthode, résultat chiffré, verdict, preuve) dans §4 et mettre à jour §6 et §9.
+3. Distinguer toujours **mesuré** (script exécuté) de **supposé**. Ne jamais marquer ✅ sans preuve.
+4. Ne jamais toucher à la session Blender de l'utilisateur ni aux autres versions de Blender installées (3.6, 4.4, 5.0, 5.3). Travailler dans un clone isolé et une instance séparée de Blender 5.2 (voir §8). Un `blender.exe` « Blender 5.3 » peut tourner sur la machine : c'est celui de l'utilisateur, ne pas l'arrêter.
+5. Ne rien committer, supprimer ni fusionner sans accord explicite de l'utilisateur. L'arbre de travail contient des fichiers non suivis voulus (rapports, `tools/audit/`).
+6. L'utilisateur parle français ; l'interface du plugin est en français ; les rapports sont en français.
+
+## 1. Contexte
+
+- **Projet :** HumanLoom, extension Blender **5.2** de génération d'humains (corps, visage, âge, morphologie, groom natif). Dépôt local `G:\_dev\BlenderDev\HumanLoom`, branche `codex/groom` @ `443d278` (3 commits d'avance sur `main` ; `codex/modelisation` = `main`). Version 0.15.2, schéma de formes 9. Identifiant d'extension `human_modeling` (conservé, voir D-02).
+- **Lecture rapide :** `CLAUDE.md` (commandes, architecture), `ETAT_DES_LIEUX.md` (état détaillé et exhaustif), `ISSUES.md` (défauts numérotés), `DESIGN_NATIF.md` (conception cible), `IDEES.md` (brainstorming et décisions), `TEST_REPORT.md`, `UI_REVIEW.md`, `REFERENCE_PLUGINS.md` (MPFB2, CharMorph), `docs/audit/` (mesures JSON, images), `tools/audit/` (scripts de mesure).
+- **Modifications du dépôt faites pendant l'audit (non committées) :** `tools/validate_model.py` et `tools/validate_controls.py` corrigés (stature = surface lissée ; attendu = formule générale des shape keys). Le plugin n'avait pas été modifié pendant l'audit ; les étapes 1 et 2 l'ont modifié (voir §4 P).
+
+## 2. Légende des verdicts
+
+✅ validé (mesuré, concluant) · ❌ défaut ou échec reproduit · ⚠ réserve / partiel · ⬜ non testé · ⛔ écarté (décision ou preuve)
+
+## 3. Décisions
+
+| ID | Décision | Statut | Origine |
+|---|---|---|---|
+| D-01 | « Human Native » = HumanLoom, un seul projet ; le prototype `human_native_5x.zip` est ignoré | ✅ acquise | utilisateur |
+| D-02 | Identifiant d'extension `human_modeling` conservé ; nouvel espace de noms de données côté objet ; anciens opérateurs gardés en alias | ✅ acquise (choix de l'IA, laissé à son appréciation) | utilisateur / IA |
+| D-03 | Intégration **native à Blender** maximale (panneaux dans l'éditeur de propriétés, menus, F9, Asset Browser, raccourcis, traduction, unités) | ✅ acquise | utilisateur |
+| D-04 | Contrôleur/moteurs abstraits, graphe de dépendances, gizmos, éditeur de nœuds propre : **reportés** | ✅ acquise | utilisateur |
+| D-05 | **Les nœuds ne sont pas optionnels** : des nœuds « Human » doivent pouvoir s’ajouter dans le graphe de Geometry Nodes de Blender et piloter le corps (morphologie, âge, taille) et les cheveux (longueur), avec animation. **Moteur retenu : la déformation du corps par un groupe de nœuds** (T-C6 exact à 0,00083 mm). Le coût (57,6 ms ; 459 ms avec Subsurf) venait des couches d’attributs propagées par la subdivision : **supprimées en fin de groupe (Remove Named Attribute, motif générique `d*`), la déformation à base réduite coûte 35,8 ms avec Subsurf contre 37,7 ms pour les shape keys** (T-C10). Reste à concevoir : poids → base locale par contrôle (T-C11) et ajout des nœuds au menu Ajouter du graphe | ✅ acquise (décision du 2026-11-21 : nœuds non optionnels) | utilisateur |
+| D-06 | La stature d'un humain est celle de la **surface lissée** (non la cage) | ✅ acquise | utilisateur |
+| D-07 | Source des paramètres côté objet : **façade D** = `PropertyGroup` sur l’objet (getter/setter) qui **lit et écrit les entrées du modificateur de nœuds « HL Human »** (cœur de Blender : valides sans l’extension, animables, visibles dans l’onglet Modificateurs). **Confirmée par l’utilisateur « si c’est la bonne solution »** ; jugée bonne avec précautions : identifiants de sockets stables (table nom → identifiant versionnée, jamais de renommage ni de réordonnancement sans migration), message d’inactivité si le modificateur manque, opérateur de reconstruction du modificateur, protection contre la suppression accidentelle. Variantes A, C et « façade sur le bloc de clés » : non retenues (la dernière sert de transition tant que le corps garde ses shape keys) | ✅ acquise | utilisateur / analyse |
+| D-09 | **Arbitrage vitesse accepté** : la déformation du corps par nœuds coûte environ +16 à +20 ms avec Subsurf niveau 1 (58,5 ms à la tolérance 1e-4 contre 42,6 ms pour les shape keys), car les nœuds se placent dans le graphe de Blender et se lient à d’autres objets | ✅ acquise (2026-11-21) | utilisateur |
+| D-10 | **L’écart de forme Atlas14 à la migration est un défaut à corriger** : une migration ne doit pas modifier la forme au neutre (I-30, I-37) | ✅ acquise | utilisateur |
+| D-11 | **Statut : prêt pour l’implémentation.** L’audit et les prototypes sont terminés ; la prochaine session implémente selon §7 et §9 | ✅ | — |
+| D-12 | **Public visé : le cinéma (film)**, avec des rendus **stylisés et réalistes** (les deux). Conséquences à prioriser : matériaux de peau/yeux/cheveux réalistes **et** options stylisées, animation faciale (expressions) et rig, cheveux dynamiques, exports de production (USD, Alembic, FBX), plusieurs personnages par scène, niveau de subdivision au rendu | ✅ acquise (2026-11-21) | utilisateur |
+| D-13 | **Seul Blender 5.2 est ciblé et testé.** Le système de modificateurs/cheveux dynamiques utilisé n'existe qu'à partir de la 5.2 ; la 5.3 de l'utilisateur sert en production : **ne lancer aucune autre version, ne rien y tester** (le manifeste borne à 5.2.0–5.3.0 : compatibilité 5.3 non vérifiée) | ✅ acquise | utilisateur |
+| D-14 | **Visage : option C + D validée** : l'identité du visage (21 contrôles) est **dans le groupe de nœuds** (aucune shape key d'identité) ; les **expressions** de film sont des shape keys **séparées** (visèmes, FACS ou ARKit) ou un rig facial ; un opérateur **« Convertir en shape keys » (bake à la demande)** sert à l'export et à l'édition ; l'artiste peut ajouter ses propres shape keys **sous** le modificateur (T-X1). Test d'additivité fait (4 bis K) | ✅ acquise (2026-11-21) | utilisateur |
+| D-15 | **Chantiers non commencés (à planifier, ne pas supposer faits) : rig, texturing (matériaux de peau/yeux/cheveux) et mapping (UV, dépliage, textures)** ; état actuel : 1 UV (`UVMap`), 0 matériau sur le corps et les yeux, pas de rig | ✅ constat de l'utilisateur | utilisateur |
+| D-16 | **Méthode pour les nouveaux contrôles : validée.** Peu de contrôles nommés + un **mode avancé de transformation de région** (déplacer / mettre à l'échelle / gonfler un masque) ; chaque contrôle = une couche de base locale de plus dans « HL Human » ; les noms s'inspirent de la liste de MPFB2 (216 illustrations nommées, liste non exhaustive), **aucune donnée n'est reprise**. Catalogue : `AJOUT_CONTROLES.md` (dents et anatomie génitale ajoutées à la demande de l'utilisateur, avec garde-fous : option désactivée par défaut, indisponible aux âges enfant/adolescent) | ✅ acquise (2026-11-21) | utilisateur |
+| D-17 | **Branche de travail : `codex/natif`** (créée à partir de `codex/groom` ; aucun commit sans accord explicite) | ✅ acquise | utilisateur |
+| D-18 | **Amplitude visible retenue : ×6 par rapport à l'amplitude actuelle** pour les contrôles timides (groupes A et B de `AMPLITUDES_CONTROLES.md`), validée à l'œil par l'utilisateur sur les planches (×3 jugé trop discret). **Plafonné par contrôle** quand ×6 retourne des faces (`ears_size`, `ears_angle`, `eye_spacing`, `facial_asymmetry`, `nose_length`, `nose_width`, `head_height` : ×2 à ×3 tant que de nouvelles cibles ne sont pas sculptées). Application : facteur d'amplitude dans le groupe « HL Human » à la migration schéma 10 (T-A3 d'abord) ; aucune modification avant | ✅ acquise (2026-11-21) | utilisateur |
+| D-19 | **La forme actuelle (asset `realistic.blend` du dépôt, avec les clés Atlas14) est la référence du produit** : l'utilisateur la juge meilleure qu'extension-13 (planche `docs/audit/rendu-comparatif-actuel-vs-ancien.png`, carte `capture-ecart-atlas14.png`). Elle doit être conservée telle quelle (écart 17,8 à 37,4 mm au stade 2 vs extension-13), reprise dans les nœuds au schéma 10, et non supprimée. **Précise D-10** : ce qui reste un défaut à corriger, c'est qu'un *ancien fichier* change de forme à la mise à jour sans que l'utilisateur l'ait choisi ; la forme d'un *nouveau* personnage est, elle, voulue. | ✅ acquise (2026-11-21) | utilisateur |
+| D-20 | **Mise à jour d'un ancien fichier : il garde sa forme d'origine par défaut** (clés Atlas14 à 0 pour ce personnage), avec un **bouton explicite « adopter la forme actuelle »**. Les nouveaux personnages utilisent la forme actuelle (D-19). Re-référencement des tests : `validate_age_transitions`, `validate_body_mass_neutral`, `validate_musculature` comparent à une référence figée de la forme actuelle ; `validate_controls` et `validate_presets` deviennent les **tests d'acceptation de la migration** (forme au neutre inchangée), en échec attendu jusqu'au schéma 10. | ✅ acquise (2026-11-21) | utilisateur |
+| D-08 | Calibration des amplitudes, corpulence unifiée, visage, matériaux, rig, repères automatiques | ⚠ à prioriser | IDEES.md |
+
+## 4. Registre des tests techniques
+
+Environnement de tous les tests : Blender 5.2.0 LTS, Windows 11, clone isolé de `codex/groom` @ `443d278` (sauf mention), arrière-plan ou instance de test séparée. Preuves : `docs/audit/*`, `tools/audit/*`.
+
+### A. Installation, cycle de vie, robustesse
+
+| ID | Question | Résultat | Verdict | Preuve |
+|---|---|---|---|---|
+| T-A1 | `extension validate` et `extension build` | OK ; archive 23,9 Mo | ✅ | TEST_REPORT |
+| T-A2 | Installation dans un dossier de configuration isolé (`BLENDER_USER_RESOURCES`), activation, création d'un humain et d'un groom depuis le paquet installé | OK | ✅ | TEST_REPORT |
+| T-A3 | `unregister()` puis `register()` ×3 | 13 classes, 0 résidu, aucune exception | ✅ | TEST_REPORT |
+| T-A4 | Enregistrer/rouvrir un corps | schéma 9 conservé, 459/459 drivers valides | ✅ | TEST_REPORT |
+| T-A5 | **Ouvrir un `.blend` sans l'extension chargée** (corps + « Pilosité adulte ») | 459/459 drivers valides ; le corps répond aux clés (14 mm) ; 9 zones de cheveux évaluent (ex. 29 337 mèches) ; groupes de nœuds locaux (non liés à une bibliothèque) ; yeux suivent | ✅ | `tools/audit/proto5_*.py` |
+| T-A6 | Undo/redo dans l'interface réelle | ✅ slider « Carrure », silhouette « Musclé », « Régler la taille », groom « Court » ; ✅ slider façade (T-P2) | ✅ (4 + 1 actions) ; ⬜ chaînes multiples | ETAT_DES_LIEUX §7 bis |
+| T-A7 | Duplication native (Shift+D) du corps **seul** | corps indépendant (maillage et clés copiés) mais **sans** yeux, cheveux ni repères | ⚠ | ISSUES I-24 |
+| T-A8 | Duplication native avec **toute la hiérarchie sélectionnée** | tout est copié et **re-parenté** ; cheveux suivent le nouveau corps (écart 0,016 mm contre 2,09 mm à l'original) ; yeux suivent ; repère re-parenté ; données de courbes copiées ; ❌ **matériau de cheveux partagé** avec l'original | ✅ / ⚠ matériau | `docs/audit/proto-P4-duplication.json` |
+| T-A9 | Plusieurs humains : coûts | 12 humains dans la scène, modifier un seul : 14,0 ms (les autres n'ajoutent rien) | ✅ | `proto-P1-objet-drivers.json` |
+
+### B. Fonctionnel (voir `ETAT_DES_LIEUX.md` pour le détail)
+
+| ID | Résultat | Verdict |
+|---|---|---|
+| T-B1 | 48 sliders ±1 : valeurs finies, retour à 0, 0 croisement (maillage lissé) ; amplitudes faibles (10 sliders < 3 mm ; visage ≤ 8,9 mm) ; `skin_relief` inactif avant 30 ans (0,38 mm à stade 2,5 ; 0,76 mm à 75 ans) | ⚠ (ISSUES I-13) |
+| T-B2 | Morphologie (sexe), âge 5/15/30/75, silhouettes (8), variation (6 cas + 30 graines), préréglages JSON (aller-retour 0,0 mm), mesures/références (42 combinaisons), taille, repères (10), ajustement de dimensions (4/7 concluants avec mes repères) | ✅ / ⚠ |
+| T-B3 | Corpulence : trois échelles incohérentes (`whole_body`, `adiposity`, `body_mass`) et dépendance à l'âge incohérente | ❌ (I-21) |
+| T-B4 | Maillage : 68 croisements sur la **cage seule**, 0 avec Subsurf+Relief (neutre et chacun des 96 réglages ±1, 30 graines aléatoires, tous à −1) ; 168 avec tous les contrôles à +1 | ⚠ (I-14) |
+| T-B5 | Groom : 11 zones, paramètres, qualité, densités, export/import, XPBD ; ❌ bornes float32 (variation 0,8 ; rayon), ❌ premier objet dans la mauvaise collection, ⚠ XPBD lent | ❌/⚠ (I-19, I-28, I-31) |
+| T-B6 | Corps et yeux **sans matériau** ; pas de dents ni langue | ❌ (I-20) |
+| T-B7 | Perf : 11 ms (cage) à 14,7 ms/42 ms (avec modificateurs) par changement de slider ; la valeur varie avec la charge de la machine (14 ms mesurés quand d'autres Blender tournent) | ⚠ (I-17) |
+| T-B8 | Animation : âge et corpulence animables (images clés), densité de cheveux animable, **longueur de cheveux non animable** (pas d'entrée native) | ✅ / ❌ longueur |
+
+### C. Scripts historiques de `tools/` (copie de `validation/`, arguments corrects)
+
+27 réussis, 8 échecs par assertion : voir `TEST_REPORT.md`. À retenir : écart de forme vs 0.13 au neutre aux âges intermédiaires (17,7 mm à sexe 0, stade 1,5 : **I-30, à trancher**), tests périmés (47 contrôles, corpulence/whole_body, seuil du cou, ancien asset), travail en cours `collision29` (7,3 % d'allongement, 1 guide pénètre 1,9 mm). **Ne pas relancer sans raison.**
+
+### D. Prototypes de la conception native (P1 à P7)
+
+| ID | Question | Méthode | Résultat | Verdict |
+|---|---|---|---|---|
+| **T-P1a** | Réécrire les 459 drivers pour qu'ils lisent une `PropertyGroup` sur l'objet par **chemin RNA** (`hlproto.x`) | 1 092 variables réécrites ; 10 états aléatoires | forme **identique** au système actuel (0,0 mm) ; 0 driver invalide ; temps identique (14,7 ms) ; duplication : la copie pilote la copie ✅ ; ❌ **rouvert sans l'extension : 458 drivers invalides, le corps ne répond plus** | ⛔ **variante A écartée** (casse la dégradation gracieuse) |
+| T-P1a' | Même chose avec un chemin d'ID-property `["hlproto"]["x"]` | 458 drivers invalides, écart 602 mm : les propriétés RNA ne sont pas résolubles par ce chemin | ❌ | ⛔ écarté |
+| **T-P1c** | Variante C : propriétés **personnalisées sur l'objet** (`obj["hl_x"]`), drivers vers l'objet | écart 0,0 mm ; 0 invalide ; 14,2 ms ; duplication : la copie pilote la copie ; images clés ✅ ; **rouvert sans l'extension : 0 invalide, répond** | ✅ | `proto-P1b-variantes-C-D.json` |
+| **T-P1d** | Variante D : `PropertyGroup` **façade** (getter/setter lisant et écrivant les propriétés du bloc de clés), aucun driver réécrit | écart 0,0 mm ; 0 invalide ; 14,1 ms ; duplication ✅ ; images clés via la façade ✅ ; rouvert sans extension : 0 invalide, répond | ✅ (réserve : les courbes d'animation portant sur le chemin façade deviennent invalides sans l'extension — non testé) | idem |
+| **T-P2** | Panneau « Human » dans Propriétés > Objet (`bl_space_type='PROPERTIES'`, `bl_context='object'`), même fonction de dessin que la barre latérale, `poll` | affiché sous « Visibility » ; mise en page `use_property_split` ; infobulle de la propriété ✅ ; la barre latérale existante et le nouveau panneau lisent la même valeur (1,000 / 1,00) ; **un glisser = une étape d'annulation** : Ctrl+Z → 0 ; Ctrl+Maj+Z → 1 | ✅ | `proto-P2-panneau-proprietes-objet.png`, `proto-P2-ui.json` |
+| T-P2b | Sous-menu « Human » dans Ajouter, raccourci `Shift+Ctrl+H`, opérateur avec options F9, `poll_message_set` | enregistrés sans erreur ; `Operator.poll_message_set` existe ; non exercés visuellement | ⚠ ⬜ | `tools/audit/proto2_ui.py` |
+| T-P2c | `Region.active_panel_category` | lecture seule si modifiée dans le même cycle qu'un `temp_override` ; fonctionne dans un cycle ultérieur | ⚠ note | — |
+| **T-P3** | Longueur de cheveux animable via un nœud **Trim Curves** (modificateur ajouté à la pile du groom) | croissance 0 → 1 : longueur moyenne 0,0 → 0,0075 → 0,0241 → 0,0407 → 0,0482 m ; mèches évaluées constantes (29 337) ; images clés ✅ ; ⚠ réglage statique par Python nécessite `update_tag()` ; ⚠ le module est tombé en index 3 (après l'interpolation) ; ❌ piège : une boucle `while … modifier_move_up` ne termine pas en arrière-plan | ✅ (principe) ; ordre dans la pile ⬜ | `proto-P3-rognage-cheveux.json` |
+| **T-P4** | Duplication du personnage complet | voir T-A8 | ✅ / ⚠ matériau | `proto-P4-duplication.json` |
+| **T-P5** | Traduction (`bpy.app.translations`) | « Nose Width » → « Largeur du nez » ✅ ; ❌ **« Height » → « Hauteur »** : le catalogue intégré de Blender l'emporte sur notre entrée (« Taille ») | ✅ ; ⚠ utiliser des chaînes uniques ou un contexte propre pour les termes métier | `proto-P1-objet-drivers.json` |
+| **T-P6** | Images clés sur une propriété d'objet ; lecture des actions 5.x | ✅ keyframes `hlproto.shoulders` et `hlproto.age` (hauteur 1,10 → 1,69 → 1,67 m) ; API : `Action` **sans `fcurves`** ; passer par `act.slots`, `act.layers[0].strips[0].channelbag(slot).fcurves` ✅ | ✅ | idem |
+| **T-P7** | Erreur d'une base réduite de déformations (40 états aléatoires, déplacement max 547 mm) | modèle linéaire en valeurs de clés : erreur 0,0009 mm. Erreur max de la base à R = 50 : 11,4 mm ; 70 : 3,2 ; 100 : 1,9 ; 128 : 0,42 ; **150 : 0,047 mm** ; 200 : 0,0009 | ✅ (R ≈ 150 suffit) | `proto-P7-base-reduite.json` |
+| T-P7b | Taille de fichier | corps avec 461 shape keys : 79,3 Mo (non compressé) ; +150 attributs : 98,5 Mo (+19,2) ; compressé 41,9 Mo. **Remplacer** les clés par la base donnerait ≈ 40 Mo (estimation 79,3 − 58,5 + 19,2, non mesurée par suppression des clés) | ⚠ estimation | idem |
+
+### E. Option C : déformation du corps par Geometry Nodes (D-05)
+
+| ID | Question | Résultat | Verdict |
+|---|---|---|---|
+| T-C1 | Rang des déformations (SVD, 457 deltas non nuls) | 69 à 1e-3, 128 à 1e-4, 150 à 1e-5 | ✅ |
+| T-C2 | Mélange de R déformations (Nommé attribut → Échelle → Ajouter → Définir la position) | R = 50 : 3,0 ms ; 150 : 7,8 ms ; 300 : 19,8 ms ; 457 : 37,5 ms ; mémoire 6,3 / 19 / 38 / 58 Mo ; erreur 0,0 mm vs numpy | ✅ (somme linéaire seule) |
+| T-C3 | Structure des poids actuels (analyse des 459 drivers) | 119 expressions distinctes ; formes : `amount`, `amount*morph`, `(1-morph)*amount`, `(amount)*max(0,1-abs(stage-s))`, variantes avec écrêtage `min(max(overall+amount,-1),1)`, produits avec `1-max(0,1-abs(adult_stage-2))` ; 1 à 6 variables par driver ; 49 propriétés cibles, toutes sur le bloc de clés (âge cité 378 fois, sexe 271) → tout est exprimable avec des nœuds Math (max, min, abs, produits) | ✅ (faisabilité des poids en nœuds : jugement fondé sur les expressions, **non prototypé**) |
+| T-C4 | Structure des clés | 461 clés : `Age` 308 (3 stades × contrôles + corrections), `HM` 135, `Surface` 11 ; 218 « correction » ; toutes relatives à `Basis` | ✅ |
+| T-C5 | Cheveux sur un corps déformé par nœuds | voir 4 bis G | ✅ |
+| T-C6 | Poids calculés dans les nœuds | voir 4 bis G (0,00083 mm) | ✅ |
+| T-C7 | Temps d’un corps entièrement en nœuds | voir 4 bis G (57,6 ms ; 459 ms avec Subsurf) | ❌ non retenu |
+| T-C8 | Yeux dans un modèle C | voir 4 bis G (OK dans la façade T-CF) | ✅ via T-CF |
+
+### 4 bis. Passe finale (2026-11-21) : option C de bout en bout, interface native, API, données
+
+Environnement : Blender 5.2.0 LTS, clone isolé, instances séparées. Preuves : `docs/audit/proto-*.json`, `tools/audit/`.
+
+#### G. Option C : déformation par nœuds contre façade de nœuds
+
+| ID | Question | Résultat | Verdict |
+|---|---|---|---|
+| T-C5 | Cheveux sur un corps déformé **par un modificateur** de nœuds | construction OK ; pile du corps `[HL Human, Capture Rest Geometry]` ; écart racine–surface 0,031 mm au neutre, 0,018 mm après morphologie extrême et âge 0 | ✅ |
+| T-C6 | Poids compilés **dans les nœuds** à partir des 459 drivers (parseur d'expressions → nœuds Math) | 4 681 nœuds Math, 6 033 nœuds au total (450 clés), compilation 293 s + 173 s par l'API Python ; erreur max **0,00083 mm** sur 25 états (aléatoires, coins âge × sexe, tout à −1) | ✅ |
+| T-C7 | Temps d'un corps entièrement en nœuds | **57,6 ms** (contre 11,3 ms pour les shape keys) ; avec Subsurf niveau 1 : **458,9 ms** (la sortie du groupe de nœuds fait perdre la voie rapide de la subdivision) | ❌ **déformation complète par nœuds non retenue comme moteur interactif** |
+| T-C8 | Yeux d'un corps en nœuds (drivers vers les entrées du modificateur) | comparaison ratée dans ce montage (524 mm, cause non diagnostiquée : montage d'essai) ; **réussie dans la façade (T-CF)** | ⚠ remplacé par T-CF |
+| T-C9 | `measurements.measure` sur un corps en nœuds | même stature (1,7062 m) | ✅ |
+| **T-CF** | **Façade** : un groupe de nœuds « HL Human » (sans déformer) porte les entrées (sexe, âge, 48 contrôles) ; **les drivers existants lisent les entrées du modificateur** ; les shape keys déforment | 1 363 variables du corps et 278 des yeux réécrites, 0 driver invalide ; corps : erreur max **0,00012 mm** ; yeux : **0,0 mm** (20 états) ; temps identique à la référence (15,8 contre 15,6 ms sur la cage ; 47,1 contre 47,3 ms avec Subsurf) ; images clés sur les entrées du modificateur ✅ (hauteur 1,131 → 1,677 m, profondeur 0,219 → 0,458 m) ; cheveux : racines à 0,018 mm ; duplication de la hiérarchie : la copie pilote la copie (14 mm), l'original reste à 0 ; groupe de nœuds partagé entre copies ; **rouvert sans l'extension : 0 driver invalide, répond à l'entrée (11,2 mm), 29 346 mèches** | ✅ **solution retenue pour D-05** |
+
+#### G bis. Coût de la déformation par nœuds : cause et correctif (2026-11-21)
+
+| ID | Question | Résultat | Verdict |
+|---|---|---|---|
+| T-C10 | Pourquoi 459 ms avec Subsurf ? Et le correctif | la subdivision propage les 450 couches d’attributs de sommets (42 342 sommets × 450 vecteurs). Avec un nœud **Remove Named Attribute** (entrée « Pattern Mode » à `Wildcard`, nom `d*`) en fin de groupe : **base de 150 déformations : nœuds seuls 7,5 ms, avec Subsurf niveau 1 35,8 ms** (shape keys + Subsurf : 37,7 ms) ; **457 déformations : 37,4 ms seuls, 70,7 ms avec Subsurf** (sans suppression : 109 ms pour 150 et 398 ms pour 457) | ✅ **le coût n’est plus un obstacle** (mesure CPU en arrière-plan ; rendu du viewport non mesuré) |
+| T-C11 | Une base locale par contrôle réduit-elle le nombre d’attributs ? | rang par groupe de clés (contrôle × sexe × âge) : 2 à 4 vecteurs par contrôle ; somme sur les 56 groupes : **194** (1e-3), **213** (1e-4), **255** (1e-5) ; poids → base par petites matrices locales (≈ 8 poids → 2 à 4) | ✅ (faisabilité ; **non prototypé** avec les nœuds de matrice locale) |
+| T-C12 | Ajouter des groupes « HumanLoom » au menu Ajouter du graphe de Geometry Nodes (en plus d’un modificateur) | non testé (menus du graphe : `NODE_MT_add`, ajout de nœud de groupe `GeometryNodeGroup` avec `node_tree`, assets de groupes de nœuds) | ⬜ à prototyper |
+| T-C13 | **Bout en bout, base locale par contrôle** : poids compilés depuis les 459 drivers, base par groupe de clés (SVD, tolérance 1e-5), suppression des attributs avant la subdivision | 91 groupes ; **249 attributs de base** ; erreur max **0,0037 mm** (médiane 0,0006 mm) sur 23 états (aléatoires + coins âge × sexe) ; **sans partage de sous-expressions** : 4 681 nœuds Math, 8 706 nœuds, 38,2 ms seuls / **68,3 ms avec Subsurf 1** (référence shape keys 42,6 ms) ; **avec partage (CSE)** : 1 518 nœuds Math, 5 543 nœuds, **33,2 ms seuls / 63,2 ms avec Subsurf 1** (référence 42,7 ms), même précision | ✅ **faisable et précis ; ≈ 1,5× plus lent que les shape keys (63 contre 43 ms avec Subsurf)** |
+| T-C14 | Coûts de fabrication | compilation des poids 13,8 s avec partage (289 s sans) ; construction du graphe par l’API Python 409 s avec partage (1 280 s sans) : **à faire une fois hors ligne** et livrer le groupe dans un `.blend` de ressources, pas à la création d'un humain | ⚠ |
+| T-C15 | Réduire le temps par une base moins précise (avec partage des sous-expressions, Subsurf 1) | tolérance 1e-5 : 249 attributs, 33,2 ms seuls / 63,2 ms avec Subsurf, erreur max 0,0037 mm ; **1e-4 : 207 attributs, 28,5 / 58,5 ms, erreur max 0,0169 mm** (médiane 0,0019) ; 1e-3 : 189 attributs, 30,6 / 62,8 ms, erreur max 0,105 mm. Référence shape keys : 42,6 à 46,1 ms. **Gain faible** : le coût restant vient surtout des ≈ 5 000 nœuds et de la subdivision (≈ 30 ms), pas du nombre de couches ; **1e-4 est le meilleur compromis (+16 ms, erreur invisible)** ; autres pistes non mesurées : subdivision 0 dans le viewport (≈ 33 ms), moins de nœuds de matrices locales | ✅ mesuré (gain limité) |
+
+
+#### H. Interface native (instance Blender avec interface ; prototype `tools/audit/proto2b_ui.py`)
+
+| ID | Test | Résultat | Verdict |
+|---|---|---|---|
+| T-U1 | Ajouter > sous-menu « Human » (Adulte, Enfant) | entrée en bas du menu Ajouter ; crée un humain | ✅ |
+| T-U2 | « Ajuster la dernière opération » (F9) pour la création | panneau « Human » (Sex, Age stage, Shoulders) ; glisser Age 2,00 → 0,41 ré-exécute : stature 1,69 → 1,34 m | ✅ |
+| T-U3 | Raccourci `Ctrl+Maj+H` (création) et pie menu `Ctrl+Maj+P` (Enfant, Ado, Adulte, Senior) | les deux fonctionnent ; choisir « Senior » crée un humain d'âge 3,00 | ✅ |
+| T-U4 | `poll_message_set` | l'infobulle d'une entrée grisée du menu Objet affiche « Disabled: Select a HumanLoom body first. » | ✅ |
+| T-U5 | Atelier « Character » avec Asset Browser (script) | atelier créé et zone Asset Browser affichée ; ⚠ le doublon de l'atelier crée un onglet « Layout.001 » en plus | ✅ ⚠ |
+| T-U6 | Outil de barre d'outils (`WorkSpaceTool`) et gizmo | l'outil s'enregistre, apparaît et s'active ; le gizmo (flèche liée au curseur « épaules ») est enregistré mais **non visible à l'écran de façon concluante** (aucun glisser testé) | ⚠ |
+| T-U7 | Annulation en chaîne dans Propriétés > Objet | 3 sliders mis à 1,00 ; Ctrl+Z ×3 → 0,00 un par un ; Ctrl+Maj+Z ×3 → 1,00 | ✅ |
+| T-U8 | Repères à la souris en mode Édition | passage en Édition par le menu de mode, sélection d'un sommet, « Placer le repère bassin » puis « Placer sur le sommet sélectionné » : repère visible sur le sommet ; les touches (Tab) sont peu fiables avec l'outil de pilotage | ✅ |
+| T-U9 | Thème clair et échelle d'interface 1,5 | lisibles ; à 1,5 des libellés sont tronqués ; les préférences de l'utilisateur n'ont pas été modifiées (fichier de préférences inchangé) | ✅ |
+| T-U10 | Infobulles des contrôles existants | présentes (ex. « Relief de peau âgée : −1 désactive, 0 référence, +1 accentue ») | ✅ |
+
+#### I. API, données, fichiers
+
+| ID | Test | Résultat | Verdict |
+|---|---|---|---|
+| T-A10 | Duplication liée (Alt+D) | partage maillage et clés ; modifier l'original déplace la copie (12,6 mm) ; enfants non copiés | ⚠ comportement natif (I-39) |
+| T-A11 | Asset : collection (corps, yeux, cheveux) marquée `asset_mark`, enregistrée ; **ajout depuis le fichier d'assets**, **lien** et **override de bibliothèque** | ajout : 5 objets, 0 driver invalide, répond (11,2 mm), cheveux évaluent ; lien OK ; override créé (`override_hierarchy_create`), corps en override, **le bloc de clés n'est pas marqué override** mais l'édition d'une propriété fonctionne en session (12,6 mm) ; **persistance des modifications d'override non testée** | ✅ / ⚠ |
+| T-A12 | Exports | glTF avec morph targets : 87,1 Mo, 13 s (461 cibles) ; glTF sans morph : 0,5 Mo ; FBX sans modificateurs : 21,9 Mo, 1,5 s, **462 shape keys conservées à la réimportation** ; FBX avec modificateurs appliqués : 2,4 Mo (sans shape keys) ; noms de paramètres FBX 5.2 : `use_mesh_modifiers`, `object_types` | ✅ |
+| T-A13 | **Migration d'anciens fichiers** (sessions 08 à 13, schémas 3 à 8) par `add_proportions` | tous passent en schéma 9, 462 clés, 0 driver invalide, yeux OK, un contrôle déplace le corps (11,2 mm) ; durée 7 à 31 s ; session 14 : déjà à jour ; ⚠ **forme au neutre modifiée par conception** (clé `HM · Atlas14 · reference`) : 35,4 mm (féminin), 17,5 mm (masculin) | ✅ / ⚠ (I-37) |
+| T-A14 | Reste de `validate_controls` (migration, ancien asset 0.13) | échoue à la ligne 123 (identité au neutre < 1e-6 attendue) pour la raison de T-A13 | ❌ test à mettre à jour (I-37) |
+| T-A15 | Masque de densité peint puis reconstruction | les racines restent du côté ouvert (839) et aucune côté masqué (0) ; un masque entièrement vide est refusé (« Aucune surface valide pour cette zone sur cette base. ») et les guides précédents sont conservés ; ⚠ masque à 1,0 partout : 986 090 courbes évaluées (I-35) | ✅ / ⚠ |
+| T-A16 | XPBD à vide (aucune autre charge) | **3,68 s par image** (850 guides, 8 sous-pas, 1 024 itérations, collisions), 12 images | ❌ (I-40) |
+| T-A17 | Ordre des modificateurs et rognage avant interpolation | `modifiers.move(index, destination)` OK avec l'index explicite ; `modifiers.new` sur la zone Cheveux s'insère en index 3 ; rognage en index 0 : longueur moyenne 0,048 → 0,0239 → 0,0096 → 0 m pour 1,0 / 0,5 / 0,2 / 0,0 ; nombre de mèches constant (29 337) | ✅ (I-36) |
+| T-A18 | Pile de modificateurs des zones | Cheveux : [densité, profil, matériau, suivi] ; autres zones : [densité, suivi, profil, matériau] | ⚠ (I-36) |
+
+#### K. Expressions en shape keys avec un corps en nœuds (T-X, 2026-11-21)
+
+| ID | Test | Résultat | Verdict |
+|---|---|---|---|
+| T-X1 | Une expression (shape key « Smile » sur le maillage de base, 1 227 sommets, 6 mm) combinée avec un groupe de nœuds d'identité (4 déformations) | **additive** : erreur 0,00004 mm ; changer l'identité après coup garde l'expression (écart 0,000007 mm) ; fonctionne avec Subsurf niveau 1 (42 342 sommets) | ✅ |
+| T-X2 | Export de ce corps : glTF avec morph targets (modificateurs non appliqués) / glTF modificateurs appliqués (sans morph) / FBX sans modificateurs / FBX modificateurs appliqués | 0,68 / 0,51 / 0,79 / 0,65 Mo ; **l'identité (nœuds) n'est incluse que si l'on applique les modificateurs** ; **FBX avec modificateurs appliqués : l'expression (shape key) est perdue à la réimportation** (0 shape key) | ⚠ **il faut un export dédié** (voir ci-dessous) |
+| T-X3 | (Erreur de ma première mesure) tailles d'export de 87 Mo | venaient d'un objet resté sélectionné (le corps d'origine à 461 clés) ; chiffres corrigés ci-dessus | ✅ corrigé |
+
+**Conséquence pour D (bake)** : prévoir un « Bake pour export » qui **applique l'identité dans le maillage de base** (positions évaluées du groupe de nœuds) **en conservant les shape keys d'expression** ; l'additivité mesurée (T-X1) garantit que les deltas d'expression restent valides. À prototyper (⬜).
+
+#### L. Audit UV et derniers prototypes (2026-11-21, Blender 5.2 isolé, lecture seule)
+
+| ID | Test | Résultat | Verdict |
+|---|---|---|---|
+| T-U1 | Audit du dépliage de `extension/data/realistic.blend` (`tools/audit/uv_audit.py`, `uv_tiles.py` ; `docs/audit/mesures-uv.json`, `mesures-uv-tuiles.json`) | **Une seule UV, 40 îlots, disposition de type UDIM** : bornes U 0,04–8,95 et V 0,03–3,97, 84 % des boucles hors de 0–1, **24 tuiles occupées** (u1–u9 × v1–v4) ; aire UV totale 9,49 pour 1,556 m² de surface ; **densité de texels très uniforme** (médiane 1,0 ; 5ᵉ–95ᵉ centiles 0,85–1,23 ; tête 1,02 et bas des jambes 0,99 relativement à la médiane) ≈ **10 100 texels/m avec des tuiles 4096** (≈ 0,1 mm par texel) ; **aucun chevauchement** (raster 1024, 0 %) ; **côtés gauche/droit dans des tuiles séparées** (v1 et v3 identiques), donc **couture au milieu du visage** ; 50 % des triangles à aire UV négative (îlots retournés en miroir, 10 579 sur 21 160) ; 4,2 % des triangles étirés d'un rapport > 2 (99ᵉ centile 3,7) ; yeux : 2 îlots, 0–1, sans retournement, 35 % d'occupation | ✅ mesuré |
+| T-U1 (lecture) | Conséquences | une texture à une seule tuile ne convient pas : **tout matériau doit gérer l'UDIM** (24 tuiles à 4K = très lourd ; prévoir 2K/1K, ou densité réglable) ; densité uniforme = **pas de sur-résolution du visage** (plans rapprochés de film à traiter) ; miroir : tangentes des normales à vérifier à l'export ; l'état visuel des îlots n'a **pas** été regardé (aucune image) | ⚠ à décider |
+| T-X4 | « Bake pour export » : identité en nœuds appliquée dans la base, expression conservée (`tools/audit/bake_export.py` ; `docs/audit/proto-bake-export.json`) | écart rendu avant/après bake **0,000015 mm** ; modificateur et attributs temporaires supprimés ; **FBX et glTF conservent la shape key d'expression** (Basis + Smile) et son delta (6 mm) après réimportation ; glTF 42 340 sommets (coupures de normales/UV) | ✅ (l'identité dans la base après import n'est pas comparée sommet à sommet) |
+| T-C12 (partiel) | Ajout d'un groupe HumanLoom au menu Ajouter du graphe Geometry Nodes (`tools/audit/tc12_menu.py` ; `docs/audit/proto-tc12-menu.json`) | les menus `NODE_MT_geometry_node_add_all`, `NODE_MT_add`, `NODE_MT_group_add` existent en 5.2 ; **`append` d'une fonction de dessin réussit** ; un groupe peut être marqué **asset** (`asset_mark`, catalogue disponible) | 🟡 enregistrement seulement ; **rendu réel du menu non vu** (pas d'interface) |
+
+#### M. Amplitudes des contrôles (2026-11-21, Blender 5.2 isolé, lecture seule)
+
+| ID | Test | Résultat | Verdict |
+|---|---|---|---|
+| T-A1 | Géométrie à ±1, ±2, ±3 pour 23 contrôles (`tools/audit/amplitude_test.py` ; `docs/audit/mesures-amplitudes.json`) | linéaire (×2 = 2,00 ; ×3 = 3,00) pour 21 contrôles ; aucune face dégénérée ni arête étirée jusqu'à ×3 ; **anomalie** : `eye_spacing` à −3 retourne 6 faces ; **`fat_face` et `muscles_abdomen` ne passent pas à l'échelle** (bornes ±1 dans leurs expressions) | ✅ mesuré (un seul état, cage seule) |
+| T-A2 | Rendus de face/¾ neutre, ×1, ×3 pour 6 contrôles (`docs/audit/planche-amplitudes-*.png`) | ×1 à peine perceptible ; ×3 visible et naturel ; `eyelid_aperture` reste subtil à ×3 | ⚠ lecture à l'œil à valider par l'utilisateur |
+| T-A1/T-A2 bis | Seconde passe : ×6 et ×10, rendus 700 px sur 20 cm, carte de différence (`docs/audit/planche-amplitudes-*-a/b.png`) | ×3 trop discret ; **×6 net** ; faces retournées dès ×6 pour `ears_*`, `facial_asymmetry`, `eye_spacing` (négatif), `nose_length` ; presque tous à ×10 ; facteurs sûrs par contrôle dans `AMPLITUDES_CONTROLES.md` §7 | ✅ mesuré ; choix final à valider par l'utilisateur |
+| T-A1 ter | Matrice sexe × âge × contrôle (1 008 mesures, `docs/audit/mesures-amplitudes-matrice.json`) | ×6 sûr chez l'adulte pour 11 contrôles, ×3 pour 7, plafond < ×3 pour `eye_spacing`, `head_height`, `head_width` ; **plafonds plus bas chez l'enfant/adolescent** : le facteur doit dépendre de l'âge | ✅ mesuré (cage seule, un réglage à la fois) |
+| T-A3 | Migration : ancien fichier avec valeur intermédiaire garde sa forme après facteur | non fait | ⬜ |
+| T-S/M/R | Peau, morphologie, rig dans Blender 5.2 | non faits | ⬜ |
+
+#### N. Peau et rig dans Blender 5.2 (2026-11-21, instance isolée, lecture seule)
+
+| ID | Test | Résultat | Verdict |
+|---|---|---|---|
+| T-S1 | Principled BSDF 5.2 : méthodes de subsurface et rendu Cycles CPU d'un matériau de peau minimal à 3 teintes (`tools/audit/skin_probe.py` ; `docs/audit/proto-peau-s1.json`, `rendu-peau-test-s1.png`) | **les 4 méthodes existent en 5.2** : `Christensen-Burley`, `Random Walk`, `Random Walk (Skin)`, `Random Walk (Legacy)` (confirme le manuel) ; le rendu Cycles avec `Random Walk (Skin)`, rayon par canal (1 ; 0,35 ; 0,2) et échelle 0,012 **fonctionne** sur le corps ; **la première conversion naïve était fausse** (rendus rose/rouge saturés) ; **corrigée** (T-S1 bis ci-dessous) | ✅ infrastructure ; la conversion corrigée est dans `tools/audit/skin_color.py` |
+| T-S1 bis | Conversion pigments → couleur de base corrigée (`tools/audit/skin_color.py` ; `docs/audit/rendu-peau-test-s1.png`) | modèle physique : absorption de la mélanine (eu/phéo) et de base de Donner/Jacques, hémoglobine OMLC (Prahl), épiderme 0,25 mm sur derme par Kubelka-Munk, intégration spectrale 400–700 nm (CIE approchées de Wyman 2013, éclairage ≈ D65) ; le blanc parfait donne (1, 1, 1) ; **gradient naturel du très clair au très foncé** (rendus Cycles, `Random Walk (Skin)`) ; **réglage provisoire `s_scale = 0,4` choisi pour la plausibilité, pas ajusté sur des mesures** ; la teinte rouge de l'hémoglobine reste **peu marquée** (G/R ≈ 0,7 à 0,8) | ✅ plausible à l'œil ; ⚠ **non calibré sur des mesures** ; bruit (48 échantillons) et halo orangé sur les zones fines (oreilles, paupières) à examiner |
+| T-R1 (partiel) | Rigify en 5.2 : méta-rig humain, génération, poids automatiques, pile de modificateurs (`tools/audit/rig_probe.py` ; `docs/audit/proto-rig-r1.json`) | Rigify **0.6.10** s'active (`bpy.ops.preferences.addon_enable(module="rigify")`, **nécessaire** : sans cela la génération échoue avec `make_custom_pivot`) ; méta-rig humain 159 os ; **rig généré 706 os** ; poids automatiques : 161 groupes de sommets ; **ordre de pile obtenu : SUBSURF, DISPLACE, ARMATURE** (l'armature se retrouve après Subsurf et Displace) | ✅ génération ; ⚠ **l'ordre de pile devra être imposé** (nœuds d'identité → armature → subsurf) ; qualité de déformation, stabilité des poids quand l'identité change et placement du méta-rig sur le maillage évalué **non testés** (⬜ T-R2, T-R3) |
+| T-M1 | Anthropométrie ANSUR II vs corps HumanLoom | **non faisable ici** : les données ANSUR II ne sont pas dans le dépôt (non téléchargées) | ⬜ |
+| T-A3 | Migration avec facteur d'amplitude | **à faire avec le code** (le facteur n'existe pas encore) | ⬜ |
+
+#### O. État de référence des tests historiques (2026-11-21, clone isolé, Blender 5.2 ; `tools/audit/run_baseline.py` ; `docs/audit/baseline-tests.json`)
+
+**Résultat à l'origine : 37 OK sur 46 exécutés ; après traitement d'I-34 : 40 OK, 1 obsolète, 5 échecs restants (2 fixtures + 3 non élucidés)** (1 ignoré : `validate_groom_collision29`, travail en cours de l'utilisateur). Chaque test tourne dans un Blender séparé, dans un clone du dépôt (jamais dans `validation/` de l'utilisateur), avec les arguments propres à chaque script (registre dans `run_baseline.py`).
+
+| Catégorie | Tests | Lecture |
+|---|---|---|
+| **Échecs de fixture manquante** | `validate_controls`, `validate_presets` | attendent des `.blend` d'anciennes versions (`adult-original.blend`, `legacy-03.blend`) qui ne sont ni dans le dépôt ni dans `validation/` : **à générer** par le futur lanceur (étape 2) |
+| **Tests périmés (I-34) : traités le 2026-11-21** | `validate_delivery12_reopen`, `validate_muscle_workflow`, `validate_global_physique` mis à jour → **OK** ; `validate_surface_fix` marqué **OBSOLÈTE** (non exécuté) | décision utilisateur ; détail dans `ISSUES.md` I-34 ; nouveau constat I-48 (cou) |
+| **Échecs d'assertion non élucidés** | `validate_age_transitions` (stade 1,5 : `unchanged_from_previous` faux), `validate_body_mass_neutral` (écart 0,0177 à sexe 0, stade 1,5), `validate_musculature` | dépendent de l'**ancien asset** supposé (`extension-13`) : **je ne sais pas** s'il s'agit d'une régression réelle ou d'un mauvais choix de fixture ; à instruire |
+| **OK** | tous les autres (dont `validate_model`, `validate_anatomy`, `validate_measurements`, `validate_groom*` hors collision29, `validate_hair20`, `check_*`) | l'état de référence sert de base de comparaison avant toute modification de code |
+
+#### P. Étapes 1 et 2 du plan §9 (2026-11-21, branche `codex/natif`, non committé ; Blender 5.2 headless, clone isolé)
+
+Commande : `python tools/run_tests.py --out <dossier> --seed-validation <validation source, lue seulement>` (le lanceur copie `extension/` et `tools/` dans `<out>/clone`).
+
+| ID | Test | Résultat | Verdict |
+|---|---|---|---|
+| T-Q1 | `tools/validate_quickwins_step1.py` sur l'arbre modifié : I-19 (bornes float32 acceptées, 1 % hors borne refusé), I-28 (3 zones dans la collection du corps alors que la collection active est une autre), I-36 (pile Animation = [densité, suivi, profil, matériau], XPBD = [suivi, densité, profil, matériau], aller-retour, aucun pin), I-35 (aire du masque recalculée = valeur stockée à 1e-6 après construction ; masque à 1,0 → `check_viewport_budget` et `appearance` refusent), I-27 (messages via faux `self`), interface (dessin simulé par un enregistreur : `body_mass`/`corpulence` non dessinés, 21/21 contrôles du visage dans un seul sous-panneau, `skin_relief` actif seulement si âge > 2, `hm_*` intacts), cycle `unregister`/`register` | `QUICKWINS_STEP1_OK`, code 0 | ✅ mesuré |
+| T-Q2 | Même test sur le code d'origine (`git archive HEAD`) | échoue dès I-19 (`Valeur invalide : variation`) | ✅ le test détecte le défaut |
+| T-Q3 | **Cause de I-36 (mesurée)** : `use_pin_to_last` du modificateur natif de `curves_empty_hair_add` | `True` : `modifiers.move` sans effet pour lui ; zone Cheveux en XPBD gardait « suivi » en dernier | ✅ (sonde `probe_order.py`/`probe_pin.py`, hors dépôt) |
+| T-Q4 | `extension validate` sur le clone | `Success parsing TOML` | ✅ |
+| T-Q5 | Lanceur complet, **arbre d'origine** (même lanceur) | 36 OK / 47 | référence de cette session |
+| T-Q6 | Lanceur complet, **arbre modifié** | 40 OK sur 47 exécutés (+1 ignoré : `collision29`) dont le nouveau `validate_quickwins_step1` ; **0 régression par rapport à T-Q5**. Échecs restants : `age_transitions`, `body_mass_neutral`, `musculature` (non élucidés), `muscle_workflow`, `surface_fix` (périmés I-34), `controls`, `presets` | ✅ pas de nouvel échec ; ⚠ voir réserves |
+| T-Q7 | Fixtures synthétiques (I-47) : `controls` et `presets` passent désormais le chargement de la fixture et échouent à l'assertion « forme au neutre inchangée après mise à jour » (< 1e-6) | reproduit **I-37 / D-10** (clé `HM · Atlas14 · reference`) sur des fixtures *synthétiques* | ⚠ ne prouve rien sur de vrais anciens fichiers |
+
+| T-Q8 | **Les 3 échecs « non élucidés » instruits** (sonde `probe_i30.py`, hors dépôt) : cage actuelle contre `extension-13` (schéma 8, 430 clés ; actuel 462 clés), sexe 0, stade 1,5 | écart max **17,95 mm** ; clés actives seulement chez l'actuel : **uniquement `HM · Atlas14 · reference` (valeur 0,5)** ; aucune clé active seulement chez l'ancien ; aucune valeur différente ; **muter cette seule clé ramène l'écart à 0,0 mm** | ✅ mesuré : **ce n'est pas un mauvais choix d'asset** (extension-13 est une vraie version précédente) mais **I-37 / I-30** (clé Atlas14, D-10). `validate_age_transitions` (stade 1,5), `validate_body_mass_neutral` (0,01769 m), `validate_musculature` (coordonnées à sexe 0) échouent pour cette cause ; ⚠ je n'ai vérifié que sexe 0 / stade 1,5 par la sonde, les trois assertions exactes sont dans leurs journaux |
+| T-Q9 | Preuve du grisage de `skin_relief` : sortie du pilote du Displace (`max(0,stage-2)*.002*(1+amount)`), `strength` lue après évaluation | âge 0, 1, 2 et 2,01 : 0,0 pour amount −1, 0, +1 ; âge 2,5 : 0,0 / 0,001 / 0,002 ; âge 3 : 0,0 / 0,002 / 0,004 ; amount −1 → 0 à tout âge. ⚠ à 2,01 la valeur théorique 2e-5 s'affiche 0,0 | ✅ mesuré |
+
+| T-Q10 | **Re-référencement D-19** : `validate_age_transitions` et `validate_body_mass_neutral` comparent à la référence figée `tools/data/neutral_reference.json` (générée par `tools/make_neutral_reference.py`, lue par `tools/neutral_reference.py`) ; `validate_musculature` aussi pour son identité au neutre. Seule la comparaison à extension-13 est retirée (`body_mass_neutral` garde extension-13 comme fixture de migration). Référence : **961 808 octets** (< 1 Mo ; une première version à 1 sommet sur 25 seul faisait 295 629 octets, 1 sur 5 aurait dépassé 1 Mo par extrapolation, non mesuré), 21 états (sexes 0 / 0,5 / 1 × stades 0 / 0,5 / 1 / 1,5 / 2 / 2,5 / 3), par état : cage du corps (modificateurs coupés, autres commandes à 0) échantillonnée à 1 sommet sur 25 + pieds (1 sur 16) + mains (1 sur 16) + **tous les sommets à moins de 3 cm du centre de chaque globe** (paupières) ; **yeux** : 1 sommet sur 12 de chacun des deux globes, empreinte SHA-256 de `realistic.blend`, empreinte informative de la cage à 1e-6 ; tolérance 1e-5 m | `age_transitions` : `TRANSITIONS_PASS`, 21 états, écart max à la référence 5,0e-7 m (arrondi à 1e-6 de la référence) ; `body_mass_neutral` : `BODY_MASS_NEUTRALITY_PASS 21` | ✅ mesuré |
+| T-Q11 | Non-vacuité de la référence (`probe_ref.py`, hors dépôt) | forme modifiée (`hm_waist` = 0,01) : échec, écart 1,44e-4 m ; référence dont l'empreinte d'asset est falsifiée : `load()` échoue (« realistic.blend a changé… ») ; régénération : fichier **identique octet pour octet** | ✅ mesuré |
+| T-Q12 | **`validate_musculature` échoue toujours, pour une autre cause, jusque-là masquée** : après le re-référencement, l'identité au neutre passe ; l'assertion suivante échoue (« même saturation régionale doit donner exactement la même surface », `hm_muscles = 1` contre toutes les régions à 1, < 1e-6) | écart max 0,505 mm (sexe 0, 495 sommets), 0,358 mm (sexe 0,5, 556), 0,484 mm (sexe 1, 440) ; **identique sur extension-13** : antérieur à Atlas14 et à mes changements, jamais atteint parce que la ligne 46 échouait avant | ✅ mesuré. **Cause établie par la session de relecture** : `hm_muscle_definition` rangé à tort parmi les régions (`MUSCLE_CONTROLS[1:]`) ; test corrigé par elle (T-Q15), saturation régionale exacte (0,000 mm) |
+| T-Q13 | `validate_controls` et `validate_presets` : classés « ÉCHEC ATTENDU (schéma 10, D-20) » par le lanceur seulement si l'échec porte sur l'assertion exacte de forme inchangée au neutre ; tout autre échec reste « ÉCHEC » | les deux portent bien cette assertion ; passeront OK le jour de la migration schéma 10 | ✅ mesuré |
+| T-Q14 | **Lot complet** (`run_tests.py`, clone isolé, `--compare` sur l'exécution de l'arbre d'origine) | **44 OK** sur 48 scripts (dernier lot, après correction de `musculature` par la session de relecture et référence élargie) : 2 « ÉCHEC ATTENDU (schéma 10, D-20) » (`controls`, `presets`), 1 ignoré (`collision29`), 1 OBSOLÈTE (`surface_fix`), **0 échec inattendu, régressions : []** ; corrigés vs arbre d'origine : `age_transitions`, `body_mass_neutral`, `delivery12`, `global_physique`, `muscle_workflow`, `musculature`, `skin_relief` ; `resume.json` contient maintenant l'entrée OBSOLÈTE ; `docs/audit/baseline-tests.json` n'est pas écrit par le lanceur (simple référence de comparaison) et n'a pas été modifié par moi | ✅ |
+
+**Réserves et écarts (à lire) :**
+- Deux tests existants calés sur l'ancien comportement ont dû être adaptés **par moi**, sans autre changement : `validate_landmark_sets.py` (`mirror_landmarks` rendait CANCELLED, I-27) et `validate_groom28.py` (simulait un masque coûteux en écrasant `hl_mask_area_m2`, que le budget n'utilise plus, I-35 ; il peint maintenant le masque à 1,0 puis le restaure).
+- **Quatre tests périmés ont été modifiés par quelqu'un d'autre pendant la session** (`validate_delivery12_reopen`, `validate_global_physique`, `validate_muscle_workflow`, `validate_surface_fix`, fichiers modifiés à 18:26–18:28, pas par moi). Leur passage OK dans T-Q6 contre échec dans T-Q5 vient de ces modifications, **pas de mon code** (reproduit isolément sur les deux arbres). Je n'ai pas tranché I-34.
+- Le lanceur essaie d'abord la sortie « fichier » puis « dossier » (les scripts diffèrent, I-44) ; la comparaison par défaut utilise `docs/audit/baseline-tests.json`, dont 4 entrées ne correspondent plus (`delivery12`, `global_physique`, `muscle_workflow`, `skin_relief` y sont OK, `surface_fix` OBSOLÈTE).
+- Le comportement XPBD de la zone Cheveux a changé (solveur avant interpolation, comme les autres zones) : **non vérifié** — ni avec `collision29` (travail de l'utilisateur, scripts non touchés), ni par une mesure de simulation ; seul l'ordre de la pile est vérifié (T-Q1).
+- Rendu réel de l'interface (barre latérale), messages dans la barre d'état et réaction de l'interface au clic sur « Afficher les contrôles hérités » : **non vus**.
+- Incident (suivi fait) : en nettoyant mes processus de test, j'ai arrêté par erreur un `blender.exe` (PID 30936) qui appartenait probablement à l'autre session (qui lançait les 4 tests I-34 dans `i34_*`). Je les ai relancés moi-même sur l'arbre actuel avec le lanceur corrigé : `muscle_workflow` OK (21,4 s), `delivery12_reopen` OK (6,0 s), `global_physique` OK (39,4 s), `surface_fix` ÉCHEC (l'autre session le marquait OBSOLÈTE). Le « ÉCHEC » de `muscle_workflow` du tableau T-Q6 était un artefact du lanceur (sortie fichier/dossier), corrigé ensuite ; `skin_relief` idem (OK après correction).
+
+#### J. Reste non testé (explicite)
+
+- **Blender 5.0, 5.1, 5.3 :** non lancés, par consigne de l'utilisateur de ne pas toucher aux autres versions. À autoriser explicitement pour tester la compatibilité (le manifeste borne à 5.2.0–5.3.0).
+- Gizmo : visibilité et glisser (T-U6).
+- Persistance (enregistrement et réouverture) des modifications d'un override de bibliothèque ; glisser-déposer réel depuis l'Asset Browser ; vignettes et catalogues d'assets.
+- Fluidité de l'interface (images par seconde à l'écran) : seul le temps d'évaluation CPU a été mesuré ; non mesuré avec le rendu du viewport.
+- Saisie au clavier dans les champs Blender : impossible avec l'outil de pilotage (limite de l'outil, contournée par glisser, flèches et boutons).
+
+
+### F. Non testé (à ne pas supposer)
+
+Voir **4 bis J** pour la liste à jour. Restent non testés : Blender 5.0/5.1/5.3 (consigne de ne pas les lancer), visibilité du gizmo, persistance des overrides, fluidité à l’écran, saisie clavier dans les champs Blender (limite de l’outil).
+
+## 5. Défauts ouverts (voir `ISSUES.md` pour le détail)
+
+P1 : I-01 tests liés à l'extension installée ; I-19 bornes float32 du groom ; I-30 écart de forme vs 0.13. P2 : I-02 tests périmés (corrigés dans l'arbre de travail), I-03/I-03b fixtures, I-04 pas de lanceur, I-05 `__init__.py` monolithique, I-09 lisibilité de `groom.py`, I-10 imports circulaires, I-13 amplitudes, I-14 croisements de la cage, I-15 `set_height` non borné, I-17 performances, I-20 matériaux absents, I-21 corpulence, I-22 diaphonies, I-23 repères manuels, I-24 duplication, I-28 collection des cheveux, I-29 graine fixe, I-31 XPBD lent, I-32 contrôle du maillage, I-33 dossier par défaut, I-34 tests périmés. Aucun n'est corrigé dans le plugin. Ajoutés en passe finale : I-35 masque à 1,0 sans garde-fou, I-36 ordre des modificateurs, I-37 migration modifie le neutre (Atlas14), I-38 propriétés d’opérateur mémorisées, I-39 Alt+D, I-40 XPBD 3,68 s/image.
+
+## 6. Questions closes : ne pas rouvrir
+
+1. **Drivers lisant une `PropertyGroup` par chemin RNA** : ✅ équivalent en forme, ❌ casse sans l'extension → écarté (T-P1a). Ne pas y revenir sans nouvelle preuve.
+2. **Duplication d'un personnage complet** : la duplication native avec toute la hiérarchie sélectionnée fonctionne (T-A8). Reste : sélection automatique de la hiérarchie par un opérateur et matériaux de cheveux rendus uniques.
+3. **Panneau dans Propriétés > Objet** : faisable et agréable, avec undo (T-P2). Reste : choisir les sous-panneaux et la structure.
+4. **Animation** : clés sur âge, corpulence, densité de cheveux OK ; longueur de cheveux demande un nœud de rognage (T-P3).
+5. **Actions Blender 5.x** : lire/écrire via slots et `channelbag` ; `Action.fcurves` n'existe pas.
+6. **Une base de ~150 déformations** reproduit les 461 clés à 0,05 mm près (T-P7) ; ~8 ms.
+7. **La stature est celle de la surface lissée** (D-06) ; les tests `validate_model`/`validate_controls` ont été mis à jour en conséquence.
+8. **Traduction** : les chaînes courantes de Blender (ex. « Height ») gardent la traduction de Blender ; nommer les termes métier avec des chaînes uniques.
+9. **Déformation complète du corps par nœuds** : exacte (0,00083 mm) mais **57,6 ms** et **459 ms avec Subsurf** ; ne pas la proposer comme moteur interactif (T-C6, T-C7). La **façade de nœuds + drivers** est validée (T-CF).
+10. **Menus, F9, pie, raccourcis, `poll_message_set`, annulation en chaîne, thème clair, repères à la souris** : fonctionnent (4 bis H).
+11. **Migration** des sessions 08 à 13 vers le schéma 9 : fonctionne ; la forme au neutre change par conception à cause de la clé Atlas14 (I-37).
+12. **Duplication liée (Alt+D)** : forme partagée, comportement natif ; **assets, lien et override** : OK (persistance des overrides à tester) ; **exports glTF et FBX** : OK (4 bis I).
+13. **XPBD à vide** : 3,68 s par image ; inutilisable en lecture interactive avec les réglages par défaut (I-40).
+
+## 7. Conception retenue — **architecture finale** (détail : `DESIGN_NATIF.md`)
+
+1. **Un humain = un `MESH` Blender ordinaire** + identifiant stable (UUID) + une collection par personnage (corps, yeux, cheveux, repères). Identifiant d’extension `human_modeling` conservé.
+2. **Le corps est déformé par un groupe de nœuds Geometry Nodes « HL Human »**, en tête de pile des modificateurs (avant Subsurf) : base locale par contrôle (≈ 207 couches de sommets, tolérance 1e-4, erreur max 0,017 mm), poids compilés à partir des formules actuelles (fonctions « chapeau » d’âge × sexe × écrêtages) avec **partage des sous-expressions**, **suppression des couches de déformation en fin de groupe** (`Remove Named Attribute`, `Pattern Mode` = `Wildcard`, nom `d*`/`b*`) pour que la subdivision reste rapide. Entrées : sexe, âge, 48 contrôles ; la longueur de cheveux est portée par une entrée dédiée. Le groupe est **fabriqué hors ligne** (T-C14 : la construction par l’API Python prend plusieurs minutes) et livré dans un `.blend` de ressources, versionné (`HL_Human_v1`).
+3. **Façade D** : une `PropertyGroup` sur l’objet (getter/setter) lit et écrit **les entrées du modificateur** ; table d’identifiants de sockets stable et versionnée ; messages d’inactivité si le modificateur manque ; opérateur de reconstruction ; protection contre la suppression accidentelle. Les entrées sont animables par images clés (✅ T-CF) et restent valides sans l’extension.
+4. **Nœuds dans le graphe de Blender** : les groupes « HumanLoom » s’ajoutent au menu Ajouter du graphe de Geometry Nodes (et comme assets) pour être liés à d’autres objets et nœuds (instances, dispersion, etc.). **À prototyper (T-C12).**
+5. **Yeux** : gardent leurs shape keys, pilotées par des drivers qui lisent les entrées du modificateur (✅ T-CF, 0,0 mm). **Cheveux** : racines attachées au corps déformé (✅ T-C5, 0,03 mm) ; entrée de longueur par un nœud **Trim Curves en index 0** (✅ T-A17) ; ordre de pile cohérent entre zones (I-36). **Repères et mesures** : lisent le maillage évalué (✅ T-C9).
+6. **Interface native** (✅ prototypes 4 bis H) : panneau « Humain » dans Propriétés > Objet **et** barre latérale (même fonction de dessin), Ajouter > Humain, options de création en F9, raccourci et pie menu, `poll_message_set`, interface source en anglais + traduction française (⚠ « Height » garde « Hauteur » : chaînes propres), Asset Browser, atelier « Personnage ».
+7. **Cycle de vie** : « Dupliquer le personnage » (sélection de la hiérarchie, matériaux de cheveux rendus uniques, nouvel UUID ✅ T-A8), suppression propre, Bake explicite (applique le modificateur), **migration schéma 10** : convertir les `hm_*` en entrées du modificateur, supprimer les 461 shape keys du corps, **sans modifier la forme au neutre** (corriger Atlas14, D-10) ; test d’équivalence < 0,02 mm.
+8. **Performance** : 58,5 ms avec Subsurf 1 à 1e-4 (33 ms sans) ; options : subdivision 0 dans le viewport, tolérance, réduction des nœuds de matrices locales (T-C15). Mesure CPU ; rendu du viewport non mesuré.
+9. **Non-objectifs pour l’instant** : contrôleur/moteurs abstraits, éditeur de nœuds propre, gizmos (⚠ T-U6 non concluant), vêtements et rig (après les repères automatiques).
+
+## 8. Pièges et contraintes d'environnement (à relire avant de lancer un test)
+
+- **Tests :** passer par `tools/audit/shim.py` (alias de `bl_ext.user_default.human_modeling` vers le clone) ; `blender --background --factory-startup --offline-mode --python shim.py -- --shim-root <clone> --shim-test <script> -- <args>`. Les scripts qui importent `extension` et l'enregistrent eux-mêmes se lancent **sans** l'adaptateur.
+- **Ne jamais** lancer un test écrivant dans `validation/` de l'utilisateur : travailler sur une copie (7,3 Go copiés dans le clone). Les sorties vont dans le dossier temporaire de session.
+- **Évaluation :** après `Key["x"] = v` depuis Python, appeler `keys.update_tag()` puis `view_layer.update()`, sinon l'évaluation reste périmée (artefact vécu : « 0 mm partout »). Après réglage d'une entrée de modificateur : `obj.update_tag()`.
+- **Entrées de modificateurs de nœuds en 5.2 :** `mod.properties.inputs.<identifiant>.value` (et non `mod["Socket_x"]`) ; chemin d'animation `modifiers["nom"].properties.inputs.<id>.value`.
+- **Pièges de script :** `while modifiers[0] != md: bpy.ops.object.modifier_move_up(...)` ne termine pas en arrière-plan ; utiliser `modifiers.move(from, to)` (l'ordre obtenu reste à vérifier). `bpy.ops.ed.undo()` n'est pas représentatif depuis un script : tester l'undo dans l'interface réelle.
+- **Pilotage de l'interface :** les clics et glissers (`left_mouse_down` / déplacements / `left_mouse_up`) fonctionnent ; la **saisie au clavier dans les champs Blender n'a pas fonctionné**. Les touches comme Tab sont peu fiables. La fenêtre de test se met au premier plan avec `SetForegroundWindow` (PowerShell) ; `SW_RESTORE` dé-maximise la fenêtre.
+- **Windows / shell :** `rm` avec joker et `Stop-Process` large sont refusés par les garde-fous ; ne cibler que ses propres PID (vérifier la ligne de commande avec `Get-CimInstance Win32_Process`). Les heredocs bash contenant beaucoup de guillemets peuvent échouer : écrire le script avec l'outil d'écriture puis l'exécuter.
+- **Mesures de temps :** dépendent de la charge ; comparer des mesures faites dans la même exécution.
+- **Python / PDF (mis à jour)** : dans l'outil Bash, `python` (3.14) et `pdftotext` (Git for Windows) fonctionnent ; `pypdf` n'est pas installé. Les PDF reçus de l'utilisateur sont dans `G:\_dev\BlenderDev\PDF` (hors dépôt, droits d'auteur) ; extraire avec `pdftotext -layout`. Les pages PMC et Europe PMC sont bloquées (reCAPTCHA/403) pour l'outil de lecture web, de même que les PDF > 10 Mo.
+- **Rejeu des tests historiques** : ne pas boucler aveuglément sur `tools/validate_*.py` (arguments propres à chaque script, I-44).
+- **Manuel Blender** : la page `/dev/` sert la version 5.4 (au 2026-11-21) ; utiliser `/5.2/` pour la 5.2 LTS.
+- **Shell** : pour de longs scripts Python avec apostrophes, écrire un fichier avec l'outil Write puis l'exécuter (les heredocs bash échouent).
+
+## 9. Prochaines étapes (dans l’ordre) — plan d’implémentation (mis à jour 2026-11-21)
+
+Branche de travail : **`codex/natif`** (D-17). Aucun commit sans accord explicite. Fichiers non suivis voulus : rapports, `docs/audit/`, `tools/audit/`.
+
+0. Lire ce document, `CLAUDE.md`, `DESIGN_NATIF.md`, `ISSUES.md` (I-01 à I-46), `SYNTHESE_RECHERCHE.md`, `AJOUT_CONTROLES.md`.
+1. ✅ **FAIT (non committé, 2026-11-21, §4 P)** — **Gains rapides** (sans refonte) : I-19 (tolérance float32 du groom), I-28 (collection des cheveux), I-36 (ordre des modificateurs, `modifiers.move` avec index explicite), I-35 (garde-fou du masque), I-27 ; **interface des contrôles** (`REGROUPEMENT_CONTROLES.md`, I-46) : masquer `body_mass`/`corpulence`, sous-sections du visage, griser `skin_relief` quand inactif — **aucune propriété `hm_*` supprimée ni renommée** (D-02).
+2. 🟡 **Lanceur fait (`tools/run_tests.py`, §4 P) ; reste : tests de forme en mm, état de référence avant toute modification de forme, tests périmés (I-34)** — **Socle de test** (I-44) : lanceur indépendant de l’installation (`tools/audit/shim.py`), lecture de l’en-tête de chaque script, état de référence **avant** toute modification de forme, fixtures générées, tests de forme en mm. Tests périmés (I-34) : **traités** (3 mis à jour, 1 obsolète).
+3. **Générateur hors ligne du groupe de nœuds v1** : `tools/build_human_nodes.py` (partir de `tools/audit/cproto3_1e4.py`) → `extension/data/human_nodes.blend` ; équivalence < 0,02 mm sur ≥ 25 états, temps avec Subsurf, suppression des couches, déterminisme.
+4. **T-C12 (finir)** : rendu réel du groupe HumanLoom dans le menu Ajouter du graphe Geometry Nodes (enregistrement et asset validés, §4 bis L).
+5. **Tranche verticale native** : création (Ajouter > Humain, F9), modificateur « HL Human », façade D, panneau Propriétés > Objet + barre latérale, UUID, « Dupliquer le personnage », yeux (drivers vers les entrées), cheveux (racines + entrée de longueur), sauvegarde / annulation / animation / fichier rouvert sans l’extension ; critères `DESIGN_NATIF.md` §10.
+6. **Migration schéma 10** (D-10 : forme au neutre inchangée) avec les anciens fichiers `validation/` (sessions 08 à 14) ; **c'est là** que se font les fusions de contrôles (corpulence, lèvres, mâchoire) et le **facteur d'amplitude** (I-45), après T-A1 à T-A3.
+7. **Repères et zones automatiques** (I-43) : seins, ventre, nombril, mains, pieds, bouche détaillée ; **prérequis des nouveaux contrôles** (D-16).
+8. **Nouveaux contrôles** (D-16, `AJOUT_CONTROLES.md`) : P1 du tronc (seins, ventre, fessiers, trapèzes) et des proportions des membres, puis P1 du visage, puis préréglages de types de corps/tête ; mode avancé de transformation de région.
+9. **Mapping UV** (I-41) : décider UDIM / une tuile / densité avant toute texture ; **matériau de peau v1** « HL Skin » (réaliste + stylisé, `RECHERCHE_PEAU.md`), matériaux des yeux et des dents.
+10. **Dents, langue, gencives** (I-42) : nouveaux objets, UV, matériaux, lien avec les visèmes.
+11. **Rig** (Rigify, méta-rig placé par régression sur le maillage évalué, poids calculés une fois, correctifs de pose ; `RECHERCHE_RIG.md`), puis expressions (FACS + visèmes, ARKit 52 en option) et « Bake pour export » (T-X4 validé en prototype).
+12. **Anatomie génitale** (option « Anatomie adulte » désactivée par défaut, indisponible aux âges enfant/adolescent) : en dernier, après les repères.
+13. **Non applicable pour l’instant** : tester d’autres versions de Blender (D-13). À tester plus tard avec accord : gizmo, persistance des overrides, fluidité à l’écran.
+
+## 10. Questions encore ouvertes pour l’utilisateur
+
+1. ~~Amplitudes~~ : **×6 retenu (D-18)** ; reste à définir les cibles des contrôles plafonnés (retournement de faces) et à faire T-A3.
+2. **Tests périmés (I-34)** : mettre à jour 3 et marquer 1 « périmé » (recommandation), ou autre.
+3. **Mapping/UV** : périmètre (UDIM, une ou plusieurs UV, densité de texel) après lecture de l’audit T-U1.
+4. **Liste de contrôles** (`AJOUT_CONTROLES.md`) : ajouts/retraits avant de la figer.
+5. **Regroupement** (`REGROUPEMENT_CONTROLES.md`) : délégué à Claude (interface seulement à l’étape 1) ; à confirmer avant exécution.
+
+*(Tranchées : Q-01 visage (D-14) ; méthode des nouveaux contrôles (D-16) ; branche (D-17) ; idées perso pour `IDEES.md` §11 : aucune pour l’instant.)*
+
+### Recherche documentaire (2026-11-21)
+
+`RECHERCHE_PEAU.md`, `RECHERCHE_MORPHOLOGIE.md`, `RECHERCHE_RIG.md`, `RECHERCHE_PLUGINS.md`, `SYNTHESE_RECHERCHE.md`, validation dans `VALIDATION_SCIENTIFIQUE.md` (§1 à §7). Restent **non vérifiés** : bandes numériques Heath-Carter, erreurs chiffrées de régression d’articulations, gonflement du DQS et PSD (Kavan), « ARKit n’est pas FACS », 15 variables d’ANSUR, identités de quelques identifiants PMC. Aucun test peau/morphologie/rig dans Blender 5.2 (T-S, T-M, T-R : non faits).
+
+## 11. Index des fichiers
+
+| Fichier | Contenu |
+|---|---|
+| `SUIVI_REPRISE.md` | ce document (reprise de session) |
+| `PROMPT_NOUVELLE_SESSION.md` | message à coller pour démarrer une nouvelle session |
+| `ETAT_DES_LIEUX.md` | état exhaustif (inventaire de l'interface, 48 sliders, groom, interface réelle) |
+| `ISSUES.md` | défauts numérotés I-01 à I-34 |
+| `DESIGN_NATIF.md` | conception native, phasage, critères d'acceptation |
+| `IDEES.md` | brainstorming, décisions, dossier « Human Native », nœuds/animation |
+| `TEST_REPORT.md` | résultats des scripts historiques et sondes |
+| `FEATURE_STATUS.md`, `AUDIT.md`, `BRANCH_ANALYSIS.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `REFERENCE_PLUGINS.md`, `UI_REVIEW.md` | rapports de l'audit |
+| `AJOUT_CONTROLES.md`, `AMPLITUDES_CONTROLES.md`, `REGROUPEMENT_CONTROLES.md` | catalogue des contrôles à ajouter, amplitudes trop faibles (proposition non validée), regroupement des contrôles redondants (interface seulement) |
+| `RECHERCHE_PEAU.md`, `RECHERCHE_MORPHOLOGIE.md`, `RECHERCHE_RIG.md`, `RECHERCHE_PLUGINS.md`, `SYNTHESE_RECHERCHE.md` | recherche documentaire (peau, morphologie, rig, plugins) et synthèse |
+| `docs/audit/` | mesures JSON, captures, rendus, `mesures-noeuds-c.md` |
+| `tools/audit/` | scripts de mesure et de prototypage (README inclus) |
+| `CLAUDE.md` | guide pour les sessions de Claude Code |
+
+
+#### Q bis. Conséquences de D-19 (2026-11-21)
+- Les 5 tests encore en échec (`validate_age_transitions`, `validate_body_mass_neutral`, `validate_musculature`, `validate_controls`, `validate_presets`) comparent la forme au neutre à **extension-13** ou à des fixtures dérivées de l'ancien comportement. Leur échec est la conséquence **voulue** d'Atlas14, pas une régression. À re-référencer : figer la forme de l'asset actuel comme nouvelle référence (empreinte `geometry_sha256` ou coordonnées) et comparer à elle ; les fichiers des sessions 08 à 13 restent des fixtures de migration. **Non fait : à valider avant de modifier ces tests.**
+- **À arbitrer avant le schéma 10** : à la mise à jour d'un ancien fichier, garde-t-on sa forme d'origine (clé Atlas14 à 0 pour ce personnage, comportement D-10) ou lui applique-t-on la forme actuelle (changement visible de 17 à 37 mm au tronc) ? Recommandation : garder la forme d'origine par défaut, avec un bouton explicite « adopter la forme actuelle ».
+
+- **T-Q15 (relecture, 2026-11-21)** : `validate_musculature` corrigé (voir `ISSUES.md` I-34 bis) ; exécuté par `tools/run_tests.py --filter validate_musculature` → **OK** (36,5 s, 78 cas, aucun échec). La comparaison à la référence affiche « 1 OK » car le filtre n'exécute qu'un test : ce n'est pas une régression. Limite de la référence figée (D-19) : sous-échantillon 1 sommet sur 25 (424 sur 10 582 par état) ; une déformation locale hors de ces sommets ne serait pas vue (l'empreinte SHA-256 de l'asset couvre les changements du fichier, pas ceux du code ou des drivers).

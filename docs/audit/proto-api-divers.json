@@ -1,0 +1,102 @@
+{
+ "A2_linked_duplicate_Alt_D": {
+  "ok": true,
+  "value": {
+   "shares_mesh": true,
+   "shares_keys": true,
+   "children_copied": 0,
+   "changing_original_moves_linked_copy_mm": 12.6
+  },
+  "s": 0.55
+ },
+ "A4_mask_paint_rebuild": {
+  "ok": true,
+  "value": {
+   "has_mask_group": true,
+   "rebuild_result": "FINISHED",
+   "guides_after": 850,
+   "roots_on_masked_side_x_gt_0.002": 0,
+   "roots_on_open_side": 839,
+   "empty_mask_result": "ERR Error: Aucune surface valide pour cette zone sur cette base.\n",
+   "guides_after_empty_mask_attempt": 850
+  },
+  "s": 0.93
+ },
+ "A5_xpbd_at_rest_850_guides": {
+  "ok": true,
+  "value": {
+   "guides": 850,
+   "per_frame_s": [
+    3.88,
+    3.7,
+    3.63,
+    3.65,
+    3.66,
+    3.65,
+    3.75,
+    3.69,
+    3.66,
+    3.65,
+    3.64,
+    3.65
+   ],
+   "mean_s": 3.68,
+   "substeps": 8,
+   "iterations": 1024
+  },
+  "s": 51.34
+ },
+ "A6_modifier_order": {
+  "ok": true,
+  "value": {
+   "before": [
+    "HumanLoom · densité",
+    "HumanLoom · suivi 5.2",
+    "HumanLoom · profil",
+    "HumanLoom · matériau",
+    "TrimProbe"
+   ],
+   "after_move_API": [
+    "TrimProbe",
+    "HumanLoom · densité",
+    "HumanLoom · suivi 5.2",
+    "HumanLoom · profil",
+    "HumanLoom · matériau"
+   ],
+   "after_move_to_index_op": [
+    "TrimProbe",
+    "HumanLoom · densité",
+    "HumanLoom · suivi 5.2",
+    "HumanLoom · profil",
+    "HumanLoom · matériau"
+   ]
+  },
+  "s": 0.07
+ },
+ "A3_exports": {
+  "ok": true,
+  "value": {
+   "fbx_with_shapekeys": "ERR TypeError Converting py args to operator properties:: keyword \"apply_modifiers\" unrecognized",
+   "fbx_apply_modifiers": "ERR TypeError Converting py args to operator properties:: keyword \"apply_modifiers\" unrecognized",
+   "gltf_morph": {
+    "result": "FINISHED",
+    "s": 13.0,
+    "MB": 87.1
+   },
+   "gltf_apply_no_morph": {
+    "result": "FINISHED",
+    "s": 5.6,
+    "MB": 0.5
+   }
+  },
+  "s": 18.74
+ },
+ "A1_mark_collection_as_asset_and_save": {
+  "ok": true,
+  "value": {
+   "marked_asset": true,
+   "saved": "assets_lib.blend"
+  },
+  "s": 3.73
+ }
+}

@@ -1,0 +1,1267 @@
+{
+ "create_seconds": 0.553,
+ "neutral": {
+  "verts": 10582,
+  "height": 1.6899610236287117,
+  "asym_mm": 0.15261099456994684,
+  "bbox": [
+   0.8807010054588318,
+   0.29833245277404785,
+   1.6899610236287117
+  ]
+ },
+ "controls": [
+  {
+   "id": "corpulence",
+   "label": "Corpulence",
+   "-1": {
+    "finite": true,
+    "max_mm": 19.39,
+    "mean_mm": 1.316,
+    "verts_moved_pct": 52.6,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.149,
+    "ms": 11.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 29.84,
+    "mean_mm": 2.024,
+    "verts_moved_pct": 56.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.158,
+    "ms": 11.1
+   }
+  },
+  {
+   "id": "shoulders",
+   "label": "Carrure",
+   "-1": {
+    "finite": true,
+    "max_mm": 14.0,
+    "mean_mm": 3.24,
+    "verts_moved_pct": 31.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 10.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 14.0,
+    "mean_mm": 3.24,
+    "verts_moved_pct": 31.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.154,
+    "ms": 11.4
+   }
+  },
+  {
+   "id": "waist",
+   "label": "Tour de taille",
+   "-1": {
+    "finite": true,
+    "max_mm": 17.97,
+    "mean_mm": 0.379,
+    "verts_moved_pct": 11.3,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 11.5
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 17.97,
+    "mean_mm": 0.379,
+    "verts_moved_pct": 11.3,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.4
+   }
+  },
+  {
+   "id": "hips",
+   "label": "Largeur du bassin",
+   "-1": {
+    "finite": true,
+    "max_mm": 17.83,
+    "mean_mm": 0.223,
+    "verts_moved_pct": 6.5,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 17.83,
+    "mean_mm": 0.223,
+    "verts_moved_pct": 6.5,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.2
+   }
+  },
+  {
+   "id": "torso_depth",
+   "label": "Profondeur du buste",
+   "-1": {
+    "finite": true,
+    "max_mm": 12.94,
+    "mean_mm": 0.678,
+    "verts_moved_pct": 50.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.151,
+    "ms": 11.1
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 12.94,
+    "mean_mm": 0.678,
+    "verts_moved_pct": 50.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.154,
+    "ms": 11.3
+   }
+  },
+  {
+   "id": "neck",
+   "label": "Largeur du cou",
+   "-1": {
+    "finite": true,
+    "max_mm": 14.42,
+    "mean_mm": 0.327,
+    "verts_moved_pct": 16.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 13.1
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 14.42,
+    "mean_mm": 0.327,
+    "verts_moved_pct": 16.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.6
+   }
+  },
+  {
+   "id": "legs",
+   "label": "Longueur des jambes",
+   "-1": {
+    "finite": true,
+    "max_mm": 48.67,
+    "mean_mm": 35.575,
+    "verts_moved_pct": 97.7,
+    "dheight_mm": -48.67,
+    "asym_mm": 0.152,
+    "ms": 12.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 48.67,
+    "mean_mm": 35.575,
+    "verts_moved_pct": 97.7,
+    "dheight_mm": 48.67,
+    "asym_mm": 0.154,
+    "ms": 11.5
+   }
+  },
+  {
+   "id": "torso",
+   "label": "Longueur du buste",
+   "-1": {
+    "finite": true,
+    "max_mm": 28.0,
+    "mean_mm": 13.093,
+    "verts_moved_pct": 62.6,
+    "dheight_mm": -28.0,
+    "asym_mm": 0.152,
+    "ms": 11.0
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 28.0,
+    "mean_mm": 13.093,
+    "verts_moved_pct": 62.6,
+    "dheight_mm": 28.0,
+    "asym_mm": 0.153,
+    "ms": 11.1
+   }
+  },
+  {
+   "id": "whole_body",
+   "label": "Corpulence globale",
+   "-1": {
+    "finite": true,
+    "max_mm": 19.0,
+    "mean_mm": 1.245,
+    "verts_moved_pct": 34.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.15,
+    "ms": 11.5
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 34.13,
+    "mean_mm": 1.73,
+    "verts_moved_pct": 28.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.156,
+    "ms": 11.1
+   }
+  },
+  {
+   "id": "body_mass",
+   "label": "Volume hérité · 0.12",
+   "-1": {
+    "finite": true,
+    "max_mm": 32.67,
+    "mean_mm": 1.128,
+    "verts_moved_pct": 25.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 93.35,
+    "mean_mm": 3.223,
+    "verts_moved_pct": 26.5,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.154,
+    "ms": 11.4
+   }
+  },
+  {
+   "id": "adiposity",
+   "label": "Couverture régionale",
+   "-1": {
+    "finite": true,
+    "max_mm": 18.15,
+    "mean_mm": 0.751,
+    "verts_moved_pct": 32.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.165,
+    "ms": 11.5
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 45.36,
+    "mean_mm": 1.878,
+    "verts_moved_pct": 35.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.184,
+    "ms": 10.8
+   }
+  },
+  {
+   "id": "fat_abdomen",
+   "label": "Abdomen",
+   "-1": {
+    "finite": true,
+    "max_mm": 17.41,
+    "mean_mm": 0.311,
+    "verts_moved_pct": 20.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.163,
+    "ms": 10.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 43.52,
+    "mean_mm": 0.777,
+    "verts_moved_pct": 23.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.18,
+    "ms": 11.1
+   }
+  },
+  {
+   "id": "fat_flanks",
+   "label": "Flancs",
+   "-1": {
+    "finite": true,
+    "max_mm": 10.07,
+    "mean_mm": 0.136,
+    "verts_moved_pct": 11.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 25.17,
+    "mean_mm": 0.341,
+    "verts_moved_pct": 13.5,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.154,
+    "ms": 11.2
+   }
+  },
+  {
+   "id": "fat_hips",
+   "label": "Bassin et fessiers",
+   "-1": {
+    "finite": true,
+    "max_mm": 11.03,
+    "mean_mm": 0.096,
+    "verts_moved_pct": 5.3,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.3
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 27.58,
+    "mean_mm": 0.239,
+    "verts_moved_pct": 6.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.155,
+    "ms": 10.8
+   }
+  },
+  {
+   "id": "fat_thighs",
+   "label": "Cuisses",
+   "-1": {
+    "finite": true,
+    "max_mm": 5.72,
+    "mean_mm": 0.098,
+    "verts_moved_pct": 7.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 14.29,
+    "mean_mm": 0.245,
+    "verts_moved_pct": 8.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 11.5
+   }
+  },
+  {
+   "id": "fat_arms",
+   "label": "Bras",
+   "-1": {
+    "finite": true,
+    "max_mm": 5.82,
+    "mean_mm": 0.157,
+    "verts_moved_pct": 10.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 14.56,
+    "mean_mm": 0.393,
+    "verts_moved_pct": 12.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.7
+   }
+  },
+  {
+   "id": "fat_face",
+   "label": "Visage",
+   "-1": {
+    "finite": true,
+    "max_mm": 3.37,
+    "mean_mm": 0.063,
+    "verts_moved_pct": 6.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 8.43,
+    "mean_mm": 0.158,
+    "verts_moved_pct": 6.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.2
+   }
+  },
+  {
+   "id": "muscles",
+   "label": "Musculature globale",
+   "-1": {
+    "finite": true,
+    "max_mm": 20.22,
+    "mean_mm": 1.166,
+    "verts_moved_pct": 30.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.175,
+    "ms": 11.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 27.48,
+    "mean_mm": 1.755,
+    "verts_moved_pct": 25.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.231,
+    "ms": 10.9
+   }
+  },
+  {
+   "id": "muscles_shoulders",
+   "label": "Épaules",
+   "-1": {
+    "finite": true,
+    "max_mm": 6.01,
+    "mean_mm": 0.05,
+    "verts_moved_pct": 5.5,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.161,
+    "ms": 14.0
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 17.18,
+    "mean_mm": 0.143,
+    "verts_moved_pct": 6.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.181,
+    "ms": 11.7
+   }
+  },
+  {
+   "id": "muscles_chest",
+   "label": "Pectoraux",
+   "-1": {
+    "finite": true,
+    "max_mm": 6.82,
+    "mean_mm": 0.073,
+    "verts_moved_pct": 4.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 19.48,
+    "mean_mm": 0.209,
+    "verts_moved_pct": 5.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.155,
+    "ms": 11.2
+   }
+  },
+  {
+   "id": "muscles_back",
+   "label": "Dos",
+   "-1": {
+    "finite": true,
+    "max_mm": 7.25,
+    "mean_mm": 0.101,
+    "verts_moved_pct": 6.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.159,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 20.7,
+    "mean_mm": 0.287,
+    "verts_moved_pct": 6.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.177,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "muscles_arms",
+   "label": "Bras",
+   "-1": {
+    "finite": true,
+    "max_mm": 7.37,
+    "mean_mm": 0.17,
+    "verts_moved_pct": 12.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.158,
+    "ms": 10.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 21.06,
+    "mean_mm": 0.485,
+    "verts_moved_pct": 12.6,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.177,
+    "ms": 11.2
+   }
+  },
+  {
+   "id": "muscles_abdomen",
+   "label": "Abdomen",
+   "-1": {
+    "finite": true,
+    "max_mm": 1.17,
+    "mean_mm": 0.008,
+    "verts_moved_pct": 2.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 3.34,
+    "mean_mm": 0.024,
+    "verts_moved_pct": 2.3,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   }
+  },
+  {
+   "id": "muscles_glutes",
+   "label": "Fessiers",
+   "-1": {
+    "finite": true,
+    "max_mm": 5.85,
+    "mean_mm": 0.02,
+    "verts_moved_pct": 1.6,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 16.72,
+    "mean_mm": 0.058,
+    "verts_moved_pct": 1.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.2
+   }
+  },
+  {
+   "id": "muscles_thighs",
+   "label": "Cuisses",
+   "-1": {
+    "finite": true,
+    "max_mm": 8.32,
+    "mean_mm": 0.137,
+    "verts_moved_pct": 4.5,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 23.77,
+    "mean_mm": 0.39,
+    "verts_moved_pct": 4.5,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.159,
+    "ms": 10.5
+   }
+  },
+  {
+   "id": "muscles_calves",
+   "label": "Mollets",
+   "-1": {
+    "finite": true,
+    "max_mm": 6.53,
+    "mean_mm": 0.065,
+    "verts_moved_pct": 4.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 18.67,
+    "mean_mm": 0.187,
+    "verts_moved_pct": 4.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.6
+   }
+  },
+  {
+   "id": "muscle_definition",
+   "label": "Définition musculaire",
+   "-1": {
+    "finite": true,
+    "max_mm": 0.48,
+    "mean_mm": 0.002,
+    "verts_moved_pct": 2.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.7
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 0.48,
+    "mean_mm": 0.002,
+    "verts_moved_pct": 2.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   }
+  },
+  {
+   "id": "head_width",
+   "label": "Largeur de la tête",
+   "-1": {
+    "finite": true,
+    "max_mm": 6.39,
+    "mean_mm": 0.847,
+    "verts_moved_pct": 32.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 11.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 6.39,
+    "mean_mm": 0.847,
+    "verts_moved_pct": 32.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.1
+   }
+  },
+  {
+   "id": "head_height",
+   "label": "Hauteur de la tête",
+   "-1": {
+    "finite": true,
+    "max_mm": 8.86,
+    "mean_mm": 0.91,
+    "verts_moved_pct": 33.3,
+    "dheight_mm": -8.86,
+    "asym_mm": 0.152,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 8.86,
+    "mean_mm": 0.91,
+    "verts_moved_pct": 33.3,
+    "dheight_mm": 8.86,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "jaw",
+   "label": "Largeur de la mâchoire",
+   "-1": {
+    "finite": true,
+    "max_mm": 6.73,
+    "mean_mm": 0.198,
+    "verts_moved_pct": 15.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 11.2
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 6.73,
+    "mean_mm": 0.198,
+    "verts_moved_pct": 15.7,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "chin",
+   "label": "Avancée du menton",
+   "-1": {
+    "finite": true,
+    "max_mm": 4.0,
+    "mean_mm": 0.069,
+    "verts_moved_pct": 7.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 4.0,
+    "mean_mm": 0.069,
+    "verts_moved_pct": 7.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.9
+   }
+  },
+  {
+   "id": "cheeks",
+   "label": "Pommettes",
+   "-1": {
+    "finite": true,
+    "max_mm": 2.97,
+    "mean_mm": 0.072,
+    "verts_moved_pct": 17.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.7
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 2.97,
+    "mean_mm": 0.072,
+    "verts_moved_pct": 17.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "nose_length",
+   "label": "Avancée du nez",
+   "-1": {
+    "finite": true,
+    "max_mm": 4.99,
+    "mean_mm": 0.087,
+    "verts_moved_pct": 10.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.1
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 4.99,
+    "mean_mm": 0.087,
+    "verts_moved_pct": 10.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.9
+   }
+  },
+  {
+   "id": "nose_width",
+   "label": "Largeur du nez",
+   "-1": {
+    "finite": true,
+    "max_mm": 1.78,
+    "mean_mm": 0.035,
+    "verts_moved_pct": 10.3,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 1.78,
+    "mean_mm": 0.035,
+    "verts_moved_pct": 10.3,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "mouth",
+   "label": "Largeur de la bouche",
+   "-1": {
+    "finite": true,
+    "max_mm": 2.26,
+    "mean_mm": 0.078,
+    "verts_moved_pct": 8.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 12.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 2.26,
+    "mean_mm": 0.078,
+    "verts_moved_pct": 8.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "lips",
+   "label": "Relief des lèvres",
+   "-1": {
+    "finite": true,
+    "max_mm": 1.5,
+    "mean_mm": 0.047,
+    "verts_moved_pct": 8.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 1.5,
+    "mean_mm": 0.047,
+    "verts_moved_pct": 8.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.8
+   }
+  },
+  {
+   "id": "eye_spacing",
+   "label": "Écartement des yeux",
+   "-1": {
+    "finite": true,
+    "max_mm": 3.0,
+    "mean_mm": 0.288,
+    "verts_moved_pct": 11.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.6
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 3.0,
+    "mean_mm": 0.288,
+    "verts_moved_pct": 11.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.7
+   }
+  },
+  {
+   "id": "eye_height",
+   "label": "Position verticale des yeux",
+   "-1": {
+    "finite": true,
+    "max_mm": 2.5,
+    "mean_mm": 0.24,
+    "verts_moved_pct": 11.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 2.5,
+    "mean_mm": 0.24,
+    "verts_moved_pct": 11.9,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 12.3
+   }
+  },
+  {
+   "id": "forehead",
+   "label": "Hauteur du front",
+   "-1": {
+    "finite": true,
+    "max_mm": 5.0,
+    "mean_mm": 0.154,
+    "verts_moved_pct": 4.5,
+    "dheight_mm": -5.0,
+    "asym_mm": 0.153,
+    "ms": 10.9
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 5.0,
+    "mean_mm": 0.154,
+    "verts_moved_pct": 4.5,
+    "dheight_mm": 5.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "ears_size",
+   "label": "Taille des oreilles",
+   "-1": {
+    "finite": true,
+    "max_mm": 4.64,
+    "mean_mm": 0.181,
+    "verts_moved_pct": 9.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 4.64,
+    "mean_mm": 0.181,
+    "verts_moved_pct": 9.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "ears_angle",
+   "label": "Orientation des oreilles",
+   "-1": {
+    "finite": true,
+    "max_mm": 4.56,
+    "mean_mm": 0.164,
+    "verts_moved_pct": 8.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 4.56,
+    "mean_mm": 0.164,
+    "verts_moved_pct": 8.8,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.152,
+    "ms": 10.9
+   }
+  },
+  {
+   "id": "eyelid_aperture",
+   "label": "Ouverture des paupières",
+   "-1": {
+    "finite": true,
+    "max_mm": 0.63,
+    "mean_mm": 0.009,
+    "verts_moved_pct": 4.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.1
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 0.63,
+    "mean_mm": 0.009,
+    "verts_moved_pct": 4.2,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.6
+   }
+  },
+  {
+   "id": "nose_bridge",
+   "label": "Relief de l’arête nasale",
+   "-1": {
+    "finite": true,
+    "max_mm": 3.0,
+    "mean_mm": 0.035,
+    "verts_moved_pct": 10.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 3.0,
+    "mean_mm": 0.035,
+    "verts_moved_pct": 10.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.2
+   }
+  },
+  {
+   "id": "lip_thickness",
+   "label": "Épaisseur des lèvres",
+   "-1": {
+    "finite": true,
+    "max_mm": 1.06,
+    "mean_mm": 0.025,
+    "verts_moved_pct": 7.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.5
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 1.06,
+    "mean_mm": 0.025,
+    "verts_moved_pct": 7.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.7
+   }
+  },
+  {
+   "id": "mouth_corner",
+   "label": "Hauteur des commissures",
+   "-1": {
+    "finite": true,
+    "max_mm": 1.99,
+    "mean_mm": 0.036,
+    "verts_moved_pct": 5.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.4
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 1.99,
+    "mean_mm": 0.036,
+    "verts_moved_pct": 5.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.1
+   }
+  },
+  {
+   "id": "jaw_angle",
+   "label": "Angle de la mâchoire",
+   "-1": {
+    "finite": true,
+    "max_mm": 3.35,
+    "mean_mm": 0.06,
+    "verts_moved_pct": 9.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 3.35,
+    "mean_mm": 0.06,
+    "verts_moved_pct": 9.1,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 11.0
+   }
+  },
+  {
+   "id": "facial_asymmetry",
+   "label": "Asymétrie du visage",
+   "-1": {
+    "finite": true,
+    "max_mm": 1.76,
+    "mean_mm": 0.218,
+    "verts_moved_pct": 24.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.571,
+    "ms": 11.0
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 1.76,
+    "mean_mm": 0.218,
+    "verts_moved_pct": 24.4,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.573,
+    "ms": 10.9
+   }
+  },
+  {
+   "id": "skin_relief",
+   "label": "Relief de peau âgée",
+   "-1": {
+    "finite": true,
+    "max_mm": 0.0,
+    "mean_mm": 0.0,
+    "verts_moved_pct": 0.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   },
+   "+1": {
+    "finite": true,
+    "max_mm": 0.0,
+    "mean_mm": 0.0,
+    "verts_moved_pct": 0.0,
+    "dheight_mm": 0.0,
+    "asym_mm": 0.153,
+    "ms": 10.8
+   }
+  }
+ ],
+ "reset_residual_mm": 0.0,
+ "slider_eval_ms_with_modifiers": {
+  "median": 42.3,
+  "max": 47.9
+ },
+ "slider_eval_ms_cage_only": {
+  "median": 11.0,
+  "max": 12.5
+ },
+ "shape_key_count": 462,
+ "driver_count": 459,
+ "sex_sweep": [
+  {
+   "sex": 0.0,
+   "height_m": 1.6393,
+   "width_m": 0.8422,
+   "finite": true
+  },
+  {
+   "sex": 0.25,
+   "height_m": 1.6519,
+   "width_m": 0.851,
+   "finite": true
+  },
+  {
+   "sex": 0.5,
+   "height_m": 1.6645,
+   "width_m": 0.8609,
+   "finite": true
+  },
+  {
+   "sex": 0.75,
+   "height_m": 1.6771,
+   "width_m": 0.8708,
+   "finite": true
+  },
+  {
+   "sex": 1.0,
+   "height_m": 1.69,
+   "width_m": 0.8807,
+   "finite": true
+  }
+ ],
+ "age_sweep": [
+  {
+   "age_stage": 0,
+   "height_m": 1.094,
+   "finite": true,
+   "max_mm_vs_neutral": 590.9
+  },
+  {
+   "age_stage": 0.5,
+   "height_m": 1.3555,
+   "finite": true,
+   "max_mm_vs_neutral": 329.3
+  },
+  {
+   "age_stage": 1,
+   "height_m": 1.617,
+   "finite": true,
+   "max_mm_vs_neutral": 99.6
+  },
+  {
+   "age_stage": 1.5,
+   "height_m": 1.6282,
+   "finite": true,
+   "max_mm_vs_neutral": 96.8
+  },
+  {
+   "age_stage": 2,
+   "height_m": 1.6393,
+   "finite": true,
+   "max_mm_vs_neutral": 95.9
+  },
+  {
+   "age_stage": 2.5,
+   "height_m": 1.6347,
+   "finite": true,
+   "max_mm_vs_neutral": 95.0
+  },
+  {
+   "age_stage": 3,
+   "height_m": 1.6302,
+   "finite": true,
+   "max_mm_vs_neutral": 110.5
+  }
+ ],
+ "profiles": [
+  {
+   "profile": "REFERENCE",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.3125,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 95.9
+  },
+  {
+   "profile": "MINCE",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.2879,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 95.2
+  },
+  {
+   "profile": "FITNESS",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.3081,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 95.5
+  },
+  {
+   "profile": "MUSCLE",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.3265,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 95.7
+  },
+  {
+   "profile": "AMPLE",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.3329,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 96.3
+  },
+  {
+   "profile": "AMPLE_MUSCLE",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.351,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 96.3
+  },
+  {
+   "profile": "VERY_LEAN",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.2807,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 94.8
+  },
+  {
+   "profile": "LARGE",
+   "result": "FINISHED",
+   "height_m": 1.6393,
+   "depth_m": 0.3455,
+   "width_m": 0.8422,
+   "max_mm_vs_neutral": 96.6
+  }
+ ],
+ "randomize": [
+  {
+   "scope": "FACE",
+   "seed": 1,
+   "finite": true,
+   "max_mm": 95.9
+  },
+  {
+   "scope": "FACE",
+   "seed": 2,
+   "finite": true,
+   "max_mm": 95.9
+  },
+  {
+   "scope": "BODY",
+   "seed": 1,
+   "finite": true,
+   "max_mm": 112.4
+  },
+  {
+   "scope": "BODY",
+   "seed": 2,
+   "finite": true,
+   "max_mm": 103.7
+  },
+  {
+   "scope": "ALL",
+   "seed": 1,
+   "finite": true,
+   "max_mm": 112.4
+  },
+  {
+   "scope": "ALL",
+   "seed": 2,
+   "finite": true,
+   "max_mm": 103.7
+  }
+ ],
+ "all_controls_plus1": {
+  "finite": true,
+  "max_mm": 189.1,
+  "height": 1.728
+ }
+}

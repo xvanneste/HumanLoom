@@ -1,0 +1,1304 @@
+{
+ "skin_relief_mods_on": {
+  "0.0": {
+   "max_mm_vs_0": 0.0
+  },
+  "1.0": {
+   "max_mm_vs_0": 0.0
+  },
+  "-1.0": {
+   "max_mm_vs_0": 0.0
+  }
+ },
+ "modifiers": [
+  [
+   "Human Modeling · Surface",
+   "SUBSURF",
+   {
+    "levels": 1,
+    "render_levels": 2,
+    "strength": null
+   }
+  ],
+  [
+   "Human Modeling · Relief de peau",
+   "DISPLACE",
+   {
+    "levels": null,
+    "render_levels": null,
+    "strength": 0.0
+   }
+  ]
+ ],
+ "preset": {
+  "save": "FINISHED",
+  "load": "FINISHED",
+  "load_half": "FINISHED",
+  "roundtrip_max_mm": 0.0,
+  "half_vs_expected_mm": 17.589,
+  "json_keys": [
+   "format",
+   "version",
+   "base",
+   "morphology",
+   "age_stage",
+   "controls",
+   "scale",
+   "measurement_reference",
+   "landmarks"
+  ]
+ },
+ "geometry_neutral": [
+  "FINISHED",
+  {
+   "format": "human_modeling.geometry_report",
+   "version": 1,
+   "character": "Corps",
+   "matrix_world": [
+    [
+     1.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     1.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "method": "Evaluated body mesh in local coordinates; separate eyes and other objects excluded",
+   "geometry": {
+    "vertices": 10582,
+    "edges": 21170,
+    "faces": 10590,
+    "finite_coordinates": true,
+    "geometry_sha256": "7d6fce0dab78954f406a76be5fd4db94edab6a2aa4d5cb67a1a3eb438ecfea0f",
+    "components": 1,
+    "boundary_edges": 0,
+    "non_manifold_edges": 0,
+    "zero_area_faces": 0,
+    "triangles": 21160,
+    "intersections": {
+     "status": "computed",
+     "crossing_triangle_pairs": 68,
+     "approximate_regions": {
+      "feet": 61,
+      "head": 7
+     },
+     "bvh_candidates": 68,
+     "sample_triangle_pairs": [
+      [
+       523,
+       542
+      ],
+      [
+       523,
+       543
+      ],
+      [
+       523,
+       544
+      ],
+      [
+       523,
+       545
+      ],
+      [
+       523,
+       848
+      ],
+      [
+       523,
+       1061
+      ],
+      [
+       608,
+       626
+      ],
+      [
+       608,
+       628
+      ],
+      [
+       608,
+       629
+      ],
+      [
+       608,
+       990
+      ],
+      [
+       608,
+       992
+      ],
+      [
+       608,
+       993
+      ],
+      [
+       609,
+       628
+      ],
+      [
+       609,
+       630
+      ],
+      [
+       609,
+       631
+      ],
+      [
+       609,
+       988
+      ],
+      [
+       609,
+       989
+      ],
+      [
+       609,
+       990
+      ],
+      [
+       609,
+       991
+      ],
+      [
+       611,
+       626
+      ],
+      [
+       611,
+       992
+      ],
+      [
+       650,
+       2390
+      ],
+      [
+       650,
+       2451
+      ],
+      [
+       652,
+       2388
+      ],
+      [
+       652,
+       2390
+      ],
+      [
+       652,
+       2391
+      ],
+      [
+       652,
+       2450
+      ],
+      [
+       652,
+       2451
+      ],
+      [
+       652,
+       2453
+      ],
+      [
+       653,
+       2388
+      ],
+      [
+       653,
+       2453
+      ],
+      [
+       4373,
+       4498
+      ],
+      [
+       10946,
+       10966
+      ],
+      [
+       10946,
+       10967
+      ],
+      [
+       10946,
+       10968
+      ],
+      [
+       10946,
+       11272
+      ],
+      [
+       10946,
+       11273
+      ],
+      [
+       10946,
+       11484
+      ],
+      [
+       11032,
+       11053
+      ],
+      [
+       11032,
+       11054
+      ],
+      [
+       11032,
+       11055
+      ],
+      [
+       11032,
+       11412
+      ],
+      [
+       11032,
+       11413
+      ],
+      [
+       11032,
+       11414
+      ],
+      [
+       11033,
+       11051
+      ],
+      [
+       11033,
+       11052
+      ],
+      [
+       11033,
+       11053
+      ],
+      [
+       11033,
+       11414
+      ],
+      [
+       11033,
+       11415
+      ],
+      [
+       11033,
+       11416
+      ],
+      [
+       11035,
+       11051
+      ],
+      [
+       11035,
+       11416
+      ],
+      [
+       11075,
+       12815
+      ],
+      [
+       11075,
+       12874
+      ],
+      [
+       11076,
+       12813
+      ],
+      [
+       11076,
+       12876
+      ],
+      [
+       11077,
+       12813
+      ],
+      [
+       11077,
+       12814
+      ],
+      [
+       11077,
+       12815
+      ],
+      [
+       11077,
+       12874
+      ],
+      [
+       11077,
+       12875
+      ],
+      [
+       11077,
+       12876
+      ],
+      [
+       13973,
+       14306
+      ],
+      [
+       13973,
+       14308
+      ],
+      [
+       14066,
+       14306
+      ],
+      [
+       14067,
+       14306
+      ],
+      [
+       14793,
+       14798
+      ],
+      [
+       14798,
+       14922
+      ]
+     ],
+     "limitations": "Strict transverse crossings of triangles without shared vertices. Coplanar contact, nested closed shells and adjacent-face foldovers are not detected."
+    },
+    "status": "diagnostic_only"
+   },
+   "scope": "Geometric diagnostic; does not certify anatomical correctness.",
+   "eye_fit": {
+    "status": "computed",
+    "eyes": [
+     {
+      "name": "Œil droit",
+      "crossing_triangle_pairs": 0
+     },
+     {
+      "name": "Œil gauche",
+      "crossing_triangle_pairs": 0
+     }
+    ],
+    "limitations": "Strict transverse crossings including internal orbital geometry. Coplanar tangency and nested surfaces are excluded."
+   }
+  }
+ ],
+ "geometry_all_plus1": [
+  "FINISHED",
+  {
+   "format": "human_modeling.geometry_report",
+   "version": 1,
+   "character": "Corps",
+   "matrix_world": [
+    [
+     1.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     1.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "method": "Evaluated body mesh in local coordinates; separate eyes and other objects excluded",
+   "geometry": {
+    "vertices": 10582,
+    "edges": 21170,
+    "faces": 10590,
+    "finite_coordinates": true,
+    "geometry_sha256": "aa1416600a35a65028ea198486abc5f4bf9cf67b7022232230a6f5485d06ebd8",
+    "components": 1,
+    "boundary_edges": 0,
+    "non_manifold_edges": 0,
+    "zero_area_faces": 0,
+    "triangles": 21160,
+    "intersections": {
+     "status": "computed",
+     "crossing_triangle_pairs": 162,
+     "approximate_regions": {
+      "feet": 61,
+      "head": 7,
+      "hands_arms": 94
+     },
+     "bvh_candidates": 162,
+     "sample_triangle_pairs": [
+      [
+       523,
+       542
+      ],
+      [
+       523,
+       543
+      ],
+      [
+       523,
+       544
+      ],
+      [
+       523,
+       545
+      ],
+      [
+       523,
+       848
+      ],
+      [
+       523,
+       1061
+      ],
+      [
+       608,
+       626
+      ],
+      [
+       608,
+       628
+      ],
+      [
+       608,
+       629
+      ],
+      [
+       608,
+       990
+      ],
+      [
+       608,
+       992
+      ],
+      [
+       608,
+       993
+      ],
+      [
+       609,
+       628
+      ],
+      [
+       609,
+       630
+      ],
+      [
+       609,
+       631
+      ],
+      [
+       609,
+       988
+      ],
+      [
+       609,
+       989
+      ],
+      [
+       609,
+       990
+      ],
+      [
+       609,
+       991
+      ],
+      [
+       611,
+       626
+      ],
+      [
+       611,
+       992
+      ],
+      [
+       650,
+       2390
+      ],
+      [
+       650,
+       2451
+      ],
+      [
+       652,
+       2388
+      ],
+      [
+       652,
+       2390
+      ],
+      [
+       652,
+       2391
+      ],
+      [
+       652,
+       2450
+      ],
+      [
+       652,
+       2451
+      ],
+      [
+       652,
+       2453
+      ],
+      [
+       653,
+       2388
+      ],
+      [
+       653,
+       2453
+      ],
+      [
+       4373,
+       4498
+      ],
+      [
+       5985,
+       6492
+      ],
+      [
+       6045,
+       6944
+      ],
+      [
+       6045,
+       6945
+      ],
+      [
+       6046,
+       6851
+      ],
+      [
+       6047,
+       6492
+      ],
+      [
+       6047,
+       6851
+      ],
+      [
+       6050,
+       6373
+      ],
+      [
+       6051,
+       6372
+      ],
+      [
+       6051,
+       6373
+      ],
+      [
+       6072,
+       6944
+      ],
+      [
+       6073,
+       6944
+      ],
+      [
+       6080,
+       6372
+      ],
+      [
+       6080,
+       6734
+      ],
+      [
+       6080,
+       6735
+      ],
+      [
+       6095,
+       6860
+      ],
+      [
+       6166,
+       6492
+      ],
+      [
+       6166,
+       6493
+      ],
+      [
+       6167,
+       6493
+      ],
+      [
+       6167,
+       7730
+      ],
+      [
+       6168,
+       6645
+      ],
+      [
+       6169,
+       6645
+      ],
+      [
+       6169,
+       6850
+      ],
+      [
+       6170,
+       6582
+      ],
+      [
+       6170,
+       6860
+      ],
+      [
+       6170,
+       6861
+      ],
+      [
+       6171,
+       6582
+      ],
+      [
+       6172,
+       6373
+      ],
+      [
+       6173,
+       6373
+      ],
+      [
+       6173,
+       7730
+      ],
+      [
+       6195,
+       6850
+      ],
+      [
+       6195,
+       6851
+      ],
+      [
+       6212,
+       6582
+      ],
+      [
+       6212,
+       6588
+      ],
+      [
+       6212,
+       6589
+      ],
+      [
+       6212,
+       6945
+      ],
+      [
+       6213,
+       6582
+      ],
+      [
+       6240,
+       6945
+      ],
+      [
+       6244,
+       6734
+      ],
+      [
+       6245,
+       6734
+      ],
+      [
+       6248,
+       6944
+      ],
+      [
+       6249,
+       6734
+      ],
+      [
+       6249,
+       6944
+      ],
+      [
+       6258,
+       6645
+      ],
+      [
+       6258,
+       6860
+      ],
+      [
+       6259,
+       6860
+      ],
+      [
+       6284,
+       6645
+      ],
+      [
+       6285,
+       6645
+      ],
+      [
+       10946,
+       10966
+      ],
+      [
+       10946,
+       10967
+      ],
+      [
+       10946,
+       10968
+      ],
+      [
+       10946,
+       11272
+      ],
+      [
+       10946,
+       11273
+      ],
+      [
+       10946,
+       11484
+      ],
+      [
+       11032,
+       11053
+      ],
+      [
+       11032,
+       11054
+      ],
+      [
+       11032,
+       11055
+      ],
+      [
+       11032,
+       11412
+      ],
+      [
+       11032,
+       11413
+      ],
+      [
+       11032,
+       11414
+      ],
+      [
+       11033,
+       11051
+      ],
+      [
+       11033,
+       11052
+      ],
+      [
+       11033,
+       11053
+      ],
+      [
+       11033,
+       11414
+      ],
+      [
+       11033,
+       11415
+      ],
+      [
+       11033,
+       11416
+      ],
+      [
+       11035,
+       11051
+      ],
+      [
+       11035,
+       11416
+      ],
+      [
+       11075,
+       12815
+      ],
+      [
+       11075,
+       12874
+      ],
+      [
+       11076,
+       12813
+      ],
+      [
+       11076,
+       12876
+      ],
+      [
+       11077,
+       12813
+      ],
+      [
+       11077,
+       12814
+      ],
+      [
+       11077,
+       12815
+      ],
+      [
+       11077,
+       12874
+      ],
+      [
+       11077,
+       12875
+      ],
+      [
+       11077,
+       12876
+      ],
+      [
+       13973,
+       14306
+      ],
+      [
+       13973,
+       14308
+      ],
+      [
+       14066,
+       14306
+      ],
+      [
+       14067,
+       14306
+      ],
+      [
+       14793,
+       14798
+      ],
+      [
+       14798,
+       14922
+      ],
+      [
+       16408,
+       16917
+      ],
+      [
+       16408,
+       17275
+      ],
+      [
+       16409,
+       16917
+      ],
+      [
+       16468,
+       17369
+      ],
+      [
+       16469,
+       17369
+      ],
+      [
+       16470,
+       17275
+      ],
+      [
+       16471,
+       17275
+      ],
+      [
+       16474,
+       16797
+      ],
+      [
+       16496,
+       17368
+      ],
+      [
+       16496,
+       17369
+      ],
+      [
+       16497,
+       17369
+      ],
+      [
+       16505,
+       16797
+      ],
+      [
+       16505,
+       17158
+      ],
+      [
+       16505,
+       17159
+      ],
+      [
+       16518,
+       17284
+      ],
+      [
+       16519,
+       17284
+      ],
+      [
+       16590,
+       16917
+      ],
+      [
+       16591,
+       16917
+      ],
+      [
+       16591,
+       18154
+      ],
+      [
+       16592,
+       17068
+      ],
+      [
+       16592,
+       17275
+      ],
+      [
+       16593,
+       17068
+      ],
+      [
+       16594,
+       17007
+      ],
+      [
+       16594,
+       17284
+      ],
+      [
+       16595,
+       17007
+      ],
+      [
+       16596,
+       16796
+      ],
+      [
+       16596,
+       18154
+      ],
+      [
+       16596,
+       18155
+      ],
+      [
+       16597,
+       16796
+      ],
+      [
+       16597,
+       16797
+      ],
+      [
+       16618,
+       17275
+      ],
+      [
+       16636,
+       17007
+      ],
+      [
+       16636,
+       17013
+      ],
+      [
+       16637,
+       17012
+      ],
+      [
+       16637,
+       17013
+      ],
+      [
+       16637,
+       17368
+      ],
+      [
+       16664,
+       17368
+      ],
+      [
+       16664,
+       17369
+      ],
+      [
+       16669,
+       17159
+      ],
+      [
+       16672,
+       17159
+      ],
+      [
+       16672,
+       17368
+      ],
+      [
+       16673,
+       17368
+      ],
+      [
+       16682,
+       17068
+      ],
+      [
+       16682,
+       17284
+      ],
+      [
+       16682,
+       17285
+      ],
+      [
+       16708,
+       17068
+      ],
+      [
+       16709,
+       17068
+      ]
+     ],
+     "limitations": "Strict transverse crossings of triangles without shared vertices. Coplanar contact, nested closed shells and adjacent-face foldovers are not detected."
+    },
+    "status": "diagnostic_only"
+   },
+   "scope": "Geometric diagnostic; does not certify anatomical correctness.",
+   "eye_fit": {
+    "status": "computed",
+    "eyes": [
+     {
+      "name": "Œil droit",
+      "crossing_triangle_pairs": 0
+     },
+     {
+      "name": "Œil gauche",
+      "crossing_triangle_pairs": 0
+     }
+    ],
+    "limitations": "Strict transverse crossings including internal orbital geometry. Coplanar tangency and nested surfaces are excluded."
+   }
+  }
+ ],
+ "set_height": [
+  {
+   "asked": 0.5,
+   "result": "FINISHED",
+   "scale": 0.2959,
+   "height": 0.5
+  },
+  {
+   "asked": 1.2,
+   "result": "FINISHED",
+   "scale": 0.7101,
+   "height": 1.2
+  },
+  {
+   "asked": 1.75,
+   "result": "FINISHED",
+   "scale": 1.0355,
+   "height": 1.75
+  },
+  {
+   "asked": 2.2,
+   "result": "FINISHED",
+   "scale": 1.3018,
+   "height": 2.2
+  },
+  {
+   "asked": 3.0,
+   "result": "FINISHED",
+   "scale": 1.7752,
+   "height": 3.0
+  }
+ ],
+ "age_calibration": [
+  {
+   "stage": 0,
+   "sex": "F",
+   "status": "FINISHED",
+   "scale": 0.9945,
+   "height_m": 1.094
+  },
+  {
+   "stage": 0,
+   "sex": "M",
+   "status": "FINISHED",
+   "scale": 1.0,
+   "height_m": 1.1
+  },
+  {
+   "stage": 1,
+   "sex": "F",
+   "status": "FINISHED",
+   "scale": 0.9568,
+   "height_m": 1.617
+  },
+  {
+   "stage": 1,
+   "sex": "M",
+   "status": "FINISHED",
+   "scale": 1.0,
+   "height_m": 1.69
+  },
+  {
+   "stage": 2,
+   "sex": "F",
+   "status": "FINISHED",
+   "scale": 0.9633,
+   "height_m": 1.628
+  },
+  {
+   "stage": 2,
+   "sex": "M",
+   "status": "FINISHED",
+   "scale": 1.0438,
+   "height_m": 1.764
+  },
+  {
+   "stage": 3,
+   "sex": "F",
+   "status": "FINISHED",
+   "scale": 0.9455,
+   "height_m": 1.579
+  },
+  {
+   "stage": 3,
+   "sex": "M",
+   "status": "FINISHED",
+   "scale": 1.0342,
+   "height_m": 1.727
+  }
+ ],
+ "groom_short": {
+  "result": "FINISHED",
+  "seconds": 1.17,
+  "objects": [
+   [
+    "HumanLoom · Cheveux",
+    850
+   ],
+   [
+    "HumanLoom · Sourcils",
+    240
+   ]
+  ]
+ },
+ "groom_roots_neutral": {
+  "HumanLoom · Cheveux": {
+   "curves_eval": 29337,
+   "root_gap_mm_median": 0.006,
+   "root_gap_mm_max": 0.156
+  },
+  "HumanLoom · Sourcils": {
+   "curves_eval": 1747,
+   "root_gap_mm_median": 0.009,
+   "root_gap_mm_max": 0.212
+  }
+ },
+ "groom_roots_after_morph": {
+  "HumanLoom · Cheveux": {
+   "curves_eval": 29337,
+   "root_gap_mm_median": 0.006,
+   "root_gap_mm_max": 0.156
+  },
+  "HumanLoom · Sourcils": {
+   "curves_eval": 1747,
+   "root_gap_mm_median": 0.01,
+   "root_gap_mm_max": 0.215
+  }
+ },
+ "groom_roots_after_scale": {
+  "HumanLoom · Cheveux": {
+   "curves_eval": 29337,
+   "root_gap_mm_median": 0.005,
+   "root_gap_mm_max": 0.135
+  },
+  "HumanLoom · Sourcils": {
+   "curves_eval": 1747,
+   "root_gap_mm_median": 0.008,
+   "root_gap_mm_max": 0.185
+  }
+ },
+ "groom_all": {
+  "result": "FINISHED",
+  "seconds": 1.96,
+  "objects": [
+   [
+    "HumanLoom · Abdomen",
+    280
+   ],
+   [
+    "HumanLoom · Barbe",
+    500
+   ],
+   [
+    "HumanLoom · Bras",
+    550
+   ],
+   [
+    "HumanLoom · Cheveux",
+    850
+   ],
+   [
+    "HumanLoom · Dos",
+    350
+   ],
+   [
+    "HumanLoom · Jambes",
+    800
+   ],
+   [
+    "HumanLoom · Moustache",
+    240
+   ],
+   [
+    "HumanLoom · Sourcils",
+    240
+   ],
+   [
+    "HumanLoom · Torse",
+    420
+   ]
+  ]
+ }
+}

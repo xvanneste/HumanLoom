@@ -1,0 +1,32 @@
+{
+ "cles_utilisees": [
+  "Morphologie",
+  "HM · shoulders",
+  "HM · shoulders · correction",
+  "HM · waist"
+ ],
+ "sommets_touches_par_expression": 1227,
+ "bake_equivalence_max_mm": 1.5e-05,
+ "modificateurs_restants": [],
+ "attributs_d_restants": [],
+ "exports": {
+  "fbx_Mo": 0.68,
+  "glb_Mo": 2.06
+ },
+ "reimport_fbx": {
+  "sommets": 10582,
+  "shape_keys": [
+   "Basis",
+   "Smile"
+  ],
+  "delta_expression_max_mm_apres_import": 6.0
+ },
+ "reimport_glb": {
+  "sommets": 42340,
+  "shape_keys": [
+   "Basis",
+   "Smile"
+  ],
+  "delta_expression_max_mm_apres_import": 6.0
+ }
+}

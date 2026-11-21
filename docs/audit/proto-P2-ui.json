@@ -1,0 +1,10 @@
+{
+ "keymap_registered": true,
+ "kmi": "Shift Ctrl H",
+ "poll_guarded_with_body": true,
+ "panels_registered": [
+  "Human",
+  "Human (sidebar)"
+ ],
+ "add_menu_registered": true
+}

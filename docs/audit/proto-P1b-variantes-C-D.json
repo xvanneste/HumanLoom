@@ -1,0 +1,72 @@
+{
+ "C_rewired_variables": 1092,
+ "equality_max_mm_vs_current_system": {
+  "C": 0.0,
+  "D": 0.0
+ },
+ "invalid_drivers": {
+  "C": 0,
+  "D": 0
+ },
+ "slider_ms_median_p90": {
+  "baseline_key_props": [
+   14.4,
+   15.2
+  ],
+  "C_object_custom_props": [
+   14.2,
+   14.7
+  ],
+  "D_facade_proxy": [
+   14.1,
+   14.6
+  ]
+ },
+ "duplicate_C": {
+  "copy_driver_target": "Corps.003",
+  "copy": "Corps.003",
+  "orig": "Corps.001",
+  "copy_moves_mm": 2.266,
+  "orig_moves_mm": 0.0
+ },
+ "duplicate_D": {
+  "copy_driver_target": "Key.010",
+  "copy": "Corps.004",
+  "orig": "Corps.002",
+  "copy_moves_mm": 2.266,
+  "orig_moves_mm": 0.0
+ },
+ "keyframes_C_width_by_frame": [
+  [
+   1,
+   0.7768
+  ],
+  [
+   51,
+   0.7965
+  ],
+  [
+   101,
+   0.8169
+  ]
+ ],
+ "keyframes_D_width_by_frame": [
+  [
+   1,
+   0.7768
+  ],
+  [
+   51,
+   0.7965
+  ],
+  [
+   101,
+   0.8169
+  ]
+ ],
+ "saved": {
+  "C": "Corps.001",
+  "D": "Corps.002",
+  "old": "Corps"
+ }
+}

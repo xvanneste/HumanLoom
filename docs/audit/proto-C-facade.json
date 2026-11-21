@@ -1,0 +1,72 @@
+{
+ "modifier_stack": [
+  "HL Human",
+  "Human Modeling · Surface",
+  "Human Modeling · Relief de peau"
+ ],
+ "rewired_variables_body": 1363,
+ "rewired_variables_eyes": 278,
+ "invalid_drivers": {
+  "body": 0,
+  "eyes": 0
+ },
+ "body_max_error_mm_20_states": 0.00012,
+ "eyes_max_error_mm_20_states": 0.0,
+ "slider_ms_cage": {
+  "reference_key_props": [
+   15.6,
+   16.8
+  ],
+  "facade_modifier_inputs": [
+   16.0,
+   18.2
+  ]
+ },
+ "slider_ms_with_subsurf": {
+  "reference_key_props": [
+   47.2,
+   49.1
+  ],
+  "facade_modifier_inputs": [
+   47.4,
+   49.8
+  ]
+ },
+ "keyframes_on_modifier_inputs_(frame, height, depth)": [
+  [
+   1,
+   1.131,
+   0.219
+  ],
+  [
+   51,
+   1.677,
+   0.331
+  ],
+  [
+   101,
+   1.676,
+   0.458
+  ]
+ ],
+ "hair_root_gap_mm_after_morph_age0": [
+  [
+   "HumanLoom · Cheveux",
+   0.018
+  ],
+  [
+   "HumanLoom · Sourcils",
+   0.025
+  ]
+ ],
+ "duplicate": {
+  "copy": "Corps.002",
+  "driver_target": "Corps.002",
+  "modifier_group_shared_with_original": true,
+  "copy_moves_mm": 14.0,
+  "orig_moves_mm": 0.0
+ },
+ "saved": {
+  "facade": "Corps.001"
+ }
+}

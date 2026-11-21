@@ -1,0 +1,99 @@
+{
+ "modifier_order_before": [
+  "HumanLoom · densité",
+  "HumanLoom · profil",
+  "HumanLoom · matériau",
+  "HumanLoom · suivi 5.2"
+ ],
+ "trim_node_inputs": [
+  "Curve",
+  "Selection",
+  "Start",
+  "End",
+  "Start",
+  "End"
+ ],
+ "modifier_order_after": [
+  "HumanLoom · densité",
+  "HumanLoom · profil",
+  "HumanLoom · matériau",
+  "HL Trim Proto",
+  "HumanLoom · suivi 5.2"
+ ],
+ "growth_factor_vs_(evaluated_curves, mean_length_m)": [
+  [
+   1.0,
+   [
+    29337,
+    0.0482
+   ]
+  ],
+  [
+   0.5,
+   [
+    29337,
+    0.0482
+   ]
+  ],
+  [
+   0.2,
+   [
+    29337,
+    0.0482
+   ]
+  ],
+  [
+   0.0,
+   [
+    29337,
+    0.0482
+   ]
+  ]
+ ],
+ "animation_frames_(frame, growth, (curves, mean_length_m))": [
+  [
+   1,
+   0.0,
+   [
+    29337,
+    0.0
+   ]
+  ],
+  [
+   26,
+   0.156,
+   [
+    29337,
+    0.0075
+   ]
+  ],
+  [
+   51,
+   0.5,
+   [
+    29337,
+    0.0241
+   ]
+  ],
+  [
+   76,
+   0.844,
+   [
+    29337,
+    0.0407
+   ]
+  ],
+  [
+   101,
+   1.0,
+   [
+    29337,
+    0.0482
+   ]
+  ]
+ ],
+ "keyframe_ok": [
+  true,
+  true
+ ]
+}

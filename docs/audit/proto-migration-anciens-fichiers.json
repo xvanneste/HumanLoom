@@ -1,0 +1,144 @@
+{
+ "Session-modelisation-08.blend": {
+  "bodies": 2,
+  "schema_before": 3,
+  "keys_before": 55,
+  "drivers_before": 53,
+  "invalid_drivers_before": 0,
+  "modifiers_before": [
+   "Human Modeling · Surface"
+  ],
+  "finite_before": true,
+  "upgrade_poll": true,
+  "upgrade_result": "FINISHED",
+  "upgrade_s": 29.35,
+  "schema_after": 9,
+  "keys_after": 462,
+  "invalid_drivers_after": 0,
+  "max_mm_change_at_neutral": 35.3837,
+  "finite_after": true,
+  "control_moves_body_mm_after_upgrade": 11.2,
+  "eyes_invalid_drivers": 0
+ },
+ "Session-modelisation-09.blend": {
+  "bodies": 2,
+  "schema_before": 4,
+  "keys_before": 73,
+  "drivers_before": 71,
+  "invalid_drivers_before": 0,
+  "modifiers_before": [
+   "Human Modeling · Surface"
+  ],
+  "finite_before": true,
+  "upgrade_poll": true,
+  "upgrade_result": "FINISHED",
+  "upgrade_s": 31.38,
+  "schema_after": 9,
+  "keys_after": 462,
+  "invalid_drivers_after": 0,
+  "max_mm_change_at_neutral": 35.3837,
+  "finite_after": true,
+  "control_moves_body_mm_after_upgrade": 11.2,
+  "eyes_invalid_drivers": 0
+ },
+ "Session-modelisation-10.blend": {
+  "bodies": 2,
+  "schema_before": 5,
+  "keys_before": 387,
+  "drivers_before": 385,
+  "invalid_drivers_before": 0,
+  "modifiers_before": [
+   "Human Modeling · Surface"
+  ],
+  "finite_before": true,
+  "upgrade_poll": true,
+  "upgrade_result": "FINISHED",
+  "upgrade_s": 14.35,
+  "schema_after": 9,
+  "keys_after": 462,
+  "invalid_drivers_after": 0,
+  "max_mm_change_at_neutral": 35.3837,
+  "finite_after": true,
+  "control_moves_body_mm_after_upgrade": 11.2,
+  "eyes_invalid_drivers": 0
+ },
+ "Session-modelisation-11.blend": {
+  "bodies": 2,
+  "schema_before": 6,
+  "keys_before": 389,
+  "drivers_before": 386,
+  "invalid_drivers_before": 0,
+  "modifiers_before": [
+   "Human Modeling · Surface",
+   "Human Modeling · Relief de peau"
+  ],
+  "finite_before": true,
+  "upgrade_poll": true,
+  "upgrade_result": "FINISHED",
+  "upgrade_s": 14.17,
+  "schema_after": 9,
+  "keys_after": 462,
+  "invalid_drivers_after": 0,
+  "max_mm_change_at_neutral": 35.3837,
+  "finite_after": true,
+  "control_moves_body_mm_after_upgrade": 11.2,
+  "eyes_invalid_drivers": 0
+ },
+ "Session-modelisation-12.blend": {
+  "bodies": 2,
+  "schema_before": 7,
+  "keys_before": 398,
+  "drivers_before": 395,
+  "invalid_drivers_before": 0,
+  "modifiers_before": [
+   "Human Modeling · Surface",
+   "Human Modeling · Relief de peau"
+  ],
+  "finite_before": true,
+  "upgrade_poll": true,
+  "upgrade_result": "FINISHED",
+  "upgrade_s": 12.71,
+  "schema_after": 9,
+  "keys_after": 462,
+  "invalid_drivers_after": 0,
+  "max_mm_change_at_neutral": 35.3837,
+  "finite_after": true,
+  "control_moves_body_mm_after_upgrade": 11.2,
+  "eyes_invalid_drivers": 0
+ },
+ "Session-modelisation-13.blend": {
+  "bodies": 2,
+  "schema_before": 8,
+  "keys_before": 430,
+  "drivers_before": 427,
+  "invalid_drivers_before": 0,
+  "modifiers_before": [
+   "Human Modeling · Surface",
+   "Human Modeling · Relief de peau"
+  ],
+  "finite_before": true,
+  "upgrade_poll": true,
+  "upgrade_result": "FINISHED",
+  "upgrade_s": 7.04,
+  "schema_after": 9,
+  "keys_after": 462,
+  "invalid_drivers_after": 0,
+  "max_mm_change_at_neutral": 35.3837,
+  "finite_after": true,
+  "control_moves_body_mm_after_upgrade": 11.2,
+  "eyes_invalid_drivers": 0
+ },
+ "Session-modelisation-14.blend": {
+  "bodies": 2,
+  "schema_before": 9,
+  "keys_before": 462,
+  "drivers_before": 459,
+  "invalid_drivers_before": 0,
+  "modifiers_before": [
+   "Human Modeling · Surface",
+   "Human Modeling · Relief de peau"
+  ],
+  "finite_before": true,
+  "upgrade_poll": false
+ }
+}

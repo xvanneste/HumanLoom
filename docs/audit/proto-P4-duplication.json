@@ -1,0 +1,84 @@
+{
+ "original_children": [
+  "HumanLoom · Cheveux",
+  "HumanLoom · Sourcils",
+  "Mesure · Bassin · repère de segmentation",
+  "Œil droit",
+  "Œil gauche"
+ ],
+ "new_body": "Corps.001",
+ "new_body_children": [
+  "HumanLoom · Cheveux.001",
+  "HumanLoom · Sourcils.001",
+  "Mesure · Bassin · repère de segmentation.001",
+  "Œil droit.001",
+  "Œil gauche.001"
+ ],
+ "new_body_children_types": [
+  "CURVES",
+  "CURVES",
+  "EMPTY",
+  "MESH",
+  "MESH"
+ ],
+ "new_mesh_is_copy": true,
+ "new_keys_is_copy": true,
+ "eye_driver_targets": [
+  {
+   "eye": "Œil droit.001",
+   "driver_target": "Corps.001",
+   "target_is_new_body_keys": false,
+   "target_is_orig_body_keys": false
+  },
+  {
+   "eye": "Œil gauche.001",
+   "driver_target": "Corps.001",
+   "target_is_new_body_keys": false,
+   "target_is_orig_body_keys": false
+  }
+ ],
+ "hair_copies": [
+  {
+   "hair": "HumanLoom · Cheveux.001",
+   "surface": "Corps.001",
+   "surface_is_new_body": true,
+   "surface_is_orig_body": false,
+   "hl_region": "SCALP",
+   "shares_curves_data_with_original": false,
+   "material_shared_with_original": true
+  },
+  {
+   "hair": "HumanLoom · Sourcils.001",
+   "surface": "Corps.001",
+   "surface_is_new_body": true,
+   "surface_is_orig_body": false,
+   "hl_region": "BROWS",
+   "shares_curves_data_with_original": false,
+   "material_shared_with_original": true
+  }
+ ],
+ "after_morphing_copy_hair_gaps": [
+  {
+   "hair": "HumanLoom · Cheveux.001",
+   "median_gap_to_new_body_mm": 0.016,
+   "median_gap_to_orig_body_mm": 2.092
+  },
+  {
+   "hair": "HumanLoom · Sourcils.001",
+   "median_gap_to_new_body_mm": 0.016,
+   "median_gap_to_orig_body_mm": 1.094
+  }
+ ],
+ "landmark_copies": [
+  {
+   "name": "Mesure · Bassin · repère de segmentation.001",
+   "parent": "Corps.001",
+   "parent_is_new": true
+  }
+ ],
+ "eye_copy_morph_value_follows_new_body": [
+  0.25,
+  0.25
+ ],
+ "orig_body_morph_value_unchanged": 1.0
+}

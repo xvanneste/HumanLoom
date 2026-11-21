@@ -1,0 +1,107 @@
+{
+ "cheeks": {
+  "tous_ages": 3,
+  "adulte_et_senior": 3,
+  "adulte": 3
+ },
+ "chin": {
+  "tous_ages": 6,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "ears_angle": {
+  "tous_ages": 3,
+  "adulte_et_senior": 3,
+  "adulte": 3
+ },
+ "ears_size": {
+  "tous_ages": 3,
+  "adulte_et_senior": 3,
+  "adulte": 3
+ },
+ "eye_height": {
+  "tous_ages": 3,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "eye_spacing": {
+  "tous_ages": 1,
+  "adulte_et_senior": 1,
+  "adulte": 1
+ },
+ "eyelid_aperture": {
+  "tous_ages": 6,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "facial_asymmetry": {
+  "tous_ages": 1,
+  "adulte_et_senior": 1,
+  "adulte": 3
+ },
+ "forehead": {
+  "tous_ages": 6,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "head_height": {
+  "tous_ages": 1,
+  "adulte_et_senior": 1,
+  "adulte": 1
+ },
+ "head_width": {
+  "tous_ages": 1,
+  "adulte_et_senior": 1,
+  "adulte": 1
+ },
+ "jaw": {
+  "tous_ages": 3,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "jaw_angle": {
+  "tous_ages": 6,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "lip_thickness": {
+  "tous_ages": 3,
+  "adulte_et_senior": 3,
+  "adulte": 6
+ },
+ "lips": {
+  "tous_ages": 6,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "mouth": {
+  "tous_ages": 3,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "mouth_corner": {
+  "tous_ages": 3,
+  "adulte_et_senior": 3,
+  "adulte": 6
+ },
+ "muscle_definition": {
+  "tous_ages": 6,
+  "adulte_et_senior": 6,
+  "adulte": 6
+ },
+ "nose_bridge": {
+  "tous_ages": 1,
+  "adulte_et_senior": 3,
+  "adulte": 3
+ },
+ "nose_length": {
+  "tous_ages": 3,
+  "adulte_et_senior": 3,
+  "adulte": 3
+ },
+ "nose_width": {
+  "tous_ages": 3,
+  "adulte_et_senior": 3,
+  "adulte": 3
+ }
+}

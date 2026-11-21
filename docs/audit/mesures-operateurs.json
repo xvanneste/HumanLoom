@@ -1,0 +1,667 @@
+{
+ "polls": {
+  "ok": true,
+  "value": {
+   "empty_scene": {
+    "add_proportions": false,
+    "age_reference": false,
+    "body_profile": false,
+    "calibrate_age_height": false,
+    "check_geometry": false,
+    "create": true,
+    "export_geometry_report": false,
+    "fit_measurement": false,
+    "load_landmarks": false,
+    "load_preset": false,
+    "mark_anatomy": false,
+    "mark_pelvis": false,
+    "measurement_report": false,
+    "mirror_landmarks": false,
+    "randomize": false,
+    "reference_height": false,
+    "repair_surface": false,
+    "reset_proportions": false,
+    "save_landmarks": false,
+    "save_preset": false,
+    "set_height": false,
+    "smooth": false,
+    "humanloom.groom_apply": false,
+    "humanloom.groom_build": false,
+    "humanloom.groom_density": false,
+    "humanloom.groom_export": false,
+    "humanloom.groom_import": false,
+    "humanloom.groom_paint": false,
+    "humanloom.groom_preset": false,
+    "humanloom.groom_quality": false,
+    "humanloom.groom_remove": false,
+    "humanloom.groom_select": false
+   },
+   "body_selected": {
+    "add_proportions": false,
+    "age_reference": true,
+    "body_profile": true,
+    "calibrate_age_height": true,
+    "check_geometry": true,
+    "create": true,
+    "export_geometry_report": true,
+    "fit_measurement": true,
+    "load_landmarks": true,
+    "load_preset": true,
+    "mark_anatomy": false,
+    "mark_pelvis": false,
+    "measurement_report": true,
+    "mirror_landmarks": true,
+    "randomize": true,
+    "reference_height": true,
+    "repair_surface": true,
+    "reset_proportions": true,
+    "save_landmarks": true,
+    "save_preset": true,
+    "set_height": true,
+    "smooth": true,
+    "humanloom.groom_apply": true,
+    "humanloom.groom_build": true,
+    "humanloom.groom_density": false,
+    "humanloom.groom_export": true,
+    "humanloom.groom_import": true,
+    "humanloom.groom_paint": true,
+    "humanloom.groom_preset": true,
+    "humanloom.groom_quality": true,
+    "humanloom.groom_remove": true,
+    "humanloom.groom_select": true
+   },
+   "eye_active": {
+    "add_proportions": false,
+    "age_reference": true,
+    "body_profile": true,
+    "calibrate_age_height": true,
+    "check_geometry": true,
+    "create": true,
+    "export_geometry_report": true,
+    "fit_measurement": true,
+    "load_landmarks": true,
+    "load_preset": true,
+    "mark_anatomy": false,
+    "mark_pelvis": false,
+    "measurement_report": true,
+    "mirror_landmarks": true,
+    "randomize": true,
+    "reference_height": true,
+    "repair_surface": true,
+    "reset_proportions": true,
+    "save_landmarks": true,
+    "save_preset": true,
+    "set_height": true,
+    "smooth": true,
+    "humanloom.groom_apply": true,
+    "humanloom.groom_build": true,
+    "humanloom.groom_density": false,
+    "humanloom.groom_export": true,
+    "humanloom.groom_import": true,
+    "humanloom.groom_paint": true,
+    "humanloom.groom_preset": true,
+    "humanloom.groom_quality": true,
+    "humanloom.groom_remove": true,
+    "humanloom.groom_select": true
+   },
+   "edit_mode": {
+    "add_proportions": false,
+    "age_reference": false,
+    "body_profile": false,
+    "calibrate_age_height": false,
+    "check_geometry": false,
+    "create": false,
+    "export_geometry_report": false,
+    "fit_measurement": false,
+    "load_landmarks": false,
+    "load_preset": false,
+    "mark_anatomy": true,
+    "mark_pelvis": true,
+    "measurement_report": false,
+    "mirror_landmarks": false,
+    "randomize": false,
+    "reference_height": false,
+    "repair_surface": false,
+    "reset_proportions": false,
+    "save_landmarks": false,
+    "save_preset": false,
+    "set_height": false,
+    "smooth": false,
+    "humanloom.groom_apply": false,
+    "humanloom.groom_build": false,
+    "humanloom.groom_density": false,
+    "humanloom.groom_export": false,
+    "humanloom.groom_import": false,
+    "humanloom.groom_paint": false,
+    "humanloom.groom_preset": false,
+    "humanloom.groom_quality": false,
+    "humanloom.groom_remove": false,
+    "humanloom.groom_select": false
+   }
+  },
+  "ms": 842
+ },
+ "measure": {
+  "ok": true,
+  "value": {
+   "width_m": 0.8792774379253387,
+   "depth_m": 0.2939456030726433,
+   "height_m": 1.689155327156186
+  },
+  "ms": 46
+ },
+ "landmark_flow": {
+  "ok": true,
+  "value": {
+   "mark_pelvis": "FINISHED",
+   "mark_waist_level": "FINISHED",
+   "mark_hips_level": "FINISHED",
+   "mark_chest_level": "FINISHED",
+   "mark_al_l": "FINISHED",
+   "mark_al_r": "FINISHED",
+   "mark_ch_l": "FINISHED",
+   "mark_ch_r": "FINISHED",
+   "mark_en_l": "FINISHED",
+   "mark_en_r": "FINISHED",
+   "landmarks_markers": 10
+  },
+  "ms": 3259
+ },
+ "fit_measurements": {
+  "ok": true,
+  "value": {
+   "waist_level": {
+    "result": "FINISHED",
+    "before": 0.8774,
+    "target": 0.9212,
+    "after": 0.9212,
+    "extreme": "ERR Error: Cible hors de la plage du réglage : 79.81 à 95.67 cm.\n"
+   },
+   "hips_level": {
+    "result": "FINISHED",
+    "before": 0.9947,
+    "target": 1.0444,
+    "after": 1.0444,
+    "extreme": "ERR Error: Cible hors de la plage du réglage : 93.76 à 105.18 cm.\n"
+   },
+   "chest_level": "ERR Error: Cible hors de la plage du réglage : 157.40 à 167.70 cm.\n",
+   "nose_width": "ERR Error: La mesure ne varie pas régulièrement avec ce réglage et ces repères.\n",
+   "mouth_width": "ERR Error: Cible hors de la plage du réglage : 7.40 à 7.62 cm.\n",
+   "inner_eye_distance": {
+    "result": "FINISHED",
+    "before": 0.0525,
+    "target": 0.0552,
+    "after": 0.0552,
+    "extreme": "ERR Error: Cible hors de la plage du réglage : 4.65 à 5.85 cm.\n"
+   },
+   "pelvis_ratio": {
+    "result": "FINISHED",
+    "before": 0.5146,
+    "target": 0.5249,
+    "after": 0.5249,
+    "extreme": "ERR Error: Cible hors de la plage du réglage : 50.02 à 52.82 %.\n"
+   }
+  },
+  "ms": 6424
+ },
+ "landmark_io": {
+  "ok": true,
+  "value": {
+   "save": "FINISHED",
+   "mirror_none_missing": "CANCELLED",
+   "mirror_two_missing": "FINISHED",
+   "load": "FINISHED"
+  },
+  "ms": 101
+ },
+ "reference_and_reports": {
+  "ok": true,
+  "value": {
+   "combos": 42,
+   "bad": 0,
+   "reference_height": "FINISHED",
+   "height_after_cm": 176.4,
+   "report_export": "FINISHED",
+   "geometry_export": "FINISHED"
+  },
+  "ms": 3980
+ },
+ "smooth_op": {
+  "ok": true,
+  "value": {
+   "result": "FINISHED",
+   "mods": [
+    [
+     "Human Modeling · Surface",
+     "SUBSURF"
+    ],
+    [
+     "Human Modeling · Relief de peau",
+     "DISPLACE"
+    ]
+   ]
+  },
+  "ms": 166
+ },
+ "add_proportions_on_current": {
+  "ok": false,
+  "error": "RuntimeError: Operator bpy.ops.human_modeling.add_proportions.poll() failed, context is incorrect",
+  "ms": 0
+ },
+ "repair_surface": {
+  "ok": true,
+  "value": "FINISHED",
+  "ms": 0
+ },
+ "reset_proportions": {
+  "ok": true,
+  "value": "FINISHED",
+  "ms": 45
+ },
+ "create_multiple": {
+  "ok": true,
+  "value": [
+   {
+    "name": "Corps.001",
+    "loc": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "verts": 10582,
+    "shape_data": "Corps.003",
+    "keys": "Key.009"
+   },
+   {
+    "name": "Corps.002",
+    "loc": [
+     5.0,
+     0.0,
+     0.0
+    ],
+    "verts": 10582,
+    "shape_data": "Corps.004",
+    "keys": "Key.012"
+   },
+   {
+    "name": "Corps.003",
+    "loc": [
+     -5.0,
+     3.0,
+     0.0
+    ],
+    "verts": 10582,
+    "shape_data": "Corps.005",
+    "keys": "Key.015"
+   }
+  ],
+  "ms": 1929
+ },
+ "transforms_duplicates": {
+  "ok": true,
+  "value": {
+   "rot90_x_set_height": "FINISHED",
+   "rot_measure_h": 1.8,
+   "nonuniform_set_height": "FINISHED",
+   "nonuniform_scale_after": [
+    1.066,
+    2.131,
+    1.066
+   ],
+   "dup_shares_mesh": false,
+   "dup_shares_keys": false,
+   "dup_independent_edit": true,
+   "dup_children": 0
+  },
+  "ms": 1348
+ },
+ "groom_build_each_region": {
+  "ok": true,
+  "value": {
+   "SCALP": {
+    "res": "FINISHED",
+    "s": 1.41,
+    "guides": 850,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · profil",
+     "HumanLoom · matériau",
+     "HumanLoom · suivi 5.2"
+    ]
+   },
+   "BROWS": {
+    "res": "FINISHED",
+    "s": 0.55,
+    "guides": 240,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "BEARD": {
+    "res": "FINISHED",
+    "s": 0.71,
+    "guides": 500,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "MOUSTACHE": {
+    "res": "FINISHED",
+    "s": 0.74,
+    "guides": 240,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "CHEST": {
+    "res": "FINISHED",
+    "s": 1.0,
+    "guides": 420,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "ABDOMEN": {
+    "res": "FINISHED",
+    "s": 1.04,
+    "guides": 280,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "BACK": {
+    "res": "FINISHED",
+    "s": 1.25,
+    "guides": 350,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "ARMS": {
+    "res": "FINISHED",
+    "s": 1.46,
+    "guides": 550,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "LEGS": {
+    "res": "FINISHED",
+    "s": 1.89,
+    "guides": 800,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "AXILLA": {
+    "res": "FINISHED",
+    "s": 1.56,
+    "guides": 160,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   },
+   "PUBIC": {
+    "res": "FINISHED",
+    "s": 1.57,
+    "guides": 220,
+    "mods": [
+     "HumanLoom · densité",
+     "HumanLoom · suivi 5.2",
+     "HumanLoom · profil",
+     "HumanLoom · matériau"
+    ]
+   }
+  },
+  "ms": 13795
+ },
+ "groom_parameters": {
+  "ok": true,
+  "value": {
+   "base_eval_curves": 29337,
+   "nature=0": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "nature=1": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "variation=0": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "variation=0.8": "ERR Error: Valeur invalide : variation\n",
+   "frizz=0": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "frizz=1": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "viewport=0": {
+    "res": "FINISHED",
+    "eval": 0
+   },
+   "viewport=1": {
+    "res": "FINISHED",
+    "eval": 97825
+   },
+   "density=0": {
+    "res": "FINISHED",
+    "eval": 0
+   },
+   "density=8000000": {
+    "res": "FINISHED",
+    "eval": 130355
+   },
+   "radius=5e-06": "ERR Error: Valeur invalide : radius\n",
+   "radius=0.00015": "ERR Error: Valeur invalide : radius\n",
+   "grey=0": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "grey=1": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "roughness=0.05": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "roughness=1": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "bendiness=0": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "bendiness=1": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "root_bendiness=0": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "root_bendiness=1": {
+    "res": "FINISHED",
+    "eval": 29337
+   },
+   "length=0.001": {
+    "res": "FINISHED",
+    "guides": 850,
+    "eval": 29337
+   },
+   "length=0.45": {
+    "res": "FINISHED",
+    "guides": 850,
+    "eval": 29337
+   },
+   "guides=20": {
+    "res": "FINISHED",
+    "guides": 20,
+    "eval": 29337
+   },
+   "guides=3000": {
+    "res": "FINISHED",
+    "guides": 3000,
+    "eval": 29337
+   },
+   "seed=0": {
+    "res": "FINISHED",
+    "guides": 3000,
+    "eval": 29341
+   },
+   "seed=2147483647": {
+    "res": "FINISHED",
+    "guides": 3000,
+    "eval": 29324
+   },
+   "style=SWEPT": "FINISHED",
+   "style=PARTED": "FINISHED",
+   "style=UPRIGHT": "FINISHED",
+   "quality=LIGHT": {
+    "res": "FINISHED",
+    "eval": 9786
+   },
+   "quality=BALANCED": {
+    "res": "FINISHED",
+    "eval": 29324
+   },
+   "quality=FULL": {
+    "res": "FINISHED",
+    "eval": 97774
+   },
+   "quality=CUSTOM": {
+    "res": "FINISHED",
+    "eval": 97774
+   },
+   "density_preset=SPARSE": {
+    "res": "FINISHED",
+    "density": 700000.0
+   },
+   "density_preset=NORMAL": {
+    "res": "FINISHED",
+    "density": 1800000.0
+   },
+   "density_preset=DENSE": {
+    "res": "FINISHED",
+    "density": 2500000.0
+   },
+   "select": "FINISHED",
+   "paint": "FINISHED",
+   "mode_after_paint": "PAINT_WEIGHT"
+  },
+  "ms": 79971
+ },
+ "groom_xpbd": {
+  "ok": true,
+  "value": {
+   "xpbd_frames_s": 10.63
+  },
+  "ms": 14657
+ },
+ "groom_io": {
+  "ok": true,
+  "value": {
+   "export": "FINISHED",
+   "layers": [
+    "SCALP",
+    "BROWS",
+    "BEARD",
+    "MOUSTACHE",
+    "CHEST",
+    "ABDOMEN",
+    "BACK",
+    "ARMS",
+    "LEGS",
+    "AXILLA",
+    "PUBIC"
+   ],
+   "import_over_existing": "ERR Error: Supprimez les zones correspondantes avant import ; les guides sculptés so",
+   "import_invalid": "ERR Error: Préréglage HumanLoom invalide.\n",
+   "after_remove_curves": 0,
+   "import_clean": "FINISHED",
+   "after_import_curves": 11
+  },
+  "ms": 203967
+ },
+ "stress": {
+  "ok": true,
+  "value": {
+   "all_plus1_modifiers_on": {
+    "pairs": 168,
+    "regions": {
+     "hands_arms": 168
+    }
+   },
+   "all_minus1_modifiers_on": {
+    "pairs": 0,
+    "regions": {}
+   },
+   "random_all_strength1_30_seeds_pairs": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "ms": 23395
+ }
+}

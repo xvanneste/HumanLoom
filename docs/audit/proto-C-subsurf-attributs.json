@@ -1,0 +1,57 @@
+{
+ "R=150 remove_attributes=False": {
+  "gn_only_ms_median_and_verts": [
+   7.6,
+   10582
+  ],
+  "gn_plus_subsurf1_ms_median_and_verts": [
+   116.3,
+   42342
+  ]
+ },
+ "R=150 remove_attributes=True": {
+  "gn_only_ms_median_and_verts": [
+   7.5,
+   10582
+  ],
+  "gn_plus_subsurf1_ms_median_and_verts": [
+   35.8,
+   42342
+  ],
+  "remove_node_inputs": [
+   "Geometry",
+   "Pattern Mode",
+   "Name"
+  ],
+  "remove_node_props": [],
+  "enum_items": []
+ },
+ "R=457 remove_attributes=False": {
+  "gn_only_ms_median_and_verts": [
+   37.6,
+   10582
+  ],
+  "gn_plus_subsurf1_ms_median_and_verts": [
+   394.8,
+   42342
+  ]
+ },
+ "R=457 remove_attributes=True": {
+  "gn_only_ms_median_and_verts": [
+   37.4,
+   10582
+  ],
+  "gn_plus_subsurf1_ms_median_and_verts": [
+   70.7,
+   42342
+  ],
+  "remove_node_inputs": [
+   "Geometry",
+   "Pattern Mode",
+   "Name"
+  ],
+  "remove_node_props": [],
+  "enum_items": []
+ },
+ "reference_shape_keys_plus_subsurf1_ms": 37.7
+}

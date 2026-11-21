@@ -1,0 +1,75 @@
+{
+ "keys_total": 461,
+ "keys_with_nodes": 450,
+ "math_nodes": 4681,
+ "compile_weights_s": 292.81,
+ "blend_nodes_s": 173.28,
+ "total_nodes": 6033,
+ "T_C6_max_error_mm_over_25_states": 0.00083,
+ "T_C6_median_error_mm": 0.0006,
+ "T_C7_slider_ms_median_p90": {
+  "shape_keys_and_459_drivers": [
+   11.3,
+   12.0
+  ],
+  "geometry_nodes_group": [
+   57.6,
+   59.6
+  ]
+ },
+ "T_C7_with_subsurf1_ms_median_p90": [
+  458.9,
+  501.9
+ ],
+ "T_C9_measure_height_m": {
+  "keys": 1.7062,
+  "nodes": 1.7062
+ },
+ "T_C8_eyes_max_error_mm_10_states": 524.84202,
+ "T_C8_invalid_eye_drivers": 0,
+ "T_C5_groom_build": "FINISHED",
+ "T_C5_body_modifier_stack_after_groom": [
+  [
+   "HL Human",
+   "NODES"
+  ],
+  [
+   "Capture Rest Geometry",
+   "NODES"
+  ]
+ ],
+ "T_C5_hair_objects": [
+  [
+   "HumanLoom · Cheveux",
+   850
+  ],
+  [
+   "HumanLoom · Sourcils",
+   240
+  ]
+ ],
+ "T_C5_root_gap_mm_neutral": [
+  [
+   "HumanLoom · Cheveux",
+   0.031,
+   0.371
+  ],
+  [
+   "HumanLoom · Sourcils",
+   0.031,
+   0.42
+  ]
+ ],
+ "T_C5_root_gap_mm_after_morph_and_age0": [
+  [
+   "HumanLoom · Cheveux",
+   0.018,
+   0.243
+  ],
+  [
+   "HumanLoom · Sourcils",
+   0.025,
+   0.286
+  ]
+ ]
+}

@@ -1,0 +1,5329 @@
+{
+ "H": 1.6899610236287117,
+ "z0": -0.00554782897233963,
+ "base_bands_mm": {
+  "head": [
+   182.4,
+   213.8
+  ],
+  "neck": [
+   150.7,
+   178.9
+  ],
+  "shoulder": [
+   442.6,
+   173.2
+  ],
+  "chest": [
+   456.2,
+   240.2
+  ],
+  "waist": [
+   325.5,
+   221.7
+  ],
+  "hip": [
+   354.9,
+   253.5
+  ],
+  "thigh": [
+   152.1,
+   175.3
+  ],
+  "knee": [
+   111.1,
+   120.7
+  ],
+  "calf": [
+   106.5,
+   109.5
+  ]
+ },
+ "base_cross": {
+  "pairs": 0,
+  "regions": {},
+  "ms": 565
+ },
+ "controls": [
+  {
+   "id": "corpulence",
+   "label": "Corpulence",
+   "-1": {
+    "max_mm": 19.39,
+    "where_z_frac": 0.558,
+    "where_x_mm": 1.0,
+    "where_y_mm": -23.0,
+    "bands_mm": {
+     "head": [
+      -0.0,
+      -0.1
+     ],
+     "neck": [
+      -0.2,
+      -0.2
+     ],
+     "shoulder": [
+      -1.6,
+      -1.5
+     ],
+     "chest": [
+      2.8,
+      -11.4
+     ],
+     "waist": [
+      -25.1,
+      -26.0
+     ],
+     "hip": [
+      -32.7,
+      -31.3
+     ],
+     "thigh": [
+      -14.1,
+      -17.3
+     ],
+     "knee": [
+      -7.4,
+      -6.8
+     ],
+     "calf": [
+      -1.3,
+      -1.4
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 29.84,
+    "where_z_frac": 0.558,
+    "where_x_mm": 1.0,
+    "where_y_mm": -28.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.2
+     ],
+     "neck": [
+      0.3,
+      0.3
+     ],
+     "shoulder": [
+      2.4,
+      2.3
+     ],
+     "chest": [
+      1.2,
+      19.7
+     ],
+     "waist": [
+      38.7,
+      40.0
+     ],
+     "hip": [
+      50.3,
+      48.2
+     ],
+     "thigh": [
+      11.3,
+      26.6
+     ],
+     "knee": [
+      11.3,
+      10.5
+     ],
+     "calf": [
+      2.1,
+      2.2
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 29.11,
+   "+1_age0": 21.16,
+   "+1_age1": 29.84,
+   "+1_age3": 29.55
+  },
+  {
+   "id": "shoulders",
+   "label": "Carrure",
+   "-1": {
+    "max_mm": 14.0,
+    "where_z_frac": 0.559,
+    "where_x_mm": 0.0,
+    "where_y_mm": -62.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      -28.0,
+      0.0
+     ],
+     "chest": [
+      -4.9,
+      0.0
+     ],
+     "waist": [
+      -13.8,
+      0.0
+     ],
+     "hip": [
+      -18.0,
+      0.0
+     ],
+     "thigh": [
+      -4.7,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 14.0,
+    "where_z_frac": 0.559,
+    "where_x_mm": 0.0,
+    "where_y_mm": -62.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      28.0,
+      0.0
+     ],
+     "chest": [
+      -15.1,
+      0.0
+     ],
+     "waist": [
+      13.8,
+      0.0
+     ],
+     "hip": [
+      18.0,
+      0.0
+     ],
+     "thigh": [
+      4.7,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 14.0,
+   "+1_age0": 9.93,
+   "+1_age1": 14.0,
+   "+1_age3": 13.87
+  },
+  {
+   "id": "waist",
+   "label": "Tour de taille",
+   "-1": {
+    "max_mm": 17.97,
+    "where_z_frac": 0.604,
+    "where_x_mm": -0.0,
+    "where_y_mm": -31.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      -0.0,
+      -0.0
+     ],
+     "chest": [
+      -1.8,
+      -0.7
+     ],
+     "waist": [
+      -33.2,
+      -16.6
+     ],
+     "hip": [
+      -8.6,
+      -3.0
+     ],
+     "thigh": [
+      -0.0,
+      -0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 17.97,
+    "where_z_frac": 0.604,
+    "where_x_mm": -0.0,
+    "where_y_mm": -34.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      1.8,
+      0.8
+     ],
+     "waist": [
+      33.2,
+      16.6
+     ],
+     "hip": [
+      8.7,
+      3.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 17.22,
+   "+1_age0": 12.75,
+   "+1_age1": 17.98,
+   "+1_age3": 17.8
+  },
+  {
+   "id": "hips",
+   "label": "Largeur du bassin",
+   "-1": {
+    "max_mm": 17.83,
+    "where_z_frac": 0.48,
+    "where_x_mm": 0.0,
+    "where_y_mm": -25.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      -0.0,
+      0.0
+     ],
+     "waist": [
+      -0.4,
+      -0.1
+     ],
+     "hip": [
+      -21.9,
+      -9.4
+     ],
+     "thigh": [
+      -4.6,
+      -1.9
+     ],
+     "knee": [
+      0.0,
+      -0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 17.83,
+    "where_z_frac": 0.48,
+    "where_x_mm": 0.0,
+    "where_y_mm": -27.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.4,
+      0.1
+     ],
+     "hip": [
+      22.2,
+      9.4
+     ],
+     "thigh": [
+      4.6,
+      1.9
+     ],
+     "knee": [
+      -0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 17.84,
+   "+1_age0": 12.65,
+   "+1_age1": 17.83,
+   "+1_age3": 17.66
+  },
+  {
+   "id": "torso_depth",
+   "label": "Profondeur du buste",
+   "-1": {
+    "max_mm": 12.94,
+    "where_z_frac": 0.705,
+    "where_x_mm": 0.0,
+    "where_y_mm": -43.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -0.7
+     ],
+     "neck": [
+      0.0,
+      -2.6
+     ],
+     "shoulder": [
+      0.0,
+      -7.7
+     ],
+     "chest": [
+      0.0,
+      -22.0
+     ],
+     "waist": [
+      0.0,
+      -16.1
+     ],
+     "hip": [
+      0.0,
+      -4.2
+     ],
+     "thigh": [
+      0.0,
+      -0.2
+     ],
+     "knee": [
+      0.0,
+      -0.0
+     ],
+     "calf": [
+      0.0,
+      -0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 12.94,
+    "where_z_frac": 0.705,
+    "where_x_mm": 0.0,
+    "where_y_mm": -50.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.7
+     ],
+     "neck": [
+      0.0,
+      2.6
+     ],
+     "shoulder": [
+      0.0,
+      7.7
+     ],
+     "chest": [
+      0.0,
+      22.5
+     ],
+     "waist": [
+      0.0,
+      16.1
+     ],
+     "hip": [
+      0.0,
+      4.2
+     ],
+     "thigh": [
+      0.0,
+      0.2
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 13.52,
+   "+1_age0": 9.18,
+   "+1_age1": 12.95,
+   "+1_age3": 12.82
+  },
+  {
+   "id": "neck",
+   "label": "Largeur du cou",
+   "-1": {
+    "max_mm": 14.42,
+    "where_z_frac": 0.828,
+    "where_x_mm": -0.0,
+    "where_y_mm": 7.0,
+    "bands_mm": {
+     "head": [
+      -0.0,
+      -0.0
+     ],
+     "neck": [
+      -9.9,
+      -3.2
+     ],
+     "shoulder": [
+      -10.4,
+      -2.3
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 14.42,
+    "where_z_frac": 0.828,
+    "where_x_mm": -0.0,
+    "where_y_mm": 9.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      9.9,
+      3.2
+     ],
+     "shoulder": [
+      10.4,
+      2.3
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 16.46,
+   "+1_age0": 10.23,
+   "+1_age1": 14.42,
+   "+1_age3": 14.28
+  },
+  {
+   "id": "legs",
+   "label": "Longueur des jambes",
+   "-1": {
+    "max_mm": 48.67,
+    "where_z_frac": 0.707,
+    "where_x_mm": -0.0,
+    "where_y_mm": -69.0,
+    "bands_mm": {
+     "head": [
+      -24.9,
+      -14.4
+     ],
+     "neck": [
+      -21.2,
+      0.7
+     ],
+     "shoulder": [
+      -151.3,
+      -29.0
+     ],
+     "chest": [
+      -8.0,
+      3.8
+     ],
+     "waist": [
+      -4.3,
+      7.4
+     ],
+     "hip": [
+      -1.6,
+      -10.7
+     ],
+     "thigh": [
+      2.8,
+      0.5
+     ],
+     "knee": [
+      4.5,
+      6.1
+     ],
+     "calf": [
+      3.3,
+      4.0
+     ]
+    },
+    "eye_move_mm": [
+     48.67,
+     48.67
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 48.67,
+    "where_z_frac": 0.764,
+    "where_x_mm": -0.0,
+    "where_y_mm": -69.0,
+    "bands_mm": {
+     "head": [
+      -13.4,
+      -17.1
+     ],
+     "neck": [
+      175.8,
+      -32.1
+     ],
+     "shoulder": [
+      47.9,
+      37.3
+     ],
+     "chest": [
+      -8.2,
+      -13.2
+     ],
+     "waist": [
+      10.7,
+      1.8
+     ],
+     "hip": [
+      17.6,
+      0.3
+     ],
+     "thigh": [
+      -1.9,
+      -4.7
+     ],
+     "knee": [
+      -5.7,
+      -5.3
+     ],
+     "calf": [
+      -1.8,
+      -1.8
+     ]
+    },
+    "eye_move_mm": [
+     48.67,
+     48.67
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 47.21,
+   "+1_age0": 43.16,
+   "+1_age1": 48.67,
+   "+1_age3": 48.51
+  },
+  {
+   "id": "torso",
+   "label": "Longueur du buste",
+   "-1": {
+    "max_mm": 28.0,
+    "where_z_frac": 0.857,
+    "where_x_mm": 0.0,
+    "where_y_mm": -72.0,
+    "bands_mm": {
+     "head": [
+      -5.0,
+      -13.9
+     ],
+     "neck": [
+      -27.8,
+      -4.9
+     ],
+     "shoulder": [
+      -76.7,
+      -18.0
+     ],
+     "chest": [
+      -0.4,
+      4.1
+     ],
+     "waist": [
+      0.0,
+      3.6
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     28.0,
+     28.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 28.0,
+    "where_z_frac": 0.889,
+    "where_x_mm": 0.0,
+    "where_y_mm": -72.0,
+    "bands_mm": {
+     "head": [
+      -3.8,
+      -8.3
+     ],
+     "neck": [
+      109.3,
+      -31.7
+     ],
+     "shoulder": [
+      26.4,
+      26.5
+     ],
+     "chest": [
+      0.0,
+      -2.9
+     ],
+     "waist": [
+      4.5,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     28.0,
+     28.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 28.0,
+   "+1_age0": 24.83,
+   "+1_age1": 28.0,
+   "+1_age3": 27.91
+  },
+  {
+   "id": "whole_body",
+   "label": "Corpulence globale",
+   "-1": {
+    "max_mm": 19.0,
+    "where_z_frac": 0.653,
+    "where_x_mm": -0.0,
+    "where_y_mm": -34.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      -1.0,
+      -0.1
+     ],
+     "shoulder": [
+      -2.3,
+      -7.6
+     ],
+     "chest": [
+      2.5,
+      -26.0
+     ],
+     "waist": [
+      -34.4,
+      -30.3
+     ],
+     "hip": [
+      -15.6,
+      -10.0
+     ],
+     "thigh": [
+      -8.7,
+      -6.9
+     ],
+     "knee": [
+      -2.8,
+      -1.4
+     ],
+     "calf": [
+      -3.4,
+      -0.9
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 34.13,
+    "where_z_frac": 0.612,
+    "where_x_mm": 0.0,
+    "where_y_mm": -9.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.1,
+      0.2
+     ],
+     "shoulder": [
+      2.2,
+      6.2
+     ],
+     "chest": [
+      2.9,
+      32.2
+     ],
+     "waist": [
+      61.3,
+      34.8
+     ],
+     "hip": [
+      63.6,
+      38.9
+     ],
+     "thigh": [
+      3.0,
+      3.7
+     ],
+     "knee": [
+      3.2,
+      1.4
+     ],
+     "calf": [
+      0.2,
+      0.1
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 29.9,
+   "+1_age0": 40.47,
+   "+1_age1": 74.61,
+   "+1_age3": 86.94
+  },
+  {
+   "id": "body_mass",
+   "label": "Volume hérité · 0.12",
+   "-1": {
+    "max_mm": 32.67,
+    "where_z_frac": 0.568,
+    "where_x_mm": -0.0,
+    "where_y_mm": -34.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      -0.5,
+      -0.2
+     ],
+     "shoulder": [
+      -0.2,
+      -1.3
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      -45.2,
+      -41.5
+     ],
+     "hip": [
+      -30.5,
+      -38.0
+     ],
+     "thigh": [
+      -4.2,
+      -10.3
+     ],
+     "knee": [
+      -7.9,
+      -7.7
+     ],
+     "calf": [
+      1.0,
+      -0.6
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 93.35,
+    "where_z_frac": 0.565,
+    "where_x_mm": -0.0,
+    "where_y_mm": -68.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      1.3,
+      0.5
+     ],
+     "shoulder": [
+      0.6,
+      3.7
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      129.1,
+      119.0
+     ],
+     "hip": [
+      88.7,
+      114.7
+     ],
+     "thigh": [
+      12.0,
+      29.3
+     ],
+     "knee": [
+      22.9,
+      22.4
+     ],
+     "calf": [
+      -1.0,
+      1.7
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 93.11,
+   "+1_age0": 52.92,
+   "+1_age1": 65.34,
+   "+1_age3": 92.46
+  },
+  {
+   "id": "adiposity",
+   "label": "Couverture régionale",
+   "-1": {
+    "max_mm": 18.15,
+    "where_z_frac": 0.578,
+    "where_x_mm": -1.0,
+    "where_y_mm": -33.0,
+    "bands_mm": {
+     "head": [
+      -0.0,
+      -0.0
+     ],
+     "neck": [
+      -0.0,
+      0.0
+     ],
+     "shoulder": [
+      -0.1,
+      -0.1
+     ],
+     "chest": [
+      -1.3,
+      -1.8
+     ],
+     "waist": [
+      -22.2,
+      -7.6
+     ],
+     "hip": [
+      -11.4,
+      -6.2
+     ],
+     "thigh": [
+      -1.0,
+      -3.4
+     ],
+     "knee": [
+      0.6,
+      0.1
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 45.36,
+    "where_z_frac": 0.578,
+    "where_x_mm": -1.0,
+    "where_y_mm": -53.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      0.1,
+      0.4
+     ],
+     "chest": [
+      3.6,
+      4.4
+     ],
+     "waist": [
+      55.5,
+      19.0
+     ],
+     "hip": [
+      32.9,
+      15.4
+     ],
+     "thigh": [
+      5.9,
+      8.4
+     ],
+     "knee": [
+      -1.5,
+      -0.3
+     ],
+     "calf": [
+      -0.0,
+      -0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 41.64,
+   "+1_age0": 32.18,
+   "+1_age1": 45.37,
+   "+1_age3": 44.93
+  },
+  {
+   "id": "fat_abdomen",
+   "label": "Abdomen",
+   "-1": {
+    "max_mm": 17.41,
+    "where_z_frac": 0.604,
+    "where_x_mm": 0.0,
+    "where_y_mm": -94.0,
+    "bands_mm": {
+     "head": [
+      -0.0,
+      -0.0
+     ],
+     "neck": [
+      -0.0,
+      0.0
+     ],
+     "shoulder": [
+      -0.0,
+      -0.1
+     ],
+     "chest": [
+      -0.1,
+      -1.8
+     ],
+     "waist": [
+      -6.2,
+      -7.4
+     ],
+     "hip": [
+      -2.2,
+      -3.6
+     ],
+     "thigh": [
+      0.0,
+      -0.0
+     ],
+     "knee": [
+      0.0,
+      -0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 43.52,
+    "where_z_frac": 0.604,
+    "where_x_mm": -0.0,
+    "where_y_mm": -133.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.4
+     ],
+     "chest": [
+      0.4,
+      4.4
+     ],
+     "waist": [
+      15.4,
+      18.4
+     ],
+     "hip": [
+      5.4,
+      9.1
+     ],
+     "thigh": [
+      -0.0,
+      0.1
+     ],
+     "knee": [
+      -0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 39.37,
+   "+1_age0": 30.87,
+   "+1_age1": 43.52,
+   "+1_age3": 43.11
+  },
+  {
+   "id": "fat_flanks",
+   "label": "Flancs",
+   "-1": {
+    "max_mm": 10.07,
+    "where_z_frac": 0.596,
+    "where_x_mm": -0.0,
+    "where_y_mm": 2.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      -0.0,
+      0.0
+     ],
+     "shoulder": [
+      -0.0,
+      -0.0
+     ],
+     "chest": [
+      -0.1,
+      -0.0
+     ],
+     "waist": [
+      -16.0,
+      -0.2
+     ],
+     "hip": [
+      -5.4,
+      -0.1
+     ],
+     "thigh": [
+      -0.0,
+      -0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 25.17,
+    "where_z_frac": 0.596,
+    "where_x_mm": -0.0,
+    "where_y_mm": 6.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.4,
+      0.0
+     ],
+     "waist": [
+      40.0,
+      0.6
+     ],
+     "hip": [
+      14.8,
+      0.4
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 25.86,
+   "+1_age0": 17.85,
+   "+1_age1": 25.17,
+   "+1_age3": 24.93
+  },
+  {
+   "id": "fat_hips",
+   "label": "Bassin et fessiers",
+   "-1": {
+    "max_mm": 11.03,
+    "where_z_frac": 0.47,
+    "where_x_mm": 0.0,
+    "where_y_mm": 36.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      -0.0,
+      -0.0
+     ],
+     "hip": [
+      -3.6,
+      -2.3
+     ],
+     "thigh": [
+      -0.6,
+      -1.4
+     ],
+     "knee": [
+      0.0,
+      -0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 27.58,
+    "where_z_frac": 0.47,
+    "where_x_mm": 0.0,
+    "where_y_mm": 56.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.1,
+      0.0
+     ],
+     "hip": [
+      11.9,
+      5.8
+     ],
+     "thigh": [
+      1.5,
+      3.5
+     ],
+     "knee": [
+      -0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 25.44,
+   "+1_age0": 19.56,
+   "+1_age1": 27.58,
+   "+1_age3": 27.31
+  },
+  {
+   "id": "fat_thighs",
+   "label": "Cuisses",
+   "-1": {
+    "max_mm": 5.72,
+    "where_z_frac": 0.355,
+    "where_x_mm": -3.0,
+    "where_y_mm": 17.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      -0.0,
+      -0.0
+     ],
+     "hip": [
+      -0.2,
+      -0.1
+     ],
+     "thigh": [
+      -0.4,
+      -1.9
+     ],
+     "knee": [
+      0.6,
+      0.1
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 14.29,
+    "where_z_frac": 0.355,
+    "where_x_mm": -3.0,
+    "where_y_mm": 26.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.5,
+      0.2
+     ],
+     "thigh": [
+      4.5,
+      4.8
+     ],
+     "knee": [
+      -1.5,
+      -0.3
+     ],
+     "calf": [
+      -0.0,
+      -0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 15.21,
+   "+1_age0": 10.14,
+   "+1_age1": 14.29,
+   "+1_age3": 14.15
+  },
+  {
+   "id": "fat_arms",
+   "label": "Bras",
+   "-1": {
+    "max_mm": 5.82,
+    "where_z_frac": 0.663,
+    "where_x_mm": 0.0,
+    "where_y_mm": 4.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      -0.0,
+      0.0
+     ],
+     "chest": [
+      -1.1,
+      0.0
+     ],
+     "waist": [
+      -0.0,
+      0.0
+     ],
+     "hip": [
+      -0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 14.56,
+    "where_z_frac": 0.663,
+    "where_x_mm": 0.0,
+    "where_y_mm": 15.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.1,
+      0.0
+     ],
+     "chest": [
+      2.7,
+      0.0
+     ],
+     "waist": [
+      0.1,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 15.25,
+   "+1_age0": 10.33,
+   "+1_age1": 14.56,
+   "+1_age3": 14.42
+  },
+  {
+   "id": "fat_face",
+   "label": "Visage",
+   "-1": {
+    "max_mm": 3.37,
+    "where_z_frac": 0.904,
+    "where_x_mm": -0.0,
+    "where_y_mm": -114.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 8.43,
+    "where_z_frac": 0.904,
+    "where_x_mm": -0.0,
+    "where_y_mm": -121.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 8.45,
+   "+1_age0": 7.31,
+   "+1_age1": 8.43,
+   "+1_age3": 8.4
+  },
+  {
+   "id": "muscles",
+   "label": "Musculature globale",
+   "-1": {
+    "max_mm": 20.22,
+    "where_z_frac": 0.595,
+    "where_x_mm": 3.0,
+    "where_y_mm": 20.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      -0.7,
+      -1.5
+     ],
+     "shoulder": [
+      -18.3,
+      -15.2
+     ],
+     "chest": [
+      -7.6,
+      -11.9
+     ],
+     "waist": [
+      -0.1,
+      -3.5
+     ],
+     "hip": [
+      -0.4,
+      -9.9
+     ],
+     "thigh": [
+      -9.8,
+      -22.7
+     ],
+     "knee": [
+      -4.8,
+      -4.4
+     ],
+     "calf": [
+      -4.0,
+      -8.1
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 27.48,
+    "where_z_frac": 0.595,
+    "where_x_mm": -2.0,
+    "where_y_mm": 17.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      1.1,
+      3.5
+     ],
+     "shoulder": [
+      19.8,
+      25.1
+     ],
+     "chest": [
+      -10.5,
+      21.5
+     ],
+     "waist": [
+      0.0,
+      5.1
+     ],
+     "hip": [
+      1.3,
+      20.1
+     ],
+     "thigh": [
+      -1.5,
+      39.4
+     ],
+     "knee": [
+      0.3,
+      0.0
+     ],
+     "calf": [
+      17.9,
+      21.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 28.51,
+   "+1_age0": 4.06,
+   "+1_age1": 13.6,
+   "+1_age3": 14.55
+  },
+  {
+   "id": "muscles_shoulders",
+   "label": "Épaules",
+   "-1": {
+    "max_mm": 6.01,
+    "where_z_frac": 0.791,
+    "where_x_mm": -22.0,
+    "where_y_mm": 4.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      -6.5,
+      -0.1
+     ],
+     "chest": [
+      -0.0,
+      -0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 17.18,
+    "where_z_frac": 0.793,
+    "where_x_mm": -22.0,
+    "where_y_mm": 0.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      -0.0,
+      0.0
+     ],
+     "shoulder": [
+      18.5,
+      0.3
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 15.79,
+   "+1_age0": 3.09,
+   "+1_age1": 10.92,
+   "+1_age3": 10.82
+  },
+  {
+   "id": "muscles_chest",
+   "label": "Pectoraux",
+   "-1": {
+    "max_mm": 6.82,
+    "where_z_frac": 0.772,
+    "where_x_mm": -3.0,
+    "where_y_mm": -99.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      -2.2
+     ],
+     "chest": [
+      0.0,
+      -1.6
+     ],
+     "waist": [
+      0.0,
+      -0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 19.48,
+    "where_z_frac": 0.772,
+    "where_x_mm": -3.0,
+    "where_y_mm": -118.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      0.0,
+      7.6
+     ],
+     "chest": [
+      0.0,
+      4.6
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 18.72,
+   "+1_age0": 1.82,
+   "+1_age1": 6.41,
+   "+1_age3": 6.35
+  },
+  {
+   "id": "muscles_back",
+   "label": "Dos",
+   "-1": {
+    "max_mm": 7.25,
+    "where_z_frac": 0.749,
+    "where_x_mm": 9.0,
+    "where_y_mm": 81.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      -0.4,
+      -1.2
+     ],
+     "shoulder": [
+      -0.0,
+      -6.0
+     ],
+     "chest": [
+      -0.3,
+      -3.3
+     ],
+     "waist": [
+      0.0,
+      -1.3
+     ],
+     "hip": [
+      0.0,
+      -0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 20.7,
+    "where_z_frac": 0.749,
+    "where_x_mm": 9.0,
+    "where_y_mm": 98.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      1.1,
+      3.5
+     ],
+     "shoulder": [
+      0.1,
+      17.2
+     ],
+     "chest": [
+      1.2,
+      14.7
+     ],
+     "waist": [
+      0.0,
+      4.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 18.12,
+   "+1_age0": 2.06,
+   "+1_age1": 7.27,
+   "+1_age3": 7.2
+  },
+  {
+   "id": "muscles_arms",
+   "label": "Bras",
+   "-1": {
+    "max_mm": 7.37,
+    "where_z_frac": 0.714,
+    "where_x_mm": -9.0,
+    "where_y_mm": 16.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      -0.4,
+      -0.0
+     ],
+     "chest": [
+      -10.3,
+      -0.0
+     ],
+     "waist": [
+      0.0,
+      -0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 21.06,
+    "where_z_frac": 0.713,
+    "where_x_mm": -9.0,
+    "where_y_mm": 19.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      1.3,
+      0.0
+     ],
+     "chest": [
+      -11.7,
+      0.3
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 12.15,
+   "+1_age0": 2.77,
+   "+1_age1": 9.77,
+   "+1_age3": 9.68
+  },
+  {
+   "id": "muscles_abdomen",
+   "label": "Abdomen",
+   "-1": {
+    "max_mm": 1.17,
+    "where_z_frac": 0.69,
+    "where_x_mm": 0.0,
+    "where_y_mm": -132.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      -0.0
+     ],
+     "chest": [
+      0.0,
+      -0.7
+     ],
+     "waist": [
+      0.0,
+      -0.4
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 3.34,
+    "where_z_frac": 0.69,
+    "where_x_mm": 0.0,
+    "where_y_mm": -136.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      1.9
+     ],
+     "waist": [
+      0.0,
+      1.1
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 2.19,
+   "+1_age0": 0.39,
+   "+1_age1": 1.37,
+   "+1_age3": 1.36
+  },
+  {
+   "id": "muscles_glutes",
+   "label": "Fessiers",
+   "-1": {
+    "max_mm": 5.85,
+    "where_z_frac": 0.503,
+    "where_x_mm": 0.0,
+    "where_y_mm": 97.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      -0.0
+     ],
+     "hip": [
+      0.0,
+      -5.7
+     ],
+     "thigh": [
+      0.0,
+      -0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 16.72,
+    "where_z_frac": 0.503,
+    "where_x_mm": 0.0,
+    "where_y_mm": 113.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      16.4
+     ],
+     "thigh": [
+      0.0,
+      0.1
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 15.99,
+   "+1_age0": 3.09,
+   "+1_age1": 10.88,
+   "+1_age3": 10.78
+  },
+  {
+   "id": "muscles_thighs",
+   "label": "Cuisses",
+   "-1": {
+    "max_mm": 8.32,
+    "where_z_frac": 0.414,
+    "where_x_mm": -0.0,
+    "where_y_mm": -18.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      -1.3
+     ],
+     "thigh": [
+      -6.1,
+      -13.8
+     ],
+     "knee": [
+      -0.1,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 23.77,
+    "where_z_frac": 0.415,
+    "where_x_mm": -0.0,
+    "where_y_mm": -19.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      1.2,
+      3.7
+     ],
+     "thigh": [
+      -1.5,
+      39.4
+     ],
+     "knee": [
+      0.3,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 22.24,
+   "+1_age0": 2.41,
+   "+1_age1": 8.49,
+   "+1_age3": 8.41
+  },
+  {
+   "id": "muscles_calves",
+   "label": "Mollets",
+   "-1": {
+    "max_mm": 6.53,
+    "where_z_frac": 0.192,
+    "where_x_mm": 0.0,
+    "where_y_mm": 86.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      -0.0,
+      0.0
+     ],
+     "calf": [
+      -5.9,
+      -7.3
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 18.67,
+    "where_z_frac": 0.194,
+    "where_x_mm": 0.0,
+    "where_y_mm": 102.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      17.9,
+      21.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 16.21,
+   "+1_age0": 2.01,
+   "+1_age1": 7.1,
+   "+1_age3": 7.03
+  },
+  {
+   "id": "muscle_definition",
+   "label": "Définition musculaire",
+   "-1": {
+    "max_mm": 0.48,
+    "where_z_frac": 0.664,
+    "where_x_mm": 0.0,
+    "where_y_mm": -135.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      -0.0
+     ],
+     "chest": [
+      0.0,
+      -0.0
+     ],
+     "waist": [
+      0.0,
+      -0.4
+     ],
+     "hip": [
+      0.0,
+      -0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 0.48,
+    "where_z_frac": 0.664,
+    "where_x_mm": 0.0,
+    "where_y_mm": -136.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.4
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 0.5,
+   "+1_age0": 0.14,
+   "+1_age1": 0.48,
+   "+1_age3": 0.48
+  },
+  {
+   "id": "head_width",
+   "label": "Largeur de la tête",
+   "-1": {
+    "max_mm": 6.39,
+    "where_z_frac": 0.929,
+    "where_x_mm": 0.0,
+    "where_y_mm": -60.0,
+    "bands_mm": {
+     "head": [
+      -12.8,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     2.31,
+     2.3
+    ],
+    "interocular_delta_mm": -4.61,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 6.39,
+    "where_z_frac": 0.929,
+    "where_x_mm": 0.0,
+    "where_y_mm": -60.0,
+    "bands_mm": {
+     "head": [
+      12.8,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     2.31,
+     2.3
+    ],
+    "interocular_delta_mm": 4.61,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 6.15,
+   "+1_age0": 5.67,
+   "+1_age1": 6.39,
+   "+1_age3": 6.37
+  },
+  {
+   "id": "head_height",
+   "label": "Hauteur de la tête",
+   "-1": {
+    "max_mm": 8.86,
+    "where_z_frac": 0.919,
+    "where_x_mm": -0.0,
+    "where_y_mm": -102.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      -3.3
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 8.86,
+    "where_z_frac": 0.917,
+    "where_x_mm": -0.0,
+    "where_y_mm": -102.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -3.9
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 8.55,
+   "+1_age0": 7.85,
+   "+1_age1": 8.86,
+   "+1_age3": 8.83
+  },
+  {
+   "id": "jaw",
+   "label": "Largeur de la mâchoire",
+   "-1": {
+    "max_mm": 6.73,
+    "where_z_frac": 0.888,
+    "where_x_mm": -0.0,
+    "where_y_mm": -119.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 6.73,
+    "where_z_frac": 0.888,
+    "where_x_mm": -0.0,
+    "where_y_mm": -119.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 6.56,
+   "+1_age0": 5.47,
+   "+1_age1": 6.73,
+   "+1_age3": 6.69
+  },
+  {
+   "id": "chin",
+   "label": "Avancée du menton",
+   "-1": {
+    "max_mm": 4.0,
+    "where_z_frac": 0.871,
+    "where_x_mm": 0.0,
+    "where_y_mm": -127.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -0.0
+     ],
+     "neck": [
+      0.0,
+      -3.8
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 4.0,
+    "where_z_frac": 0.871,
+    "where_x_mm": 0.0,
+    "where_y_mm": -133.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      3.9
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 4.0,
+   "+1_age0": 3.1,
+   "+1_age1": 4.0,
+   "+1_age3": 3.97
+  },
+  {
+   "id": "cheeks",
+   "label": "Pommettes",
+   "-1": {
+    "max_mm": 2.97,
+    "where_z_frac": 0.917,
+    "where_x_mm": -0.0,
+    "where_y_mm": -119.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 2.97,
+    "where_z_frac": 0.917,
+    "where_x_mm": -0.0,
+    "where_y_mm": -119.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 2.98,
+   "+1_age0": 2.6,
+   "+1_age1": 2.97,
+   "+1_age3": 2.95
+  },
+  {
+   "id": "nose_length",
+   "label": "Avancée du nez",
+   "-1": {
+    "max_mm": 4.99,
+    "where_z_frac": 0.914,
+    "where_x_mm": 0.0,
+    "where_y_mm": -148.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -4.9
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 4.99,
+    "where_z_frac": 0.914,
+    "where_x_mm": 0.0,
+    "where_y_mm": -155.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      4.9
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 4.98,
+   "+1_age0": 4.39,
+   "+1_age1": 4.99,
+   "+1_age3": 4.98
+  },
+  {
+   "id": "nose_width",
+   "label": "Largeur du nez",
+   "-1": {
+    "max_mm": 1.78,
+    "where_z_frac": 0.913,
+    "where_x_mm": 0.0,
+    "where_y_mm": -148.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 1.78,
+    "where_z_frac": 0.913,
+    "where_x_mm": 0.0,
+    "where_y_mm": -148.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 1.82,
+   "+1_age0": 1.56,
+   "+1_age1": 1.78,
+   "+1_age3": 1.77
+  },
+  {
+   "id": "mouth",
+   "label": "Largeur de la bouche",
+   "-1": {
+    "max_mm": 2.26,
+    "where_z_frac": 0.893,
+    "where_x_mm": -0.0,
+    "where_y_mm": -134.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 2.26,
+    "where_z_frac": 0.893,
+    "where_x_mm": -0.0,
+    "where_y_mm": -134.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 2.26,
+   "+1_age0": 1.89,
+   "+1_age1": 2.26,
+   "+1_age3": 2.25
+  },
+  {
+   "id": "lips",
+   "label": "Relief des lèvres",
+   "-1": {
+    "max_mm": 1.5,
+    "where_z_frac": 0.894,
+    "where_x_mm": -0.0,
+    "where_y_mm": -139.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -0.0
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 1.5,
+    "where_z_frac": 0.894,
+    "where_x_mm": -0.0,
+    "where_y_mm": -141.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 1.5,
+   "+1_age0": 1.25,
+   "+1_age1": 1.5,
+   "+1_age3": 1.49
+  },
+  {
+   "id": "eye_spacing",
+   "label": "Écartement des yeux",
+   "-1": {
+    "max_mm": 3.0,
+    "where_z_frac": 0.934,
+    "where_x_mm": 0.0,
+    "where_y_mm": -120.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     3.0,
+     3.0
+    ],
+    "interocular_delta_mm": -6.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 3.0,
+    "where_z_frac": 0.934,
+    "where_x_mm": 0.0,
+    "where_y_mm": -120.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     3.0,
+     3.0
+    ],
+    "interocular_delta_mm": 6.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 3.0,
+   "+1_age0": 2.66,
+   "+1_age1": 3.0,
+   "+1_age3": 2.99
+  },
+  {
+   "id": "eye_height",
+   "label": "Position verticale des yeux",
+   "-1": {
+    "max_mm": 2.5,
+    "where_z_frac": 0.933,
+    "where_x_mm": 0.0,
+    "where_y_mm": -120.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     2.5,
+     2.5
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 2.5,
+    "where_z_frac": 0.936,
+    "where_x_mm": 0.0,
+    "where_y_mm": -120.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     2.5,
+     2.5
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 2.5,
+   "+1_age0": 2.22,
+   "+1_age1": 2.5,
+   "+1_age3": 2.49
+  },
+  {
+   "id": "forehead",
+   "label": "Hauteur du front",
+   "-1": {
+    "max_mm": 5.0,
+    "where_z_frac": 0.978,
+    "where_x_mm": -0.0,
+    "where_y_mm": -78.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 5.0,
+    "where_z_frac": 0.984,
+    "where_x_mm": -0.0,
+    "where_y_mm": -78.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 5.0,
+   "+1_age0": 4.43,
+   "+1_age1": 5.0,
+   "+1_age3": 4.98
+  },
+  {
+   "id": "ears_size",
+   "label": "Taille des oreilles",
+   "-1": {
+    "max_mm": 4.64,
+    "where_z_frac": 0.925,
+    "where_x_mm": 0.0,
+    "where_y_mm": -34.0,
+    "bands_mm": {
+     "head": [
+      -4.3,
+      0.0
+     ],
+     "neck": [
+      -0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 4.64,
+    "where_z_frac": 0.924,
+    "where_x_mm": 0.0,
+    "where_y_mm": -34.0,
+    "bands_mm": {
+     "head": [
+      4.3,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 4.75,
+   "+1_age0": 4.11,
+   "+1_age1": 4.64,
+   "+1_age3": 4.62
+  },
+  {
+   "id": "ears_angle",
+   "label": "Orientation des oreilles",
+   "-1": {
+    "max_mm": 4.56,
+    "where_z_frac": 0.925,
+    "where_x_mm": 0.0,
+    "where_y_mm": -31.0,
+    "bands_mm": {
+     "head": [
+      -2.6,
+      0.0
+     ],
+     "neck": [
+      -0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 4.56,
+    "where_z_frac": 0.925,
+    "where_x_mm": 0.0,
+    "where_y_mm": -36.0,
+    "bands_mm": {
+     "head": [
+      2.6,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 4.54,
+   "+1_age0": 4.04,
+   "+1_age1": 4.56,
+   "+1_age3": 4.54
+  },
+  {
+   "id": "eyelid_aperture",
+   "label": "Ouverture des paupières",
+   "-1": {
+    "max_mm": 0.63,
+    "where_z_frac": 0.934,
+    "where_x_mm": 0.0,
+    "where_y_mm": -133.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 0.63,
+    "where_z_frac": 0.934,
+    "where_x_mm": 0.0,
+    "where_y_mm": -133.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 0.64,
+   "+1_age0": 0.56,
+   "+1_age1": 0.63,
+   "+1_age3": 0.63
+  },
+  {
+   "id": "nose_bridge",
+   "label": "Relief de l’arête nasale",
+   "-1": {
+    "max_mm": 3.0,
+    "where_z_frac": 0.928,
+    "where_x_mm": 0.0,
+    "where_y_mm": -143.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -2.4
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 3.0,
+    "where_z_frac": 0.928,
+    "where_x_mm": 0.0,
+    "where_y_mm": -147.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      2.4
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 2.99,
+   "+1_age0": 2.66,
+   "+1_age1": 3.0,
+   "+1_age3": 2.99
+  },
+  {
+   "id": "lip_thickness",
+   "label": "Épaisseur des lèvres",
+   "-1": {
+    "max_mm": 1.06,
+    "where_z_frac": 0.894,
+    "where_x_mm": -0.0,
+    "where_y_mm": -143.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      -0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 1.06,
+    "where_z_frac": 0.894,
+    "where_x_mm": -0.0,
+    "where_y_mm": -144.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 1.04,
+   "+1_age0": 0.89,
+   "+1_age1": 1.06,
+   "+1_age3": 1.05
+  },
+  {
+   "id": "mouth_corner",
+   "label": "Hauteur des commissures",
+   "-1": {
+    "max_mm": 1.99,
+    "where_z_frac": 0.891,
+    "where_x_mm": 0.0,
+    "where_y_mm": -136.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 1.99,
+    "where_z_frac": 0.893,
+    "where_x_mm": 0.0,
+    "where_y_mm": -136.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 1.99,
+   "+1_age0": 1.63,
+   "+1_age1": 1.99,
+   "+1_age3": 1.98
+  },
+  {
+   "id": "jaw_angle",
+   "label": "Angle de la mâchoire",
+   "-1": {
+    "max_mm": 3.35,
+    "where_z_frac": 0.88,
+    "where_x_mm": -0.0,
+    "where_y_mm": -113.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 3.35,
+    "where_z_frac": 0.879,
+    "where_x_mm": -0.0,
+    "where_y_mm": -113.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 3.26,
+   "+1_age0": 2.62,
+   "+1_age1": 3.35,
+   "+1_age3": 3.32
+  },
+  {
+   "id": "facial_asymmetry",
+   "label": "Asymétrie du visage",
+   "-1": {
+    "max_mm": 1.76,
+    "where_z_frac": 0.915,
+    "where_x_mm": -1.0,
+    "where_y_mm": -129.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -0.6
+     ],
+     "neck": [
+      0.0,
+      0.1
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.99,
+     0.99
+    ],
+    "interocular_delta_mm": 0.01,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 1.76,
+    "where_z_frac": 0.915,
+    "where_x_mm": 1.0,
+    "where_y_mm": -129.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      -1.3
+     ],
+     "neck": [
+      0.0,
+      0.2
+     ],
+     "shoulder": [
+      0.0,
+      -0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.99,
+     0.99
+    ],
+    "interocular_delta_mm": 0.01,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 1.76,
+   "+1_age0": 1.53,
+   "+1_age1": 1.76,
+   "+1_age3": 1.75
+  },
+  {
+   "id": "skin_relief",
+   "label": "Relief de peau âgée",
+   "-1": {
+    "max_mm": 0.0,
+    "where_z_frac": 0.545,
+    "where_x_mm": -0.0,
+    "where_y_mm": -54.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1": {
+    "max_mm": 0.0,
+    "where_z_frac": 0.545,
+    "where_x_mm": -0.0,
+    "where_y_mm": -54.0,
+    "bands_mm": {
+     "head": [
+      0.0,
+      0.0
+     ],
+     "neck": [
+      0.0,
+      0.0
+     ],
+     "shoulder": [
+      0.0,
+      0.0
+     ],
+     "chest": [
+      0.0,
+      0.0
+     ],
+     "waist": [
+      0.0,
+      0.0
+     ],
+     "hip": [
+      0.0,
+      0.0
+     ],
+     "thigh": [
+      0.0,
+      0.0
+     ],
+     "knee": [
+      0.0,
+      0.0
+     ],
+     "calf": [
+      0.0,
+      0.0
+     ]
+    },
+    "eye_move_mm": [
+     0.0,
+     0.0
+    ],
+    "interocular_delta_mm": 0.0,
+    "cross_pairs": 0,
+    "cross_regions": {}
+   },
+   "+1_sex0": 0.0,
+   "+1_age0": 0.0,
+   "+1_age1": 0.0,
+   "+1_age3": 0.0
+  }
+ ]
+}
