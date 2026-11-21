@@ -1,4 +1,7 @@
-"""Verify the inner-eyelid correction on new and existing character meshes."""
+"""OBSOLÈTE (I-34, décision utilisateur) : vérifiait la correction des paupières internes sur un corps neuf et sur un
+ancien corps. Le nombre « 82 croisements » vient d'un ancien asset précis qui n'est ni dans le dépôt ni reproductible
+(l'asset de substitution `proportions-14/extension-13` donne un autre compte). La partie « corps neuf, cinq morphologies,
+zéro croisement » est couverte par `validate_geometry_quality`. Conservé pour l'historique ; non exécuté par le lanceur."""
 
 import json
 from pathlib import Path

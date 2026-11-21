@@ -1,11 +1,12 @@
-"""Check all-age neutral equivalence with the previous release."""
+"""Check that the new mass field leaves the neutral shape equal to the frozen reference of the current asset (D-19),
+then preset round-trip and the upgrade of a previous-release file (extension-13 stays a migration fixture)."""
 from pathlib import Path
 import json
 import sys
 import bpy
 import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parent))
-from validate_age_dimensions import surface
+import neutral_reference as neutral
 
 
 def main():
@@ -15,23 +16,14 @@ def main():
     with bpy.data.libraries.load(str(old_asset),link=False) as (_,target):target.collections=['Realistic Human Base']
     collection=target.collections[0];bpy.context.scene.collection.children.link(collection)
     previous=next(o for o in collection.objects if o.get('human_modeling_body'))
-    previous.modifiers.new('QA','SUBSURF').levels=1;previous.modifiers.move(len(previous.modifiers)-1,0)
+    reference=neutral.load()
     rows=[]
     for sex in (0.,.5,1.):
         for stage in (0.,.5,1.,1.5,2.,2.5,3.):
-            for body in (current,previous):
-                body.data.shape_keys.key_blocks['Morphologie'].value=sex
-                body.data.shape_keys['human_modeling_age']=stage
-                body.data.shape_keys.update_tag()
-            bpy.context.view_layer.update()
-            repair=current.data.shape_keys.key_blocks.get('Age · Adulte · Surface · Raccord interne')
-            if repair:repair.mute=True
-            current.data.shape_keys.update_tag();bpy.context.view_layer.update()
-            difference=float(np.abs(surface(current)[0]-surface(previous)[0]).max())
-            if repair:repair.mute=False
-            current.data.shape_keys.update_tag();bpy.context.view_layer.update()
-            assert difference<1e-7,(sex,stage,difference)
-            rows.append({'sex':sex,'stage':stage,'max_coordinate_difference_m':difference,'scope':'New mass field at zero; separate adult inner-eyelid maintenance key temporarily muted for comparison'})
+            neutral.set_state(current,sex,stage)
+            assert current.data.shape_keys['hm_body_mass']==0.
+            difference=neutral.check(current,reference,sex,stage)
+            rows.append({'sex':sex,'stage':stage,'max_coordinate_difference_m':difference,'scope':'Mass field at zero; cage compared with the frozen reference of the current asset (tools/data/neutral_reference.json)'})
     state=character_presets.capture(current)
     state['controls']['body_mass']=.65
     state['age_stage']=1.

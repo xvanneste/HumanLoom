@@ -1,4 +1,4 @@
-"""Check muscle saturation, neutral identity, mixed corpulence and saved drivers."""
+"""Check muscle saturation, neutral shape equal to the frozen reference of the current asset (D-19), mixed corpulence and saved drivers."""
 
 import json
 from pathlib import Path
@@ -8,27 +8,25 @@ import bpy
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "extension"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import geometry_quality
+import neutral_reference as neutral
 from proportions import MUSCLE_CONTROLS
 
 
 def main():
-    asset, old_asset, output = [Path(p).resolve() for p in sys.argv[sys.argv.index("--")+1:]]
-    bodies = []
-    for path in (asset, old_asset):
-        with bpy.data.libraries.load(str(path), link=False) as (_, target):
-            target.collections = ["Realistic Human Base"]
-        collection = target.collections[0]
-        bpy.context.scene.collection.children.link(collection)
-        body = next(obj for obj in collection.objects if obj.get("human_modeling_body"))
-        body.modifiers.new("QA surface", "SUBSURF").levels = 1
-        bodies.append(body)
-    body, old = bodies
+    asset, output = [Path(p).resolve() for p in sys.argv[sys.argv.index("--")+1:]]
+    reference = neutral.load()
+    with bpy.data.libraries.load(str(asset), link=False) as (_, target):
+        target.collections = ["Realistic Human Base"]
+    collection = target.collections[0]
+    bpy.context.scene.collection.children.link(collection)
+    body = next(obj for obj in collection.objects if obj.get("human_modeling_body"))
+    body.modifiers.new("QA surface", "SUBSURF").levels = 1
     keys = body.data.shape_keys
 
     def refresh():
         keys.update_tag()
-        old.data.shape_keys.update_tag()
         bpy.context.view_layer.update()
 
     def coordinates(obj):
@@ -41,9 +39,9 @@ def main():
     records = []
     for sex in (0., .5, 1.):
         keys.key_blocks["Morphologie"].value = sex
-        old.data.shape_keys.key_blocks["Morphologie"].value = sex
         refresh()
-        assert np.max(np.abs(coordinates(body)-coordinates(old))) < 1e-6
+        # Neutral shape at the asset's default age equals the frozen reference of the current asset.
+        neutral.check(body, reference, sex, keys["human_modeling_age"])
         for identifier, _ in MUSCLE_CONTROLS:
             for amount in (-1., 1.):
                 keys["hm_"+identifier] = amount
@@ -57,10 +55,18 @@ def main():
         keys["hm_muscles"] = 1.
         refresh()
         saturated = coordinates(body)
-        for identifier, _ in MUSCLE_CONTROLS[1:]:
+        # `muscle_definition` n'est pas une région : il ajoute du détail (0,36 à 0,50 mm sur 440 à 556 sommets, mesuré),
+        # il est donc exclu de la saturation régionale et vérifié à part (I-34 bis).
+        regional = [name for name, _ in MUSCLE_CONTROLS[1:] if name != "muscle_definition"]
+        for identifier in regional:
             keys["hm_"+identifier] = 1.
         refresh()
         assert np.max(np.abs(coordinates(body)-saturated)) < 1e-6
+        keys["hm_muscle_definition"] = 1.
+        refresh()
+        definition = float(np.max(np.abs(coordinates(body)-saturated)))
+        assert definition > 1e-4, definition  # la définition musculaire doit modifier la surface (> 0,1 mm)
+        keys["hm_muscle_definition"] = 0.
         for identifier, _ in MUSCLE_CONTROLS:
             keys["hm_"+identifier] = 0.
         for fat in (-1., 0., 1.):

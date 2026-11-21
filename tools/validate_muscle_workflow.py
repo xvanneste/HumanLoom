@@ -10,7 +10,7 @@ import numpy as np
 
 def main():
     from bl_ext.user_default.human_modeling import body_profiles, character_presets, geometry_quality
-    from bl_ext.user_default.human_modeling.proportions import MUSCLE_CONTROLS
+    from bl_ext.user_default.human_modeling.proportions import MUSCLE_CONTROLS, FAT_CONTROLS
     old_asset, output = [Path(p).resolve() for p in sys.argv[sys.argv.index("--")+1:]]
     bpy.ops.human_modeling.create()
     body = bpy.context.object
@@ -24,8 +24,14 @@ def main():
         for identifier, (_, fat, muscle) in body_profiles.PROFILES.items():
             assert bpy.ops.human_modeling.body_profile(profile=identifier) == {"FINISHED"}
             assert keys["hm_nose_width"] == .4 and keys["hm_legs"] == .25
-            assert keys["hm_corpulence"] == fat and keys["hm_muscles"] == muscle
-            assert all(keys["hm_"+name] == 0 for name, _ in MUSCLE_CONTROLS[1:])
+            # I-34 : l'opérateur n'écrit plus `hm_corpulence` (remis à 0, contrôle hérité) : la corpulence passe par
+            # `hm_whole_body` (body_profiles.WHOLE_BODY), les volumes adipeux régionaux sont remis à 0, et
+            # `muscle_definition` suit max(musculature, 0). `fat` (colonne 2 de PROFILES) n'est plus utilisé.
+            assert keys["hm_corpulence"] == 0 and keys["hm_whole_body"] == body_profiles.WHOLE_BODY[identifier], identifier
+            assert keys["hm_muscles"] == muscle
+            assert all(keys["hm_"+name] == 0 for name, _ in FAT_CONTROLS if name != "whole_body" and "hm_"+name in keys)
+            assert keys["hm_muscle_definition"] == max(muscle, 0.), identifier
+            assert all(keys["hm_"+name] == 0 for name, _ in MUSCLE_CONTROLS[1:] if name != "muscle_definition")
             bpy.context.view_layer.update()
             geometry = geometry_quality.report(body, bpy.context)["geometry"]
             assert geometry["intersections"]["crossing_triangle_pairs"] == 0, (sex, identifier)
