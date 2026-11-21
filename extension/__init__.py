@@ -132,7 +132,10 @@ class HUMANMODELING_OT_smooth(bpy.types.Operator):
         return context.mode == "OBJECT" and active_body(context) is not None
 
     def execute(self, context):
-        add_smooth_preview(active_body(context))
+        body = active_body(context)
+        if body.modifiers.get(SURFACE_MODIFIER):
+            self.report({"INFO"}, "L’aperçu lissé est déjà actif : réglez le niveau dans « Subdivision ».")
+        add_smooth_preview(body)
         return {"FINISHED"}
 
 
@@ -561,10 +564,13 @@ class HUMANMODELING_PT_fat(bpy.types.Panel):
     def draw(self, context):
         keys = active_body(context).data.shape_keys
         for identifier, label in FAT_CONTROLS:
-            if identifier in {"body_mass", "adiposity"} and "hm_whole_body" in keys:
+            # body_mass is redundant with whole_body (cosine 0.81, I-46): kept in the file, hidden unless legacy controls are shown.
+            if identifier == "body_mass" and "hm_whole_body" in keys:
                 continue
             if property_name(identifier) in keys:
                 self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
+        if "hm_whole_body" in keys:
+            self.layout.prop(context.window_manager, "human_modeling_show_legacy", text="Afficher les contrôles hérités")
 
 
 class HUMANMODELING_PT_legacy_volumes(bpy.types.Panel):
@@ -578,11 +584,11 @@ class HUMANMODELING_PT_legacy_volumes(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return body is not None and "hm_whole_body" in body.data.shape_keys
+        return body is not None and "hm_whole_body" in body.data.shape_keys and context.window_manager.human_modeling_show_legacy
 
     def draw(self, context):
         keys = active_body(context).data.shape_keys
-        for identifier, label in (("corpulence", "Volume initial"), ("adiposity", "Couverture régionale"), ("body_mass", "Volume 0.12")):
+        for identifier, label in (("corpulence", "Volume initial"), ("body_mass", "Volume 0.12")):
             self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
 
 
@@ -598,10 +604,59 @@ class HUMANMODELING_PT_face(bpy.types.Panel):
         return HUMANMODELING_PT_body.poll(context)
 
     def draw(self, context):
+        # Controls are drawn by the sub-panels below; any control missing from FACE_GROUPS still appears here.
         keys = active_body(context).data.shape_keys
+        grouped = {identifier for _, _, identifiers in FACE_GROUPS for identifier in identifiers}
         for identifier, label in FACE_CONTROLS:
-            if property_name(identifier) in keys:
+            if identifier not in grouped and property_name(identifier) in keys:
                 self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
+
+
+FACE_GROUPS = (
+    ("eyes", "Yeux", ("eye_spacing", "eye_height", "eyelid_aperture")),
+    ("nose", "Nez", ("nose_length", "nose_width", "nose_bridge")),
+    ("mouth", "Bouche et lèvres", ("mouth", "lips", "lip_thickness", "mouth_corner")),
+    ("jaw", "Mâchoire et menton", ("jaw", "jaw_angle", "chin")),
+    ("ears", "Oreilles", ("ears_size", "ears_angle")),
+    ("head", "Tête et front", ("head_width", "head_height", "forehead", "cheeks", "facial_asymmetry")),
+    ("skin", "Peau", ("skin_relief",)),
+)
+
+
+class HUMANMODELING_PT_face_group(bpy.types.Panel):
+    """Base of the face sub-panels (not registered): subclasses give bl_label and identifiers."""
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Humain"
+    bl_parent_id = "HUMANMODELING_PT_face"
+    bl_options = {"DEFAULT_CLOSED"}
+    identifiers = ()
+
+    @classmethod
+    def poll(cls, context):
+        return HUMANMODELING_PT_face.poll(context)
+
+    def draw(self, context):
+        keys = active_body(context).data.shape_keys
+        labels = dict(FACE_CONTROLS)
+        for identifier in self.identifiers:
+            if property_name(identifier) not in keys:
+                continue
+            row = self.layout.row()
+            if identifier == "skin_relief":
+                # The Displace modifier is driven by max(0, stage - 2): no effect up to the 30-year reference.
+                inactive = keys.get("human_modeling_age", 0.) <= 2.
+                row.active = not inactive
+            row.prop(keys, f'["{property_name(identifier)}"]', text=labels[identifier], slider=True)
+            if identifier == "skin_relief" and inactive:
+                self.layout.label(text="Sans effet avant 30 ans (âge > 2,00)", icon="INFO")
+
+
+def _face_group_class(key, label, identifiers):
+    return type(f"HUMANMODELING_PT_face_{key}", (HUMANMODELING_PT_face_group,), {"bl_label": label, "identifiers": identifiers})
+
+
+FACE_GROUP_CLASSES = tuple(_face_group_class(*group) for group in FACE_GROUPS)
 
 
 class HUMANMODELING_PT_presets(bpy.types.Panel):
@@ -882,8 +937,8 @@ class HUMANMODELING_OT_mirror_landmarks(bpy.types.Operator):
         try:
             payload, added = landmark_sets.mirrored(body)
             if not added:
-                self.report({"INFO"}, "Aucune paire incomplète à symétriser.")
-                return {"CANCELLED"}
+                self.report({"INFO"}, "Aucune paire incomplète à symétriser : rien n’a été modifié.")
+                return {"FINISHED"}
             landmark_sets.apply(body, payload)
         except (ValueError, RuntimeError) as error:
             self.report({"ERROR"}, str(error))
@@ -1080,6 +1135,7 @@ CLASSES = (
     HUMANMODELING_PT_legacy_volumes,
     HUMANMODELING_PT_muscles,
     HUMANMODELING_PT_face,
+    *FACE_GROUP_CLASSES,
     HUMANMODELING_PT_presets,
     HUMANMODELING_PT_measurements,
     HUMANMODELING_PT_anatomy,
@@ -1104,6 +1160,9 @@ def register():
         items=(("P05", "5e percentile", ""), ("P50", "50e percentile", ""), ("P95", "95e percentile", "")),
         default="P50",
     )
+    bpy.types.WindowManager.human_modeling_show_legacy = bpy.props.BoolProperty(
+        name="Afficher les contrôles hérités", description="Affiche les volumes des anciennes versions (conservés dans les fichiers)", default=False,
+    )
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     groom.register()
@@ -1115,6 +1174,7 @@ def unregister():
     bpy.types.VIEW3D_MT_mesh_add.remove(draw_add_mesh)
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)
+    del bpy.types.WindowManager.human_modeling_show_legacy
     del bpy.types.Object.hm_reference_percentile
     del bpy.types.Object.hm_reference_sex
     del bpy.types.Object.hm_reference_group

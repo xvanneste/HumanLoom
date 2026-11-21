@@ -33,13 +33,17 @@ after=groom.state(hair.hl_groom)
 for key in before:
  if key not in ('density','physics','viewport'):assert after[key]==before[key],key
 # A rejected expensive request must preserve the active density.
-area=hair['hl_mask_area_m2'];hair['hl_mask_area_m2']=1000.
+# The budget now follows the mask as painted (I-35): simulate an expensive mask by painting it to 1.0, then restore it.
+body=hair.parent;group=body.vertex_groups['hl_density_scalp']
+saved=[next((g.weight for g in v.groups if g.group==group.index),0.) for v in body.data.vertices]
+group.add(list(range(len(saved))),1.,'REPLACE')
 try:
  try:bpy.ops.humanloom.groom_density(preset='NORMAL')
  except RuntimeError:pass  # Blender exposes an operator ERROR report this way.
  assert groom.input_value(hair.modifiers['HumanLoom · densité'],'Density')==2500000.
  assert hair.hl_groom.density==2500000.
-finally:hair['hl_mask_area_m2']=area
+finally:
+ for index,weight in enumerate(saved):group.add([index],weight,'REPLACE')
 assert groom.defaults('SCALP')['density']==1800000.
 assert mode=='Animation',repr(mode)
 cfg=groom.state(hair.hl_groom);cfg.update(physics='XPBD')

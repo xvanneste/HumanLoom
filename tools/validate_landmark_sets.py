@@ -108,7 +108,7 @@ def main():
     assert len(mirrored["points"]) == 10
     assert all(mirrored["points"][key] == value for key, value in left_before["points"].items())
     assert all(mirrored["points"][key]["status"] == "mirrored_review" for key in ("al_r", "ch_r", "en_r"))
-    assert bpy.ops.human_modeling.mirror_landmarks() == {"CANCELLED"}
+    assert bpy.ops.human_modeling.mirror_landmarks() == {"FINISHED"}  # I-27: nothing to complete is reported, not cancelled
     assert atlas.capture(target) == mirrored
 
     # Failure after creating a new marker restores object count and custom appearance.

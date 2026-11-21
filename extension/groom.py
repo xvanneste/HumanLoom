@@ -26,6 +26,10 @@ DEFAULTS={
 FORMAT='humanloom.groom';SCHEMA=1
 QUALITY_PRESETS=(('CUSTOM','Personnalisé',''),('LIGHT','Léger · 10 %',''),('BALANCED','Équilibré · 30 %',''),('FULL','Complet · 100 %',''))
 QUALITY_AMOUNTS={'LIGHT':.10,'BALANCED':.30,'FULL':1.}
+FLOAT32_TOLERANCE=1e-6
+# Canonical stack: guides are simulated first only in XPBD mode; interpolation, profile and material always follow.
+STACK_ANIMATION=('HumanLoom · densité','HumanLoom · suivi 5.2','HumanLoom · profil','HumanLoom · matériau')
+STACK_XPBD=('HumanLoom · suivi 5.2','HumanLoom · densité','HumanLoom · profil','HumanLoom · matériau')
 
 
 def local_tree(tree,memo=None):
@@ -62,11 +66,27 @@ def input_value(mod,name):
     return getattr(mod.properties.inputs,socket.identifier).value
 
 
+def mask_area(hair):
+    """Effective area of the density mask as painted now (area x mask weight), not as it was at build time."""
+    stored=hair.get('hl_mask_area_m2',0.)
+    body=hair.parent
+    group=body.vertex_groups.get('hl_density_'+hair['hl_groom_region'].lower()) if body is not None else None
+    if group is None:return stored
+    mesh=body.data;mesh.calc_loop_triangles()
+    w=np.zeros(len(mesh.vertices))
+    for v in mesh.vertices:
+        for g in v.groups:
+            if g.group==group.index:w[v.index]=g.weight
+    p=np.array([v.co[:] for v in mesh.vertices]);tri=np.array([t.vertices[:] for t in mesh.loop_triangles]);corner=p[tri]
+    areas=np.linalg.norm(np.cross(corner[:,1]-corner[:,0],corner[:,2]-corner[:,0]),axis=1)/2
+    return float(np.sum(areas*w[tri].mean(axis=1)))
+
+
 def check_viewport_budget(hair,fraction):
     if not math.isfinite(fraction) or not 0<=fraction<=1:raise ValueError('La quantité d’aperçu doit être comprise entre 0 et 100 %.')
     density=input_value(hair.modifiers['HumanLoom · densité'],'Density')
     points=max(len(c.points) for c in hair.data.curves)
-    estimated=(hair.get('hl_mask_area_m2',0.)*density+len(hair.data.curves))*points*fraction
+    estimated=(mask_area(hair)*density+len(hair.data.curves))*points*fraction
     if estimated>12000000:raise ValueError('Cette quantité d’aperçu dépasse le budget pour cette zone. Choisissez un pourcentage inférieur.')
 
 
@@ -216,7 +236,9 @@ def validate(cfg):
     bounds={'length':(.001,.45),'nature':(0,1),'variation':(0,.8),'frizz':(0,1),'seed':(0,2147483647),'guides':(20,3000),'density':(0,8000000),'viewport':(0,1),'radius':(.000005,.00015),'roughness':(.05,1),'grey':(0,1),'substeps':(1,32),'iterations':(16,32768),'bendiness':(0,1),'root_bendiness':(0,1)}
     for key,(lo,hi) in bounds.items():
         v=cfg[key]
-        if isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or not lo<=v<=hi:raise ValueError('Valeur invalide : '+key)
+        # Blender stores floats in single precision: a slider bound read back (0.8, 5e-6, 1.5e-4) differs from the double bound by up to ~6e-8 relative. Integers stay strict.
+        slack=FLOAT32_TOLERANCE if type(v) is float else 0
+        if isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or not lo-abs(lo)*slack<=v<=hi+abs(hi)*slack:raise ValueError('Valeur invalide : '+key)
     for key in ('seed','guides','substeps','iterations'):
         if type(cfg[key]) is not int:raise ValueError('Entier attendu : '+key)
     if cfg['style'] not in ('SWEPT','PARTED','UPRIGHT') or cfg['physics'] not in ('ANIMATION','XPBD'):raise ValueError('Mode de groom invalide.')
@@ -261,17 +283,27 @@ def make_material(hair,cfg):
     mod=hair.modifiers.new('HumanLoom · matériau','NODES');mod.node_group=group
 
 
+def order_modifiers(hair,physics):
+    """Impose the canonical stack with explicit indices.
+
+    The native hair modifier added by curves_empty_hair_add is pinned to last (use_pin_to_last),
+    which turns every modifiers.move into a silent no-op and leaves it at the end of the Cheveux zone.
+    """
+    for mod in hair.modifiers:mod.use_pin_to_last=False
+    for index,name in enumerate(STACK_XPBD if physics=='XPBD' else STACK_ANIMATION):
+        current=list(hair.modifiers).index(hair.modifiers[name])
+        if current!=index:hair.modifiers.move(current,index)
+
+
 def configure(hair,cfg):
     density=hair.modifiers['HumanLoom · densité']
     for name,value in (('Density',cfg['density']),('Viewport Amount',cfg['viewport']),('Seed',cfg['seed'])):set_input(density,name,value)
     dynamics=hair.modifiers['HumanLoom · suivi 5.2']
     set_input(dynamics,'Mode','Animation')
-    hair.modifiers.move(list(hair.modifiers).index(density),0)
-    hair.modifiers.move(list(hair.modifiers).index(dynamics),1)
+    order_modifiers(hair,cfg['physics'])
     inter=next(n for n in density.node_group.nodes if n.type=='GROUP');inter.inputs['Resting Surface'].default_value=True
     if cfg['physics']=='XPBD':
-        # Run the native solver on guides, then interpolate on the deformed surface.
-        hair.modifiers.move(list(hair.modifiers).index(dynamics),0)
+        # Run the native solver on guides, then interpolate on the deformed surface (order set by order_modifiers).
         inter=next(n for n in density.node_group.nodes if n.type=='GROUP');inter.inputs['Resting Surface'].default_value=False
         set_input(dynamics,'Mode','Physics (Experimental)')
         for name,value,kind in [('Substeps',cfg['substeps'],None),('Constraint Steps',cfg['iterations'],None),('Bendiness',cfg['bendiness'],None),('Root Bendiness',cfg['root_bendiness'],None),('Stretchiness',0.,None),('Randomness',False,None),('Gravity',True,'NodeSocketBool'),('Surface Collision',cfg['collisions'],None)]:set_input(dynamics,name,value,kind)
@@ -282,7 +314,7 @@ def appearance(hair,cfg):
     """Apply non-geometric settings without losing a sculpted strand."""
     validate(cfg)
     points=max(len(c.points) for c in hair.data.curves)
-    budget=(hair.get('hl_mask_area_m2',0.)*cfg['density']+len(hair.data.curves))*points
+    budget=(mask_area(hair)*cfg['density']+len(hair.data.curves))*points
     if budget>40000000 or budget*cfg['viewport']>12000000:raise ValueError('Réduisez la densité ou la quantité en aperçu pour ce niveau de détail.')
     configure(hair,cfg)
     set_input(hair.modifiers['HumanLoom · profil'],'Radius',cfg['radius'])
@@ -329,6 +361,8 @@ def build(body,region,cfg):
         else:
             if bpy.ops.object.curves_empty_hair_add()!={'FINISHED'}:raise ValueError('Impossible de créer les Hair Curves natives.')
             hair=bpy.context.object;hair.name='HumanLoom · '+LABELS[region]
+            for collection in tuple(hair.users_collection):collection.objects.unlink(hair)
+            body.users_collection[0].objects.link(hair)
             hair.modifiers[0].node_group=local_tree(hair.modifiers[0].node_group)
             for modifier in body.modifiers:
                 if modifier.type=='NODES' and modifier.node_group and modifier.node_group.name.startswith('Capture Rest Geometry'):
@@ -450,7 +484,7 @@ class HL_OT_groom_density(bpy.types.Operator):
         density={'SPARSE':700000.,'NORMAL':1800000.,'DENSE':2500000.}[self.preset]
         try:
             points=max(len(c.points) for c in hair.data.curves)
-            budget=(hair.get('hl_mask_area_m2',0.)*density+len(hair.data.curves))*points
+            budget=(mask_area(hair)*density+len(hair.data.curves))*points
             fraction=input_value(hair.modifiers['HumanLoom · densité'],'Viewport Amount')
             if budget>40000000 or budget*fraction>12000000:raise ValueError('Réduisez la quantité d’aperçu ou choisissez une densité inférieure.')
             set_input(hair.modifiers['HumanLoom · densité'],'Density',density)
@@ -524,7 +558,8 @@ class HL_OT_groom_preset(bpy.types.Operator):
         except (ValueError,RuntimeError,OSError,KeyError) as error:
             for hair in created:discard(hair)
             self.report({'ERROR'},str(error));return {'CANCELLED'}
-        self.report({'INFO'},'Zones manquantes ajoutées.');return {'FINISHED'}
+        if not created:self.report({'INFO'},'Aucune zone ajoutée : toutes les zones de cette coiffure existent déjà.');return {'FINISHED'}
+        self.report({'INFO'},f'{len(created)} zone(s) ajoutée(s) : '+', '.join(LABELS[h['hl_groom_region']] for h in created)+'.');return {'FINISHED'}
 
 
 class HL_OT_groom_export(bpy.types.Operator,ExportHelper):
