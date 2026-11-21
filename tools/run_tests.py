@@ -39,15 +39,12 @@ SEED = (
 FIXTURES = {"validate_controls": ("adult-original.blend",), "validate_presets": ("legacy-03.blend",)}
 # Scripts exclus : travail en cours de l'utilisateur.
 SKIP = {"validate_groom_collision29": "travail en cours de l'utilisateur (non suivi)"}
-# Tests d'acceptation de la migration schéma 10 (D-20 : un ancien fichier garde sa forme d'origine au neutre, < 1e-6).
-# Ils échouent tant que la migration n'existe pas ; l'échec n'est « attendu » que s'il porte sur cette assertion précise.
-EXPECTED_FAILURE = {
-    "validate_controls": "assert np.max(np.abs(coordinates(legacy, True) - old_coordinates)) < 1e-6",
-    "validate_presets": "assert np.max(np.abs(evaluated_points(legacy) - before_geometry)) < 1e-6",
-}
-EXPECTED_LABEL = "ÉCHEC ATTENDU (schéma 10, D-20)"
 # Tests périmés par décision de l'utilisateur (I-34) : listés OBSOLÈTE, jamais comptés comme échec ni comme régression.
-OBSOLETE = {"validate_surface_fix": "I-34 : dépend d'un ancien asset non reproductible (82 croisements) ; remplacé par validate_geometry_quality"}
+OBSOLETE = {
+    "validate_controls": "D-21 : acceptation de la migration d'anciens fichiers, abandonnée (aucune migration au schéma 10) ; conservé",
+    "validate_presets": "D-21 : acceptation de la migration d'anciens fichiers, abandonnée (aucune migration au schéma 10) ; conservé",
+    "validate_surface_fix": "I-34 : dépend d'un ancien asset non reproductible (82 croisements) ; remplacé par validate_geometry_quality",
+}
 SHIM = '''import sys, types, runpy
 from pathlib import Path
 ROOT = Path(sys.argv[sys.argv.index("--shim-root") + 1]); TEST = sys.argv[sys.argv.index("--shim-test") + 1]
@@ -79,7 +76,8 @@ def registry(clone, out):
         "validate_anatomy": [o("anatomy")], "validate_atlas14_measurements": ["07"], "validate_atlas14_reopen": ["07"],
         "validate_body_mass_neutral": [old, o("body_mass_neutral")], "validate_controls": [o("controls")],
         "validate_extended_body": [o("extended_body")], "validate_geometry_quality": [o("geometry_quality")],
-        "validate_global_physique": [o("global_physique")], "validate_landmark_sets": [o("landmark_sets")],
+        "validate_global_physique": [o("global_physique")],
+        "validate_human_nodes": [str(clone / "extension/data/human_nodes.blend"), o("human_nodes/resultat.json")], "validate_landmark_sets": [o("landmark_sets")],
         "validate_mass_render_surface": [o("mass_render_surface")], "validate_mass_transitions": [o("mass_transitions")],
         "validate_measurements": [o("measurements")], "validate_model": [o("model")],
         "validate_modeling_batch": [asset, o("modeling_batch.json"), "0.0", "2.0"],
@@ -144,7 +142,7 @@ def compare(summary, reference_path):
     now = {row["test"]: row for row in summary}
     ok = lambda row: row is not None and row["statut"] == "OK"
     report = {
-        "regressions": sorted(t for t in now if ok(reference.get(t)) and not ok(now[t]) and now[t]["statut"] not in ("OBSOLÈTE", EXPECTED_LABEL)),
+        "regressions": sorted(t for t in now if ok(reference.get(t)) and not ok(now[t]) and now[t]["statut"] != "OBSOLÈTE"),
         "corriges": sorted(t for t in now if reference.get(t) and not ok(reference[t]) and ok(now[t])),
         "nouveaux_tests": sorted(t for t in now if t not in reference),
         "absents_de_cette_execution": sorted(t for t in reference if t not in now),
@@ -212,8 +210,6 @@ def main():
         (out / f"{name}.log").write_text(text, encoding="utf-8")
         error = next((l for l in reversed(text.splitlines()) if re.search(r"(Error|Exception|AssertionError|FAILED)", l)), "")
         status = "OK" if code == 0 else ("TIMEOUT" if code == -9 else "ÉCHEC")
-        if status == "ÉCHEC" and name in EXPECTED_FAILURE and EXPECTED_FAILURE[name] in text:
-            status = EXPECTED_LABEL
         summary.append({"test": name, "statut": status, "code": code,
                         "secondes": seconds, "args": [Path(a).name if "/" in a or "\\" in a else a for a in args],
                         "derniere_erreur": error[:220]})

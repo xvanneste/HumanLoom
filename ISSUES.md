@@ -47,6 +47,8 @@ Aucun crash ni corruption de données observé dans les exécutions faites. Cela
 
 **I-17 — Évaluation des sliders : 11 ms (cage) à 42 ms (avec Subsurf + Displace) par changement.** *Mesuré* en arrière-plan (CPU, `to_mesh`, 10 582 sommets) : médianes 11 ms et 42 ms, maxima 12 et 48 ms. Les modificateurs ajoutent ≈ 31 ms. Le rendu interactif dans l'interface (GPU) n'a pas été mesuré. P2 : à surveiller, pas de preuve de lenteur perçue.
 
+  **Lot 1 schéma 10 (2026-11-21, mesuré) :** le groupe de nœuds « HL Human » coûte 39 à 42 ms sur la cage (clés actuelles : 18 ms dans la même exécution) et 92 à 95 ms avec Subsurf 1 (70 à 76 ms), soit ≈ +20 ms, cohérent avec D-09 ; le critère « ≤ 33 ms sur la cage » du plan n'est pas atteint (SUIVI §4 P, T-L7).
+
 **I-18 — Mélange de préréglages non linéaire.** *Confirmé.* `load_preset(factor=0.5)` donne un écart de 17,6 mm au milieu géométrique des deux états (les drivers des clés de graisse/muscle sont non linéaires). Peut surprendre ; non nécessairement un défaut. À documenter. S.
 
 **I-19 — Bornes du groom rejetées par la validation (bug reproduit).** *Confirmé.* `groom.validate()` compare en double précision à des bornes strictes ; les propriétés Blender sont en simple précision. « Variation » = 0,8 (max du curseur) et « Rayon à la racine » à 5e-6 et 1,5e-4 (min et max) donnent « Valeur invalide » à l'application (`groom_apply`). Des bornes voisines (rugosité 0,05, longueur 0,001/0,45) passent par hasard. Solution : tolérance d'arrondi float32 dans `validate`. S. P1 (une valeur proposée par l'interface est refusée).
