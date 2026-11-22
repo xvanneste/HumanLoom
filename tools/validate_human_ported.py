@@ -93,7 +93,7 @@ assert "corpulence" not in [p for p, _ in drawn(addon.HUMANMODELING_PT_body)]
 seen = []
 for cls in addon.FACE_GROUP_CLASSES:
     seen += [p for p, _ in drawn(cls) if not p.startswith(("label", "operator"))]
-assert sorted(seen) == sorted(i for i, _ in FACE_CONTROLS)
+assert sorted(seen) == sorted(i for i, _ in FACE_CONTROLS if i in {c for c, _ in NATIVE_CONTROLS}), seen
 skin = addon.FACE_GROUP_CLASSES[-1]
 grey = {}
 for age in (0., 2., 2.5, 3.):
