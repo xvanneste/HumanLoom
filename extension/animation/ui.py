@@ -13,7 +13,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from . import importer
 from . import index as index_module
-from . import rig_ui
+from . import mapping_ui, rig_ui
 
 ADDON_ID = __package__.rpartition(".")[0]
 RESULT_LIMIT = 200
@@ -281,6 +281,7 @@ def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     rig_ui.register()
+    mapping_ui.register()
     wm = bpy.types.WindowManager
     wm.hl_anim_query = StringProperty(name="Recherche", description="Préfixes de mots (ex. « walk fwd »)", update=_update_results)
     wm.hl_anim_category = EnumProperty(name="Catégorie", items=_category_items, update=_update_results)
@@ -291,6 +292,7 @@ def register():
 
 
 def unregister():
+    mapping_ui.unregister()
     rig_ui.unregister()
     wm = bpy.types.WindowManager
     for name in ("hl_anim_active", "hl_anim_results", "hl_anim_favorites", "hl_anim_category", "hl_anim_query"):
