@@ -132,7 +132,11 @@ Aucun crash ni corruption de données observé dans les exécutions faites. Cela
 
 **I-45 — Amplitudes trop faibles (compléments à I-13).** *Mesuré (`AMPLITUDES_CONTROLES.md`).* 5 contrôles sous 1,6 mm, 9 entre 1,7 et 3,4 mm à ±1 ; pôles négatifs des graisses/muscles à ≈ 40 % du pôle positif. À corriger par un facteur d'amplitude lors de la migration schéma 10, après tests de qualité géométrique. M.
 
+  **Schéma 10, lot 4 (2026-11-22) :** facteurs d'amplitude par contrôle et par âge dans le groupe `HL Human` (`proportions.AMPLITUDE_FACTORS`) : ×6 pour 11 contrôles à l'âge adulte, ×3 pour 6, ×2 pour `facial_asymmetry`, abaissés chez l'enfant/adolescent ou au-delà de l'adulte quand une face se retournait ; `validate_human_amplitudes` : amplitude exacte (1,8e-6 m), 0 retournement sur la cage et la surface lissée (pas de 0,5 an). Non fait : `fat_face`, `muscles_abdomen` (expressions à ±1), plage ±2, validation visuelle. Défaut préexistant noté : `facial_asymmetry` −1 retourne 1 face à ×1 (sexe 0, âge 1,25).
+
 **I-46 — Contrôles de corpulence redondants (compléments à I-16).** *Mesuré (`REGROUPEMENT_CONTROLES.md`, similarité cosinus 0,81–0,82 entre `corpulence`, `whole_body`, `body_mass`).* Masquer `body_mass` et `corpulence` dans l'interface (étape 1) ; fusion réelle en schéma 10. S.
+
+  **Lot 3 bis (2026-11-22, D-26) :** `lips`+`lip_thickness` et `jaw`+`jaw_angle` fusionnés (somme sous un seul contrôle, facteurs d'âge abaissés contre les retournements) ; couverture de forme perdue mesurée 7,3 mm (lèvres) et 13,4 mm (mâchoire) (SUIVI §4 P, T-N8).
 
   **Schéma 10, lot 3 (2026-11-22) :** `corpulence` et `body_mass` n'existent plus dans le groupe de nœuds d'un humain natif (une seule échelle : `whole_body`) ; l'ancien moteur les garde jusqu'au lot 5. Fusions `lips`/`lip_thickness` et `jaw`/`jaw_angle` : non faites (décision d'artiste, à poser à l'utilisateur).
 

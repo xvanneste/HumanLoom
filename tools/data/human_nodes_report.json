@@ -40,6 +40,30 @@
   "jaw_angle",
   "facial_asymmetry"
  ],
+ "merged_controls": {
+  "lip_thickness": "lips",
+  "jaw_angle": "jaw"
+ },
+ "amplified_controls": [
+  "jaw",
+  "chin",
+  "cheeks",
+  "nose_length",
+  "nose_width",
+  "mouth",
+  "lips",
+  "eye_height",
+  "forehead",
+  "muscle_definition",
+  "ears_size",
+  "ears_angle",
+  "eyelid_aperture",
+  "nose_bridge",
+  "lip_thickness",
+  "mouth_corner",
+  "jaw_angle",
+  "facial_asymmetry"
+ ],
  "mask_bits": 0,
  "inputs": [
   "sex",
@@ -85,9 +109,7 @@
   "ears_angle",
   "eyelid_aperture",
   "nose_bridge",
-  "lip_thickness",
   "mouth_corner",
-  "jaw_angle",
   "facial_asymmetry",
   "skin_relief"
  ],
@@ -100,13 +122,13 @@
   "body_mass"
  ],
  "math_nodes": 6027,
- "total_nodes": 6753,
- "links": 9631,
+ "total_nodes": 6771,
+ "links": 9682,
  "vertices": 10582,
- "weights_compile_s": 12.5,
- "total_s": 798.7,
- "graph_fingerprint": "6e4b32bf53c66bce2d4ef74e933cf53cbe94c3faec228e3fbdfcd76b14879696",
+ "weights_compile_s": 13.6,
+ "total_s": 1251.9,
+ "graph_fingerprint": "0c8dd1a287ada59041aa7f3196b633ef32fdd906b455e9d0d0d03216677519f5",
  "base_digest": "b2894184cef9f0e5030a6ae7427703497fb96a707db8f9653b19593044272597",
  "layers_digest": "580043f6537bf32b0a37f04c5a68d315e59001e03ebae8e6b0890fe30d5f2f10",
- "blend_bytes": 18206539
+ "blend_bytes": 18211922
 }

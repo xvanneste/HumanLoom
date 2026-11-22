@@ -72,8 +72,10 @@ for modifier in legacy.modifiers:
     modifier.show_viewport = False
 STATES = [
     {"sex": 0.0, "age": 2.0},
-    {"sex": 1.0, "age": 2.0, "shoulders": 0.7, "waist": -0.5, "head_width": 0.8, "eye_height": 0.6, "legs": 0.4, "muscles": 0.5},
-    {"sex": 0.3, "age": 1.0, "head_height": -0.7, "eye_spacing": 0.9, "facial_asymmetry": 0.5, "torso": -0.6, "adiposity": 0.4},
+    # Contrôles à l'amplitude d'origine seulement : les contrôles amplifiés (lot 4) diffèrent de l'ancien moteur par construction,
+    # leur amplitude exacte (corps et yeux) est vérifiée par `validate_human_amplitudes.py`.
+    {"sex": 1.0, "age": 2.0, "shoulders": 0.7, "waist": -0.5, "head_width": 0.8, "fat_face": 0.6, "legs": 0.4, "muscles": 0.5},
+    {"sex": 0.3, "age": 1.0, "head_height": -0.7, "eye_spacing": 0.9, "fat_arms": 0.5, "torso": -0.6, "adiposity": 0.4},
 ]
 rows = []
 for state in STATES:

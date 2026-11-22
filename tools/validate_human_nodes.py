@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import extension as addon
 import neutral_reference as neutral
-from extension.proportions import CONTROLS, NATIVE_CONTROLS
+from extension.proportions import AMPLITUDE_FACTORS, CONTROLS, NATIVE_CONTROLS
 
 BLEND, OUT = [Path(p).resolve() for p in sys.argv[sys.argv.index("--") + 1:][:2]]
 OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -37,6 +37,9 @@ CRITERION = 2e-5
 TIME_LIMIT_MS = 33.
 CONTROL_IDS = [c[0] for c in NATIVE_CONTROLS]  # entrées du groupe (schéma 10 : sans corpulence ni body_mass)
 LEGACY_CONTROL_IDS = [c[0] for c in CONTROLS]
+# Lot 4 : les contrôles amplifiés ne sont plus égaux à l'ancien moteur (c'est voulu) ; leur amplitude est vérifiée exactement par
+# `validate_human_amplitudes.py`. Ici l'équivalence au moteur actuel porte sur les contrôles à l'amplitude d'origine.
+EQUIVALENCE_IDS = [c for c in CONTROL_IDS if c not in AMPLITUDE_FACTORS]
 result = {"criterion_m": CRITERION}
 
 addon.register()
@@ -97,13 +100,13 @@ states = []
 for sex in (0., .5, 1.):
     for age in (0., 1., 2., 3.):
         states.append({"name": f"neutre sexe={sex:g} age={age:g}", "sex": sex, "age": age})
-        states.append({"name": f"tout +1 sexe={sex:g} age={age:g}", "sex": sex, "age": age, **{c: 1. for c in CONTROL_IDS}})
+        states.append({"name": f"tout +1 sexe={sex:g} age={age:g}", "sex": sex, "age": age, **{c: 1. for c in EQUIVALENCE_IDS}})
 for sex in (0., 1.):
     for age in (0., 1., 2., 3.):
-        states.append({"name": f"tout -1 sexe={sex:g} age={age:g}", "sex": sex, "age": age, **{c: -1. for c in CONTROL_IDS}})
+        states.append({"name": f"tout -1 sexe={sex:g} age={age:g}", "sex": sex, "age": age, **{c: -1. for c in EQUIVALENCE_IDS}})
 rng = np.random.default_rng(3)
 for i in range(20):
-    state = {c: float(rng.uniform(-1, 1)) for c in CONTROL_IDS}
+    state = {c: float(rng.uniform(-1, 1)) for c in EQUIVALENCE_IDS}
     states.append({"name": f"tirage {i}", "sex": float(rng.uniform(0, 1)), "age": float(rng.uniform(0, 3)), **state})
 rows = []
 for state in states:

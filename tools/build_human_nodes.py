@@ -28,7 +28,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from extension.proportions import CONTROLS, NATIVE_CONTROLS, REMOVED_IN_SCHEMA_10  # noqa: E402
+from extension.proportions import AMPLITUDE_FACTORS, CONTROLS, MERGED_IN_SCHEMA_10, NATIVE_CONTROLS, REMOVED_IN_SCHEMA_10  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:]
 OUT = Path(ARGS[0]).resolve()
@@ -65,10 +65,18 @@ blocks = [k for k in keys.key_blocks if k != keys.reference_key]
 drivers = {d.data_path: d.driver for d in keys.animation_data.drivers}
 
 
-def token(variable):
+def raw_token(variable):
+    """Nom du contrôle lu par une variable de pilote, tel que dans l'ancien moteur."""
     path = variable.targets[0].data_path
     if path.startswith('["hm_'):
         return path[5:-2]
+    return token(variable)
+
+
+def token(variable):
+    path = variable.targets[0].data_path
+    if path.startswith('["hm_'):
+        return MERGED_IN_SCHEMA_10.get(path[5:-2], path[5:-2])  # un contrôle fusionné lit la valeur de celui qui le remplace
     if path == '["human_modeling_age"]':
         return "age"
     if 'key_blocks["Morphologie"].value' in path:
@@ -158,8 +166,8 @@ def owner_of(key, driver):
     """Control of a key: the control read by its driver variable `amount` (bind_control), else the name, else None."""
     if driver is not None:
         amounts = [v for v in driver.variables if v.name in ("amount", "local")]  # `local`: regional muscles (overall + local)
-        if amounts and token(amounts[0]) in ALL_CONTROL_IDS:
-            return token(amounts[0])
+        if amounts and raw_token(amounts[0]) in ALL_CONTROL_IDS:
+            return raw_token(amounts[0])  # nom d'origine : les deux parties d'une fusion gardent chacune leur groupe et leur facteur
     found = re.search(r"HM · ([a-z_0-9]+)", key.name)
     return found.group(1) if found and found.group(1) in ALL_CONTROL_IDS else None
 
@@ -210,10 +218,12 @@ accumulated = None
 layer_count = 0
 layers_of = defaultdict(list)
 switched = []
+amplified_controls = []
 
 
 def zero_at_zero(control, items, samples=400):
     """Vrai si tous les poids du groupe valent 0 quand la commande vaut 0, quelles que soient les autres valeurs (essai à graine fixe)."""
+    control = MERGED_IN_SCHEMA_10.get(control, control)
     if control not in CONTROL_IDS or any(driver is None for _, _, driver in items):
         return False
     generator = random.Random(11)
@@ -267,8 +277,22 @@ for control, items in layers_by_control.items():
         layer_count += 1
     if local is None:
         continue
+    factors = AMPLITUDE_FACTORS.get(control)
+    if factors and any(f != 1 for f in factors):
+        # Facteur d'amplitude dépendant de l'âge : somme des « chapeaux » d'âge (1 - |âge - stade|) pondérés par le facteur du stade.
+        factor = None
+        for stage, value in enumerate(factors):
+            hat = math("MAXIMUM", math("SUBTRACT", 1.0, math("ABSOLUTE", math("SUBTRACT", sockets["age"], float(stage)))), 0.0)
+            term = math("MULTIPLY", hat, float(value))
+            factor = term if factor is None else math("ADD", factor, term)
+        amplified = group.nodes.new("ShaderNodeVectorMath")
+        amplified.operation = "SCALE"
+        group.links.new(local, amplified.inputs[0])
+        group.links.new(factor, amplified.inputs[3])
+        local = amplified.outputs[0]
+        amplified_controls.append(control)
     if SWITCH and zero_at_zero(control, items):
-        active = math("GREATER_THAN", math("ABSOLUTE", sockets[control]), 1e-12)
+        active = math("GREATER_THAN", math("ABSOLUTE", sockets[MERGED_IN_SCHEMA_10.get(control, control)]), 1e-12)
         switch = group.nodes.new("GeometryNodeSwitch")
         switch.input_type = "VECTOR"
         group.links.new(active, switch.inputs["Switch"])
@@ -330,7 +354,7 @@ mesh.use_fake_user = True
 OUT.parent.mkdir(parents=True, exist_ok=True)
 bpy.data.libraries.write(str(OUT), {group, mesh}, compress=True)
 report = {
-    "version": VERSION, "tolerance": TOL, "switch": SWITCH, "switched_controls": switched, "mask_bits": MASK_BITS, "inputs": INPUTS, "keys_total": len(blocks), "control_groups": len(layers_by_control),
+    "version": VERSION, "tolerance": TOL, "switch": SWITCH, "switched_controls": switched, "merged_controls": MERGED_IN_SCHEMA_10, "amplified_controls": amplified_controls, "mask_bits": MASK_BITS, "inputs": INPUTS, "keys_total": len(blocks), "control_groups": len(layers_by_control),
     "basis_layers": layer_count, "dropped_keys": len(dropped), "removed_controls": list(REMOVED_IN_SCHEMA_10), "math_nodes": counts["math"], "total_nodes": len(group.nodes), "links": len(group.links),
     "vertices": vertex_count, "weights_compile_s": round(weights_seconds, 1), "total_s": round(time.perf_counter() - started, 1),
     "graph_fingerprint": fingerprint, "base_digest": base_digest,

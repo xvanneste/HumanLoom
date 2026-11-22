@@ -13,6 +13,11 @@ import uuid as uuid_module
 
 import bpy
 
+try:
+    from .proportions import AMPLITUDE_FACTORS, MERGED_IN_SCHEMA_10
+except ImportError:  # importé à plat par certains scripts de test
+    from proportions import AMPLITUDE_FACTORS, MERGED_IN_SCHEMA_10
+
 NODES_PATH = Path(__file__).parent / "data" / "human_nodes.blend"
 ASSET_PATH = Path(__file__).parent / "data" / "realistic.blend"
 GROUP_NAME = "HL Human"
@@ -200,12 +205,13 @@ def _retarget_eye_drivers(eye, body):
         return 0
     count = 0
     for fcurve in keys.animation_data.drivers:
+        owner = None
         for variable in fcurve.driver.variables:
             target = variable.targets[0]
             path = target.data_path
             match = re.search(r'hm_([a-z_]+)', path)
             if match:
-                name = match.group(1)
+                name = MERGED_IN_SCHEMA_10.get(match.group(1), match.group(1))
             elif "human_modeling_age" in path:
                 name = "age"
             elif "Morphologie" in path:
@@ -216,7 +222,33 @@ def _retarget_eye_drivers(eye, body):
             target.id = body
             target.data_path = f'modifiers["{MODIFIER_NAME}"].properties.inputs.{names[name][0]}.value'
             count += 1
+            if variable.name in ("amount", "local"):
+                owner = name
+        if owner in AMPLITUDE_FACTORS:
+            _amplify_eye_key(fcurve, keys, owner, body, names)
     return count
+
+
+def _amplify_eye_key(fcurve, keys, control, body, names):
+    """Le crâne est amplifié par le groupe de nœuds (lot 4) : l'œil reçoit le même facteur d'âge, sinon il ne suit plus son orbite."""
+    factors = AMPLITUDE_FACTORS[control]
+    driver = fcurve.driver
+    age_path = f".{names['age'][0]}.value"
+    age_name = next((v.name for v in driver.variables if v.targets[0].data_path.endswith(age_path)), None)
+    if age_name is None:
+        variable = driver.variables.new()
+        variable.name = age_name = "hl_age"
+        variable.type = "SINGLE_PROP"
+        variable.targets[0].id_type = "OBJECT"
+        variable.targets[0].id = body
+        variable.targets[0].data_path = f'modifiers["{MODIFIER_NAME}"].properties.inputs{age_path}'
+    factor = "+".join(f"{value}*max(0,1-abs({age_name}-{stage}))" for stage, value in enumerate(factors))
+    driver.expression = f"({driver.expression})*({factor})"
+    key = keys.key_blocks[fcurve.data_path.split('"')[1]]
+    top = float(max(factors))
+    if key.slider_min < 0:
+        key.slider_min *= top
+    key.slider_max = max(key.slider_max, 1.0) * top
 
 
 def create_human(context, location=None):
