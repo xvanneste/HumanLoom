@@ -115,6 +115,14 @@ def entries_from_inventory(path):
     return rows
 
 
+def actions_from_inventory(path):
+    """Noms d'action du .blend si l'inventaire les déclare tous (champ « action », écrit par l'import du lot A1b) ; sinon None."""
+    with open(path, encoding="utf-8") as handle:
+        items = json.load(handle)["animations"].values()
+    names = [item.get("action") for item in items]
+    return names if names and all(names) else None
+
+
 def names_from_blend(path):
     """Repli : noms des actions du .blend par `libraries.load(link=True)` sans rien affecter à `data_to` (rien n'est chargé ni écrit ;
     ~17 s mesurées sur 1,6 Go). Aucune catégorie n'est disponible par ce chemin : les entrées sont « Sans catégorie »."""
@@ -307,6 +315,8 @@ def open_index(path, directory, force=False):
             return cached, "cache"
     rows = entries_from_inventory(source) if source_type == "inventory" else names_from_blend(source)
     index = Index(rows, source_type, stamp)
+    if source_type == "inventory":
+        index.actions = actions_from_inventory(source)
     save_cache(directory, index)
     return index, source_type
 
