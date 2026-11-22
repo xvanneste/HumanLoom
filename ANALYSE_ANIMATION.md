@@ -54,6 +54,10 @@ C'est l'interface web **Mixamo** : barre de titre sombre, à gauche une grille d
 
 Ordre recommandé : **A1 (peut démarrer maintenant, sans toucher au rig) → A2 → A3 → A4 → A5 → A6 → A7**.
 
+## 6 bis. Décision du 2026-11-22 (D-27) : pas de redistribution, import facile
+
+Les animations ne sont jamais redistribuées. Ajout du lot **A1b — Import et guide** (avant A2) : importer dans la galerie des actions depuis un `.blend`, des FBX/BVH/glTF (conversion dans un processus Blender séparé vers un fichier de bibliothèque de l'utilisateur, avec métadonnées : nom, catégorie, fps, root motion, squelette source), ou un dossier entier ; ne jamais modifier la source ; déduplication par empreinte ; rapport des échecs. Livrable documentaire : `docs/animations-import.md`, qui explique pas à pas comment obtenir des animations depuis ses propres projets Unreal (procédures d'export vérifiées sur la documentation d'Unreal, avec les limites : root motion, additifs, squelettes différents). Critères : import de N fichiers réels, index mis à jour sans relire toute la bibliothèque, aucun fichier source modifié.
+
 ## 7. Décisions attendues de l'utilisateur
 
 1. Valider l'ordre A1→A7 et le choix « squelette compatible UEFN d'abord ».
