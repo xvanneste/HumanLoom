@@ -48,3 +48,7 @@ Schéma 10 (lots 2 à 5) → **7 repères** → **8 nouveaux contrôles** → **
 2. Les lots sensibles F11 et F12 : écartés par défaut ?
 3. Cible d'export pour F5 : Unreal, Unity, les deux ?
 4. Licences : réimplémentation indépendante (défaut) ou reprise de ressources GPL/CC0 après lecture ?
+
+## Décisions prises (2026-11-22) — voir D-23 et D-24 de `SUIVI_REPRISE.md`
+
+Ordre des lots gardé ; aucun lot écarté pour l'instant (F11, F12 : décision explicite avant démarrage) ; export vers les moteurs à analyser plus tard, on reste dans Blender ; code réécrit et optimisé, avec recherche web préalable des algorithmes et équations (plus réalistes, plus rapides, mieux intégrés à Blender) ; règle sur les assets de tiers non encore validée.
