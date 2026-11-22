@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import bpy
 import numpy as np
 
-from . import anatomy
+from . import anatomy, human
 from .proportions import BASE_ID
 
 
@@ -132,13 +132,9 @@ def apply(body, payload):
 def mirrored(body):
     """Fill missing partners by reflection on the neutral mesh, without overwrites."""
     payload = capture(body)
-    keys = body.data.shape_keys
-    if keys is None:
+    if not human.is_native(body) and body.data.shape_keys is None:
         raise ValueError("Le personnage ne dispose pas de sa forme neutre.")
-    vertices = keys.key_blocks[0].data
-    coords = np.empty(len(vertices) * 3)
-    vertices.foreach_get("co", coords)
-    coords = coords.reshape((-1, 3))
+    coords = human.base_coordinates(body)
     tolerance = float(np.ptp(coords[:, 2])) * .003
     added = []
     for a, b in PAIRS:

@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from .proportions import BASE_ID, CONTROLS, property_name
-from . import landmark_sets, measurements
+from . import human, landmark_sets, measurements
 
 
 FORMAT = "human_modeling.character"
@@ -74,15 +74,14 @@ def validate(payload):
 
 
 def capture(body):
-    keys = body.data.shape_keys
     return validate({
         "format": FORMAT,
         "version": VERSION,
         "base": body.data.get("human_modeling_base", BASE_ID),
-        "morphology": keys.key_blocks["Morphologie"].value,
-        "age_stage": keys.get("human_modeling_age", 2.0),
+        "morphology": human.get_value(body, "sex"),
+        "age_stage": human.get_value(body, "age", 2.0),
         "controls": {
-            identifier: keys.get(property_name(identifier), 0.0) for identifier, _ in CONTROLS
+            identifier: human.get_value(body, identifier) for identifier, _ in CONTROLS
         },
         "scale": list(body.scale),
         "measurement_reference": {
@@ -96,21 +95,19 @@ def capture(body):
 
 
 def assign(body, state):
-    keys = body.data.shape_keys
     for identifier, value in state["controls"].items():
-        prop = property_name(identifier)
-        if prop in keys:
-            keys[prop] = value
-    keys.key_blocks["Morphologie"].value = state["morphology"]
-    if "human_modeling_age" in keys:
-        keys["human_modeling_age"] = state["age_stage"]
+        if human.has_control(body, identifier):
+            human.set_value(body, identifier, value)
+    human.set_value(body, "sex", state["morphology"])
+    if human.has_control(body, "age"):
+        human.set_value(body, "age", state["age_stage"])
     body.scale = state["scale"]
     reference = state.get("measurement_reference")
     if reference:
         body.hm_reference_group = reference["group"]
         body.hm_reference_sex = reference["sex"]
         body.hm_reference_percentile = reference["percentile"]
-    keys.update_tag()
+    human.touch(body)
     if state.get("landmarks") is not None:
         landmark_sets.apply(body, state["landmarks"])
 
@@ -118,16 +115,15 @@ def assign(body, state):
 def apply(body, payload, factor=1.0):
     requested = validate(payload)
     factor = number(factor, "L’intensité", 0, 1)
-    if not body.is_editable or not body.data.shape_keys.is_editable:
-        raise ValueError("Le personnage et ses clés de forme doivent être éditables.")
-    keys = body.data.shape_keys
+    if not human.is_editable(body):
+        raise ValueError("Le personnage et ses réglages doivent être éditables.")
     missing = [
         identifier for identifier, value in requested["controls"].items()
-        if property_name(identifier) not in keys and value != 0
+        if not human.has_control(body, identifier) and value != 0
     ]
     if missing:
         raise ValueError("Ajoutez d’abord les derniers réglages corps et visage à ce personnage.")
-    if requested["age_stage"] != 2.0 and "human_modeling_age" not in keys:
+    if requested["age_stage"] != 2.0 and not human.has_control(body, "age"):
         raise ValueError("Ajoutez d’abord les formes d’âge à ce personnage.")
     if factor == 1 and requested.get("landmarks") is not None:
         landmark_sets.check_compatible(body, requested["landmarks"])

@@ -6,6 +6,11 @@ import bpy
 import numpy as np
 from mathutils import Vector
 
+try:
+    from . import human
+except ImportError:  # importé comme module seul par certains scripts de test : l'ancien moteur suffit
+    import human
+
 
 LANDMARK_KEY = "hm_measurement_landmark"
 LANDMARKS = (
@@ -213,15 +218,14 @@ def fit(body, context, identifier, target_m):
     """Bounded one-control fit, restoring the original value on every failure."""
     if identifier not in FIT_CONTROLS or not math.isfinite(target_m) or target_m <= 0:
         raise ValueError("Mesure cible invalide.")
-    keys = body.data.shape_keys
-    if not body.is_editable or not keys.is_editable:
-        raise ValueError("Le personnage et ses clés de forme doivent être éditables.")
-    control = "hm_" + FIT_CONTROLS[identifier]
-    original = keys[control]
+    if not human.is_editable(body):
+        raise ValueError("Le personnage et ses réglages doivent être éditables.")
+    control = FIT_CONTROLS[identifier]
+    original = human.get_value(body, control)
 
     def sample(amount):
-        keys[control] = amount
-        keys.update_tag()
+        human.set_value(body, control, amount)
+        human.touch(body)
         context.view_layer.update()
         return value(body, context, identifier)
 
@@ -246,7 +250,7 @@ def fit(body, context, identifier, target_m):
                 hi = mid
         raise ValueError("La convergence vers la mesure cible a échoué.")
     except Exception:
-        keys[control] = original
-        keys.update_tag()
+        human.set_value(body, control, original)
+        human.touch(body)
         context.view_layer.update()
         raise

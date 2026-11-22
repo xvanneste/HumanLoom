@@ -9,7 +9,8 @@ from pathlib import Path
 from mathutils import Vector
 import numpy as np
 
-from . import anatomy, landmark_sets
+from . import anatomy, landmark_sets, human
+from .proportions import CONTROLS, NATIVE_CONTROLS
 
 
 GROUPS = (
@@ -103,14 +104,15 @@ def report(body, context):
         "character": body.name,
         "model": {
             "base": body.data.get("human_modeling_base"),
-            "schema": body.data.get("human_modeling_schema"),
+            "schema": body.humanloom.schema_version if human.is_native(body) else body.data.get("human_modeling_schema"),
             "age_reference": age_shapes.metadata(body),
             "surface_revision": body.data.get("human_modeling_surface_revision", 0),
             "topology_sha256": landmark_sets.topology(body),
-            "morphology": body.data.shape_keys.key_blocks["Morphologie"].value,
-            "controls": {
-                name: body.data.shape_keys[name] for name in body.data.shape_keys.keys() if name.startswith("hm_")
-            },
+            "morphology": human.get_value(body, "sex"),
+            "controls": (
+                {name: human.get_value(body, name) for name, _ in NATIVE_CONTROLS} if human.is_native(body)
+                else {name: body.data.shape_keys[name] for name in body.data.shape_keys.keys() if name.startswith("hm_")}
+            ),
             "matrix_world": [list(row) for row in body.matrix_world],
             "scene_unit_scale_m": context.scene.unit_settings.scale_length,
         },

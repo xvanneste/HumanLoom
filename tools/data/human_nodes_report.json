@@ -22,7 +22,6 @@
   "eye_spacing",
   "eye_height",
   "forehead",
-  "corpulence",
   "muscles",
   "adiposity",
   "fat_abdomen",
@@ -39,14 +38,12 @@
   "lip_thickness",
   "mouth_corner",
   "jaw_angle",
-  "facial_asymmetry",
-  "body_mass"
+  "facial_asymmetry"
  ],
  "mask_bits": 0,
  "inputs": [
   "sex",
   "age",
-  "corpulence",
   "shoulders",
   "waist",
   "hips",
@@ -55,7 +52,6 @@
   "legs",
   "torso",
   "whole_body",
-  "body_mass",
   "adiposity",
   "fat_abdomen",
   "fat_flanks",
@@ -96,16 +92,21 @@
   "skin_relief"
  ],
  "keys_total": 461,
- "control_groups": 57,
- "basis_layers": 238,
- "math_nodes": 6354,
- "total_nodes": 7109,
- "links": 10137,
+ "control_groups": 55,
+ "basis_layers": 229,
+ "dropped_keys": 26,
+ "removed_controls": [
+  "corpulence",
+  "body_mass"
+ ],
+ "math_nodes": 6027,
+ "total_nodes": 6753,
+ "links": 9631,
  "vertices": 10582,
- "weights_compile_s": 20.1,
- "total_s": 1307.0,
- "graph_fingerprint": "e004563d159aca01469543e9dcf58c050e745ed8355ba618aebda2f161d825bc",
+ "weights_compile_s": 12.5,
+ "total_s": 798.7,
+ "graph_fingerprint": "6e4b32bf53c66bce2d4ef74e933cf53cbe94c3faec228e3fbdfcd76b14879696",
  "base_digest": "b2894184cef9f0e5030a6ae7427703497fb96a707db8f9653b19593044272597",
- "layers_digest": "4ddbffad0d97f0a7722d087ccb7a35c847af119b90aa2a97b7522e44aa80350a",
- "blend_bytes": 18723785
+ "layers_digest": "580043f6537bf32b0a37f04c5a68d315e59001e03ebae8e6b0890fe30d5f2f10",
+ "blend_bytes": 18206539
 }

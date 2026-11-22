@@ -12,6 +12,7 @@ from mathutils import Matrix,Vector
 from mathutils.bvhtree import BVHTree
 from bpy_extras.io_utils import ImportHelper,ExportHelper
 from .groom_fibers import fiber
+from . import human
 
 REGIONS=(('SCALP','Cheveux',''),('BROWS','Sourcils',''),('BEARD','Barbe',''),('MOUSTACHE','Moustache',''),('CHEST','Torse',''),('ABDOMEN','Abdomen',''),('BACK','Dos',''),('ARMS','Bras',''),('LEGS','Jambes',''),('AXILLA','Aisselles',''),('PUBIC','Pubis',''))
 LABELS={i:label for i,label,_ in REGIONS}
@@ -45,10 +46,7 @@ def local_tree(tree,memo=None):
 
 
 def body_from(context):
-    obj=context.active_object
-    if obj and obj.type=='MESH' and obj.get('human_modeling_body'):return obj
-    if obj and obj.parent and obj.parent.get('human_modeling_body'):return obj.parent
-    return None
+    return human.body_of(context.active_object)
 
 
 def find(body,region):
@@ -340,7 +338,7 @@ def discard(hair):
 def build(body,region,cfg):
     validate(cfg)
     if bpy.app.version[:2]!=(5,2):raise ValueError('HumanLoom nécessite Blender 5.2.')
-    if body.type!='MESH' or not body.get('human_modeling_body') or body.data.get('human_modeling_schema',0)<9:raise ValueError('Une base HumanLoom à jour est nécessaire.')
+    if not (human.is_native(body) or (human.is_legacy(body) and body.data.get('human_modeling_schema',0)>=9)):raise ValueError('Une base HumanLoom à jour est nécessaire.')
     if not body.is_editable or not body.data.is_editable:raise ValueError('Le personnage doit être éditable.')
     if region not in LABELS:raise ValueError('Zone inconnue.')
     root,normals,uv,ids,bary,mask,area=sample(body,region,cfg['guides'],cfg['seed'])

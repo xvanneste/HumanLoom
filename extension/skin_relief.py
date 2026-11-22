@@ -3,6 +3,35 @@ NAME='Human Modeling · Relief de peau'
 GROUP='HM · Relief visage'
 
 
+def attach_native(body, source):
+    """Relief de peau d'un humain schéma 10 : même Displace et même groupe de sommets, pilotés par les entrées du modificateur."""
+    from . import human
+    if body.modifiers.get(NAME) or source.modifiers.get(NAME) is None:
+        return False
+    original = source.modifiers[NAME]
+    group = body.vertex_groups.new(name=GROUP)
+    index = source.vertex_groups[GROUP].index
+    for vertex in source.data.vertices:
+        weight = next((g.weight for g in vertex.groups if g.group == index), 0.)
+        if weight:
+            group.add([vertex.index], weight, 'REPLACE')
+    modifier = body.modifiers.new(NAME, 'DISPLACE')
+    for attribute in ('texture', 'texture_coords', 'uv_layer', 'mid_level', 'vertex_group'):
+        setattr(modifier, attribute, getattr(original, attribute))
+    driver = modifier.driver_add('strength').driver
+    driver.type = 'SCRIPTED'
+    sockets = human.sockets()
+    for name, control in (('stage', 'age'), ('amount', 'skin_relief')):
+        variable = driver.variables.new()
+        variable.name = name
+        variable.type = 'SINGLE_PROP'
+        variable.targets[0].id_type = 'OBJECT'
+        variable.targets[0].id = body
+        variable.targets[0].data_path = f'modifiers["{human.MODIFIER_NAME}"].properties.inputs.{sockets[control][0]}.value'
+    driver.expression = 'max(0,stage-2)*.002*(1+amount)'
+    return True
+
+
 def attach(body, source):
     if body.modifiers.get(NAME):return False
     original=source.modifiers.get(NAME)

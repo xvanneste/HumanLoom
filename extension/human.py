@@ -1,6 +1,8 @@
 """Schéma 10 (lot 2) : humain natif piloté par le groupe de nœuds « HL Human ».
 
-Ajouté À CÔTÉ de l'ancien moteur (clés de forme + pilotes) : rien n'est modifié ni retiré dans les autres modules.
+Cohabite avec l'ancien moteur (clés de forme + pilotes, `human_modeling.create`), conservé jusqu'au lot 5 : les modules
+partagés (mesures, repères, préréglages, anatomie, groom, interface) passent par les accesseurs ci-dessous
+(`is_native`, `get_value`, `set_value`, `draw_control`, …) et fonctionnent pour les deux.
 Un humain schéma 10 est un objet MESH ordinaire portant `Object.humanloom` (façade D, D-07) ; ses paramètres sont les
 entrées du modificateur « HL Human », jamais des clés de forme.
 """
@@ -39,6 +41,102 @@ def sockets():
 
 def modifier_of(obj):
     return obj.modifiers.get(MODIFIER_NAME) if obj is not None and obj.type == "MESH" else None
+
+
+def is_native(obj):
+    """Vrai pour un humain schéma 10 (façade `humanloom`), faux pour un corps de l'ancien moteur ou un autre objet."""
+    properties = getattr(obj, "humanloom", None) if obj is not None else None
+    return bool(properties is not None and properties.is_human and obj.type == "MESH")
+
+
+def is_legacy(obj):
+    return obj is not None and obj.type == "MESH" and bool(obj.get("human_modeling_body")) and not is_native(obj)
+
+
+def is_body(obj):
+    return is_native(obj) or is_legacy(obj)
+
+
+def body_of(obj):
+    """Le corps (natif ou ancien moteur) de l'objet actif ou de son parent, sinon None."""
+    if is_body(obj):
+        return obj
+    if obj is not None and obj.parent is not None and is_body(obj.parent):
+        return obj.parent
+    return None
+
+
+def _legacy_name(name):
+    return {"sex": None, "age": "human_modeling_age"}.get(name, "hm_" + name)
+
+
+def has_control(obj, name):
+    """Le personnage porte-t-il cette commande (sexe, âge, ou l'un des 48 contrôles) ?"""
+    if is_native(obj):
+        return name in sockets()
+    keys = obj.data.shape_keys
+    if keys is None:
+        return False
+    if name == "sex":
+        return "Morphologie" in keys.key_blocks
+    return _legacy_name(name) in keys
+
+
+def get_value(obj, name, default=0.0):
+    if is_native(obj):
+        return float(getattr(obj.humanloom, name)) if name in sockets() else default
+    keys = obj.data.shape_keys
+    if name == "sex":
+        return float(keys.key_blocks["Morphologie"].value)
+    return float(keys.get(_legacy_name(name), default))
+
+
+def set_value(obj, name, value):
+    if is_native(obj):
+        setattr(obj.humanloom, name, float(value))
+        return
+    keys = obj.data.shape_keys
+    if name == "sex":
+        keys.key_blocks["Morphologie"].value = float(value)
+    else:
+        keys[_legacy_name(name)] = float(value)
+    keys.update_tag()
+
+
+def touch(obj):
+    """Force la réévaluation après un réglage fait par script."""
+    obj.update_tag()
+    if not is_native(obj) and obj.data.shape_keys is not None:
+        obj.data.shape_keys.update_tag()
+
+
+def is_editable(obj):
+    if is_native(obj):
+        return obj.is_editable and obj.data.is_editable and modifier_of(obj) is not None
+    return obj.is_editable and obj.data.shape_keys is not None and obj.data.shape_keys.is_editable
+
+
+def draw_control(layout, obj, name, text, slider=True):
+    """Dessine un curseur de commande, pour les deux moteurs (même code d'interface)."""
+    if is_native(obj):
+        layout.prop(obj.humanloom, name, text=text, slider=slider)
+    elif name == "sex":
+        layout.prop(obj.data.shape_keys.key_blocks["Morphologie"], "value", text=text, slider=slider)
+    else:
+        layout.prop(obj.data.shape_keys, f'["{_legacy_name(name)}"]', text=text, slider=slider)
+
+
+def base_coordinates(obj):
+    """Sommets de la forme neutre (Basis pour l'ancien moteur ; maillage de base du groupe pour un humain natif)."""
+    import numpy as np
+    if is_native(obj):
+        values = np.empty(len(obj.data.vertices) * 3)
+        obj.data.vertices.foreach_get("co", values)
+    else:
+        vertices = obj.data.shape_keys.key_blocks[0].data
+        values = np.empty(len(vertices) * 3)
+        vertices.foreach_get("co", values)
+    return values.reshape((-1, 3))
 
 
 def _getter(name):
@@ -140,18 +238,82 @@ def create_human(context, location=None):
     properties.schema_version = SCHEMA_VERSION
     properties.generator_version = GENERATOR_VERSION
     with bpy.data.libraries.load(str(ASSET_PATH), link=False) as (_, target):
-        target.objects = ["Œil gauche", "Œil droit"]
-    stray = [obj for obj in bpy.data.objects if obj.get("human_modeling_body") and obj is not body and obj.users == 0]
-    for attribute, eye in zip(("eye_left", "eye_right"), target.objects):
+        target.objects = ["Corps", "Œil gauche", "Œil droit"]
+    source, *eyes = target.objects
+    for attribute, eye in zip(("eye_left", "eye_right"), eyes):
         collection.objects.link(eye)
         eye.parent = body
         _retarget_eye_drivers(eye, body)
         setattr(properties, attribute, eye)
-    for obj in stray:
-        bpy.data.objects.remove(obj)
+    from . import skin_relief
+    skin_relief.attach_native(body, source)  # groupe de sommets + Displace piloté par les entrées du modificateur
+    source_mesh = source.data
+    bpy.data.objects.remove(source)
+    bpy.data.meshes.remove(source_mesh)  # retire aussi ses clés de forme (bloc Key) devenues orphelines
+    for stale in ("human_modeling_schema",):  # le schéma d'un humain natif est `humanloom.schema_version`
+        if stale in mesh:
+            del mesh[stale]
     if location is not None:
         body.location = location
     return body
+
+
+def _retarget_drivers(owner_id, old, new):
+    """Les pilotes copiés lisent encore l'original : ils lisent maintenant la copie."""
+    animation = getattr(owner_id, "animation_data", None)
+    if animation is None:
+        return
+    for fcurve in animation.drivers:
+        for variable in fcurve.driver.variables:
+            for target in variable.targets:
+                if target.id == old:
+                    target.id = new
+
+
+def duplicate_human(context, body):
+    """Copie complète et indépendante : corps, yeux, repères, cheveux (données, groupes de nœuds et matériaux propres), nouvel UUID."""
+    clone = body.copy()
+    clone.data = body.data.copy()
+    for collection in body.users_collection:
+        collection.objects.link(clone)
+    _retarget_drivers(clone, body, clone)
+    mapping = {body: clone}
+    for child in body.children:
+        copy = child.copy()
+        if child.data is not None:
+            copy.data = child.data.copy()
+        for collection in child.users_collection:
+            collection.objects.link(copy)
+        copy.parent = clone
+        copy.matrix_parent_inverse = child.matrix_parent_inverse.copy()
+        mapping[child] = copy
+        if child.type == "MESH" and copy.data.shape_keys is not None:
+            _retarget_drivers(copy.data.shape_keys, body, clone)
+        if child.type == "CURVES":
+            copy.data.surface = clone
+            _unshare_groom(copy)
+    properties = clone.humanloom
+    properties.uuid = _new_uuid()
+    for attribute in ("eye_left", "eye_right"):
+        original_eye = getattr(body.humanloom, attribute)
+        setattr(properties, attribute, mapping.get(original_eye))
+    return clone
+
+
+def _unshare_groom(hair):
+    """Groupes de nœuds et matériaux créés par HumanLoom : propres à la copie (T-A8 : le matériau était partagé)."""
+    materials = {}
+    for index, material in enumerate(hair.data.materials):
+        if material is not None and material.get("hl_owned"):
+            materials[material] = material.copy()
+            hair.data.materials[index] = materials[material]
+    for modifier in hair.modifiers:
+        if modifier.type == "NODES" and modifier.node_group is not None and modifier.node_group.get("hl_owned"):
+            group = modifier.node_group.copy()
+            for node in group.nodes:
+                if node.bl_idname == "GeometryNodeSetMaterial" and node.inputs["Material"].default_value in materials:
+                    node.inputs["Material"].default_value = materials[node.inputs["Material"].default_value]
+            modifier.node_group = group
 
 
 class HUMANLOOM_OT_create(bpy.types.Operator):
@@ -197,6 +359,25 @@ class HUMANLOOM_OT_assign_uuid(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class HUMANLOOM_OT_duplicate(bpy.types.Operator):
+    bl_idname = "humanloom.duplicate"
+    bl_label = "Dupliquer le personnage"
+    bl_description = "Copie le corps, les yeux, les repères et les cheveux en un personnage indépendant avec un nouvel identifiant"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return is_native(body_of(context.object))
+
+    def execute(self, context):
+        clone = duplicate_human(context, body_of(context.object))
+        for obj in tuple(context.selected_objects):
+            obj.select_set(False)
+        clone.select_set(True)
+        context.view_layer.objects.active = clone
+        return {"FINISHED"}
+
+
 def ensure_unique_uuid(scene=None, depsgraph=None):
     """Après une duplication, deux objets portent le même UUID : le second reçoit un nouvel identifiant."""
     seen = set()
@@ -220,7 +401,7 @@ def _on_depsgraph(scene, depsgraph=None):
         ensure_unique_uuid()
 
 
-CLASSES = (HumanLoomProperties, HUMANLOOM_OT_create, HUMANLOOM_OT_assign_uuid)
+CLASSES = (HumanLoomProperties, HUMANLOOM_OT_create, HUMANLOOM_OT_assign_uuid, HUMANLOOM_OT_duplicate)
 
 
 def register():

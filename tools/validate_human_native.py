@@ -126,6 +126,39 @@ R["duplication"] = {"uuid_original": native.humanloom.uuid, "uuid_copie": copy.h
                     "independants": independent,
                     "yeux_de_la_copie_sont_ceux_de_l_original": copy.humanloom.eye_left is props.eye_left}
 
+# --- duplication complète (opérateur humanloom.duplicate) : yeux indépendants, nouvel UUID, maillage propre -----------------------
+bpy.ops.object.select_all(action="DESELECT")
+native.select_set(True)
+bpy.context.view_layer.objects.active = native
+assert bpy.ops.humanloom.duplicate() == {"FINISHED"}
+full = bpy.context.object
+eyes_full = (full.humanloom.eye_left, full.humanloom.eye_right)
+assert full.humanloom.uuid not in (native.humanloom.uuid, copy.humanloom.uuid)
+assert full.data is not native.data and all(e is not None and e.parent == full for e in eyes_full)
+assert eyes_full[0] is not props.eye_left and eyes_full[1] is not props.eye_right
+
+
+def eye_points(eye):
+    eye.update_tag()
+    bpy.context.view_layer.update()
+    evaluated_eye = eye.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    mesh = evaluated_eye.to_mesh()
+    points = np.array([v.co[:] for v in mesh.vertices])
+    evaluated_eye.to_mesh_clear()
+    return points
+
+
+original_eye_before, full_eye_before = eye_points(props.eye_left), eye_points(eyes_full[0])
+full.humanloom.eye_spacing = 1.0
+original_eye_after, full_eye_after = eye_points(props.eye_left), eye_points(eyes_full[0])
+R["duplication_complete"] = {"uuid": full.humanloom.uuid, "yeux_independants_de_l_original": True,
+                             "oeil_de_la_copie_deplace_m": float(np.abs(full_eye_after - full_eye_before).max()),
+                             "oeil_de_l_original_deplace_m": float(np.abs(original_eye_after - original_eye_before).max())}
+assert R["duplication_complete"]["oeil_de_la_copie_deplace_m"] > 1e-4 and R["duplication_complete"]["oeil_de_l_original_deplace_m"] < 1e-9
+bpy.data.objects.remove(full, do_unlink=True)
+for eye in eyes_full:
+    bpy.data.objects.remove(eye, do_unlink=True)
+
 # --- sauvegarde / rechargement SANS l'extension ------------------------------------------------------------------------------
 for other in tuple(bpy.context.scene.objects):
     if other is not native and other not in (props.eye_left, props.eye_right):

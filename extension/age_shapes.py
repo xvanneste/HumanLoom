@@ -7,7 +7,11 @@ YEARS=(5,15,30,75)
 
 
 def metadata(body):
-    stage=float(body.data.shape_keys.get('human_modeling_age',2.))
+    try:
+        from . import human
+    except ImportError:
+        import human
+    stage=human.get_value(body,'age',2.)
     index=round(stage)
     return {'stage_parameter':stage,'anchor_years':YEARS,
             'exact_anchor_years':YEARS[index] if 0<=index<4 and abs(stage-index)<1e-6 else None,
@@ -15,7 +19,11 @@ def metadata(body):
 
 
 def stature_reference(body, sex):
-    stage=float(body.data.shape_keys.get('human_modeling_age',2.))
+    try:
+        from . import human
+    except ImportError:
+        import human
+    stage=human.get_value(body,'age',2.)
     index=round(stage)
     if abs(stage-index)>1e-6:
         raise ValueError('Choisissez une des quatre formes de référence avant calibration.')

@@ -61,6 +61,10 @@ FACE_CONTROLS = (
 )
 
 CONTROLS = BODY_CONTROLS + FAT_CONTROLS + MUSCLE_CONTROLS + FACE_CONTROLS
+# Schéma 10 (lot 3, I-46) : une seule échelle de corpulence (`whole_body`). Ces deux contrôles de l'ancien moteur n'existent
+# plus dans le groupe de nœuds « HL Human » ; ils restent dans CONTROLS tant que l'ancien moteur existe (lot 5).
+REMOVED_IN_SCHEMA_10 = ("corpulence", "body_mass")
+NATIVE_CONTROLS = tuple(control for control in CONTROLS if control[0] not in REMOVED_IN_SCHEMA_10)
 CURRENT_SCHEMA = 9
 BASE_ID = "blender_studio_realistic_v1"
 

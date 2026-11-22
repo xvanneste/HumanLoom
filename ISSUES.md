@@ -134,6 +134,8 @@ Aucun crash ni corruption de données observé dans les exécutions faites. Cela
 
 **I-46 — Contrôles de corpulence redondants (compléments à I-16).** *Mesuré (`REGROUPEMENT_CONTROLES.md`, similarité cosinus 0,81–0,82 entre `corpulence`, `whole_body`, `body_mass`).* Masquer `body_mass` et `corpulence` dans l'interface (étape 1) ; fusion réelle en schéma 10. S.
 
+  **Schéma 10, lot 3 (2026-11-22) :** `corpulence` et `body_mass` n'existent plus dans le groupe de nœuds d'un humain natif (une seule échelle : `whole_body`) ; l'ancien moteur les garde jusqu'au lot 5. Fusions `lips`/`lip_thickness` et `jaw`/`jaw_angle` : non faites (décision d'artiste, à poser à l'utilisateur).
+
   **Statut (2026-11-21) : interface faite, non committée ; rien n'est supprimé.** `corpulence` n'était déjà pas dessiné quand `whole_body` existe ; `body_mass` n'est plus dans « Corpulence et tissus » et le sous-panneau « Volumes des anciennes versions » (corpulence, body_mass) n'apparaît que si « Afficher les contrôles hérités » est coché (propriété de fenêtre `human_modeling_show_legacy`, non enregistrée dans les fichiers). **Écart avec `REGROUPEMENT_CONTROLES.md`** : ce document demande de *garder* « Couverture régionale » (`adiposity`), or le code le masquait quand `whole_body` existe ; il est maintenant affiché. Visage regroupé en 7 sous-panneaux repliés (Yeux, Nez, Bouche et lèvres, Mâchoire et menton, Oreilles, Tête et front, Peau) ; `skin_relief` est grisé (non désactivé) et accompagné d'une note quand l'âge ≤ 2,00 (pilote `max(0, stade-2)`). Vérifié par un enregistreur de dessin (quels champs chaque panneau dessine, 21/21 contrôles du visage dans un seul groupe, `hm_*` intacts) ; **rendu réel non vu**.
 
 

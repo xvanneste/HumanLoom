@@ -29,13 +29,14 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import extension as addon
 import neutral_reference as neutral
-from extension.proportions import CONTROLS
+from extension.proportions import CONTROLS, NATIVE_CONTROLS
 
 BLEND, OUT = [Path(p).resolve() for p in sys.argv[sys.argv.index("--") + 1:][:2]]
 OUT.parent.mkdir(parents=True, exist_ok=True)
 CRITERION = 2e-5
 TIME_LIMIT_MS = 33.
-CONTROL_IDS = [c[0] for c in CONTROLS]
+CONTROL_IDS = [c[0] for c in NATIVE_CONTROLS]  # entrées du groupe (schéma 10 : sans corpulence ni body_mass)
+LEGACY_CONTROL_IDS = [c[0] for c in CONTROLS]
 result = {"criterion_m": CRITERION}
 
 addon.register()
@@ -63,7 +64,7 @@ result["group"] = {"nodes": len(group.nodes), "links": len(group.links), "layers
 def set_engine(state):
     keys.key_blocks["Morphologie"].value = state["sex"]
     keys["human_modeling_age"] = state["age"]
-    for control in CONTROL_IDS:
+    for control in LEGACY_CONTROL_IDS:  # les contrôles supprimés restent à 0 dans l'ancien moteur
         keys["hm_" + control] = state.get(control, 0.)
 
 

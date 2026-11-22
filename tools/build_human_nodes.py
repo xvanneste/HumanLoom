@@ -28,7 +28,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from extension.proportions import CONTROLS  # noqa: E402
+from extension.proportions import CONTROLS, NATIVE_CONTROLS, REMOVED_IN_SCHEMA_10  # noqa: E402
 
 ARGS = sys.argv[sys.argv.index("--") + 1:]
 OUT = Path(ARGS[0]).resolve()
@@ -39,7 +39,8 @@ REPORT = Path(ARGS[ARGS.index("--report") + 1]).resolve() if "--report" in ARGS 
 GROUP_NAME = "HL Human"
 MESH_NAME = "HL Human Base"
 VERSION = 1
-CONTROL_IDS = [c[0] for c in CONTROLS]
+ALL_CONTROL_IDS = [c[0] for c in CONTROLS]  # contrôles de l'ancien moteur (lus dans les pilotes)
+CONTROL_IDS = [c[0] for c in NATIVE_CONTROLS]  # entrées du groupe
 INPUTS = ["sex", "age"] + CONTROL_IDS
 OPS = {ast.Add: "ADD", ast.Sub: "SUBTRACT", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
 
@@ -153,8 +154,25 @@ started = time.perf_counter()
 constant_offset = np.zeros(vertex_count * 3, np.float64)
 layers_by_control = defaultdict(list)
 readers = defaultdict(set)
+def owner_of(key, driver):
+    """Control of a key: the control read by its driver variable `amount` (bind_control), else the name, else None."""
+    if driver is not None:
+        amounts = [v for v in driver.variables if v.name in ("amount", "local")]  # `local`: regional muscles (overall + local)
+        if amounts and token(amounts[0]) in ALL_CONTROL_IDS:
+            return token(amounts[0])
+    found = re.search(r"HM · ([a-z_0-9]+)", key.name)
+    return found.group(1) if found and found.group(1) in ALL_CONTROL_IDS else None
+
+
+dropped = []
 for key in blocks:
     path = 'key_blocks["' + key.name + '"].value'
+    driver_of_key = drivers.get(path)
+    if owner_of(key, driver_of_key) in REMOVED_IN_SCHEMA_10:
+        dropped.append(key.name)  # contrôle supprimé au schéma 10 (lot 3)
+        continue
+    if driver_of_key is not None and any(token(v) in REMOVED_IN_SCHEMA_10 for v in driver_of_key.variables):
+        raise ValueError('Une clé conservée lit un contrôle supprimé : ' + key.name)
     delta = (coords(key) - coords(key.relative_key)).astype(np.float64)
     if key.name == "Morphologie":
         weight = sockets["sex"]
@@ -171,15 +189,7 @@ for key in blocks:
     if np.abs(delta).max() < 1e-9:
         continue
     weight = math("MINIMUM", math("MAXIMUM", weight, float(key.slider_min)), float(key.slider_max))
-    # Control of a key: the control read by its driver variable `amount` (bind_control), else the name, else a group of its own.
-    owner = None
-    if driver is not None:
-        amounts = [v for v in driver.variables if v.name in ("amount", "local")]  # `local`: regional muscles (overall + local)
-        if amounts and token(amounts[0]) in CONTROL_IDS:
-            owner = token(amounts[0])
-    if owner is None:
-        found = re.search(r"HM · ([a-z_0-9]+)", key.name)
-        owner = found.group(1) if found and found.group(1) in CONTROL_IDS else None
+    owner = owner_of(key, driver)
     group_name = owner if owner else "other:" + key.name
     layers_by_control[group_name].append((weight, delta, driver))
     if driver is not None:  # couplings: a group whose weights read another control (modulators such as fat, muscle, overall)
@@ -321,7 +331,7 @@ OUT.parent.mkdir(parents=True, exist_ok=True)
 bpy.data.libraries.write(str(OUT), {group, mesh}, compress=True)
 report = {
     "version": VERSION, "tolerance": TOL, "switch": SWITCH, "switched_controls": switched, "mask_bits": MASK_BITS, "inputs": INPUTS, "keys_total": len(blocks), "control_groups": len(layers_by_control),
-    "basis_layers": layer_count, "math_nodes": counts["math"], "total_nodes": len(group.nodes), "links": len(group.links),
+    "basis_layers": layer_count, "dropped_keys": len(dropped), "removed_controls": list(REMOVED_IN_SCHEMA_10), "math_nodes": counts["math"], "total_nodes": len(group.nodes), "links": len(group.links),
     "vertices": vertex_count, "weights_compile_s": round(weights_seconds, 1), "total_s": round(time.perf_counter() - started, 1),
     "graph_fingerprint": fingerprint, "base_digest": base_digest,
     "layers_digest": hashlib.sha256("".join(layer_digests).encode()).hexdigest(), "blend_bytes": OUT.stat().st_size,

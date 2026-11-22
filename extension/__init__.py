@@ -18,12 +18,13 @@ SURFACE_MODIFIER = "Human Modeling · Surface"
 
 
 def active_body(context):
-    obj = context.active_object
-    if obj and obj.type == "MESH" and obj.get(BODY_MARKER):
-        return obj
-    if obj and obj.parent and obj.parent.get(BODY_MARKER):
-        return obj.parent
-    return None
+    """Le corps actif : humain natif (schéma 10) ou corps de l'ancien moteur."""
+    return human.body_of(context.active_object)
+
+
+def has_proportions(body, minimum=2):
+    """Un humain natif a toujours ses réglages ; l'ancien moteur les a à partir du schéma 2."""
+    return body is not None and (human.is_native(body) or body.data.get("human_modeling_schema", 0) >= minimum)
 
 
 def add_smooth_preview(body):
@@ -148,15 +149,14 @@ class HUMANMODELING_OT_reset(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return context.mode == "OBJECT" and body is not None and body.data.get("human_modeling_schema", 0) >= 2
+        return context.mode == "OBJECT" and has_proportions(body)
 
     def execute(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         for identifier, _ in CONTROLS:
-            prop = property_name(identifier)
-            if prop in keys:
-                keys[prop] = 0.0
-        keys.update_tag()
+            if human.has_control(body, identifier):
+                human.set_value(body, identifier, 0.0)
+        human.touch(body)
         if context.area:
             context.area.tag_redraw()
         return {"FINISHED"}
@@ -171,7 +171,7 @@ class HUMANMODELING_OT_upgrade(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return context.mode == "OBJECT" and body is not None and body.data.get("human_modeling_schema", 0) < CURRENT_SCHEMA
+        return context.mode == "OBJECT" and body is not None and not human.is_native(body) and body.data.get("human_modeling_schema", 0) < CURRENT_SCHEMA
 
     def execute(self, context):
         body = active_body(context)
@@ -349,15 +349,14 @@ class HUMANMODELING_OT_randomize(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         scopes = {"FACE": FACE_CONTROLS, "BODY": BODY_CONTROLS + FAT_CONTROLS + MUSCLE_CONTROLS, "ALL": CONTROLS}
         for identifier, _ in scopes[self.scope]:
             rng = random.Random(f"{self.seed}:{identifier}")
             value = rng.uniform(-self.strength, self.strength)
-            prop = property_name(identifier)
-            if prop in keys:
-                keys[prop] = value
-        keys.update_tag()
+            if human.has_control(body, identifier):
+                human.set_value(body, identifier, value)
+        human.touch(body)
         return {"FINISHED"}
 
 
@@ -369,12 +368,11 @@ class HUMANMODELING_PT_model(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        layout.operator(HUMANMODELING_OT_create.bl_idname, icon="ADD")
+        layout.operator(human.HUMANLOOM_OT_create.bl_idname, icon="ADD", text="Créer un humain")
         body = active_body(context)
-        if body and body.data.shape_keys:
-            morph = body.data.shape_keys.key_blocks.get(MORPH_NAME)
-            if morph:
-                layout.prop(morph, "value", text="Morphologie", slider=True)
+        if body and (human.is_native(body) or body.data.shape_keys):
+            if human.has_control(body, "sex"):
+                human.draw_control(layout, body, "sex", "Morphologie")
                 row = layout.row()
                 row.label(text="Féminine")
                 row.alignment = "EXPAND"
@@ -387,9 +385,11 @@ class HUMANMODELING_PT_model(bpy.types.Panel):
                 layout.prop(surface, "levels", text="Subdivision")
             else:
                 layout.operator(HUMANMODELING_OT_smooth.bl_idname)
-            if body.data.get("human_modeling_schema", 0) < CURRENT_SCHEMA:
+            if not human.is_native(body) and body.data.get("human_modeling_schema", 0) < CURRENT_SCHEMA:
                 layout.operator(HUMANMODELING_OT_upgrade.bl_idname)
-            if body.data.get("human_modeling_schema", 0) >= 2:
+            if human.is_native(body):
+                layout.operator(human.HUMANLOOM_OT_duplicate.bl_idname, icon="DUPLICATE")
+            if has_proportions(body):
                 layout.operator(HUMANMODELING_OT_reset.bl_idname, icon="LOOP_BACK")
                 layout.operator(HUMANMODELING_OT_randomize.bl_idname)
 
@@ -403,16 +403,15 @@ class HUMANMODELING_PT_body(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        body = active_body(context)
-        return body is not None and body.data.get("human_modeling_schema", 0) >= 2
+        return has_proportions(active_body(context))
 
     def draw(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         for identifier, label in BODY_CONTROLS:
-            if identifier == "corpulence" and "hm_whole_body" in keys:
+            if identifier == "corpulence" and human.has_control(body, "whole_body"):
                 continue
-            if property_name(identifier) in keys:
-                self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
+            if human.has_control(body, identifier):
+                human.draw_control(self.layout, body, identifier, label)
 
 
 class HUMANMODELING_OT_body_profile(bpy.types.Operator):
@@ -428,19 +427,20 @@ class HUMANMODELING_OT_body_profile(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return context.mode == "OBJECT" and body is not None and body.data.get("human_modeling_schema", 0) >= CURRENT_SCHEMA
+        return context.mode == "OBJECT" and has_proportions(body, CURRENT_SCHEMA)
 
     def execute(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         _, fat, muscle = body_profiles.PROFILES[self.profile]
-        keys["hm_corpulence"] = 0.
+        if human.has_control(body, "corpulence"):
+            human.set_value(body, "corpulence", 0.)
         for identifier, _ in FAT_CONTROLS:
-            if property_name(identifier) in keys:
-                keys[property_name(identifier)] = 0.
+            if human.has_control(body, identifier):
+                human.set_value(body, identifier, 0.)
         for identifier, _ in MUSCLE_CONTROLS:
-            keys[property_name(identifier)] = muscle if identifier == "muscles" else max(muscle,0.) if identifier == "muscle_definition" else 0.
-        keys["hm_whole_body"]=body_profiles.WHOLE_BODY[self.profile]
-        keys.update_tag()
+            human.set_value(body, identifier, muscle if identifier == "muscles" else max(muscle,0.) if identifier == "muscle_definition" else 0.)
+        human.set_value(body, "whole_body", body_profiles.WHOLE_BODY[self.profile])
+        human.touch(body)
         return {"FINISHED"}
 
 
@@ -472,14 +472,14 @@ class HUMANMODELING_PT_muscles(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return body is not None and property_name("muscles") in body.data.shape_keys
+        return body is not None and human.has_control(body, "muscles")
 
     def draw(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         self.layout.label(text="Volumes artistiques")
         for identifier, label in MUSCLE_CONTROLS:
-            if property_name(identifier) in keys:
-                self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
+            if human.has_control(body, identifier):
+                human.draw_control(self.layout, body, identifier, label)
 
 
 class HUMANMODELING_OT_age_reference(bpy.types.Operator):
@@ -491,12 +491,12 @@ class HUMANMODELING_OT_age_reference(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return context.mode == "OBJECT" and body is not None and "human_modeling_age" in body.data.shape_keys
+        return context.mode == "OBJECT" and body is not None and human.has_control(body, "age")
 
     def execute(self, context):
-        keys = active_body(context).data.shape_keys
-        keys["human_modeling_age"] = float(self.stage)
-        keys.update_tag()
+        body = active_body(context)
+        human.set_value(body, "age", float(self.stage))
+        human.touch(body)
         return {"FINISHED"}
 
 
@@ -534,14 +534,14 @@ class HUMANMODELING_PT_age(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return body is not None and "human_modeling_age" in body.data.shape_keys
+        return body is not None and human.has_control(body, "age")
 
     def draw(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         row = self.layout.row(align=True)
         for index, label in enumerate(("5 ans", "15 ans", "30 ans", "75 ans")):
             row.operator(HUMANMODELING_OT_age_reference.bl_idname, text=label).stage = index
-        self.layout.prop(keys, '["human_modeling_age"]', text="Transition", slider=True)
+        human.draw_control(self.layout, body, "age", "Transition")
         self.layout.label(text="Interpolation de formes · amplitude artistique")
         row=self.layout.row(align=True)
         row.operator(HUMANMODELING_OT_calibrate_age_height.bl_idname,text="Stature source F").sex="F"
@@ -559,17 +559,17 @@ class HUMANMODELING_PT_fat(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return body is not None and "hm_adiposity" in body.data.shape_keys
+        return body is not None and human.has_control(body, "adiposity")
 
     def draw(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         for identifier, label in FAT_CONTROLS:
             # body_mass is redundant with whole_body (cosine 0.81, I-46): kept in the file, hidden unless legacy controls are shown.
-            if identifier == "body_mass" and "hm_whole_body" in keys:
+            if identifier == "body_mass" and human.has_control(body, "whole_body"):
                 continue
-            if property_name(identifier) in keys:
-                self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
-        if "hm_whole_body" in keys:
+            if human.has_control(body, identifier):
+                human.draw_control(self.layout, body, identifier, label)
+        if human.has_control(body, "whole_body") and not human.is_native(body):
             self.layout.prop(context.window_manager, "human_modeling_show_legacy", text="Afficher les contrôles hérités")
 
 
@@ -584,12 +584,13 @@ class HUMANMODELING_PT_legacy_volumes(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return body is not None and "hm_whole_body" in body.data.shape_keys and context.window_manager.human_modeling_show_legacy
+        # Schéma 10 : `corpulence` et `body_mass` n'existent plus (lot 3) ; ce panneau ne concerne que l'ancien moteur.
+        return body is not None and not human.is_native(body) and human.has_control(body, "whole_body") and context.window_manager.human_modeling_show_legacy
 
     def draw(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         for identifier, label in (("corpulence", "Volume initial"), ("body_mass", "Volume 0.12")):
-            self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
+            human.draw_control(self.layout, body, identifier, label)
 
 
 class HUMANMODELING_PT_face(bpy.types.Panel):
@@ -605,11 +606,11 @@ class HUMANMODELING_PT_face(bpy.types.Panel):
 
     def draw(self, context):
         # Controls are drawn by the sub-panels below; any control missing from FACE_GROUPS still appears here.
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         grouped = {identifier for _, _, identifiers in FACE_GROUPS for identifier in identifiers}
         for identifier, label in FACE_CONTROLS:
-            if identifier not in grouped and property_name(identifier) in keys:
-                self.layout.prop(keys, f'["{property_name(identifier)}"]', text=label, slider=True)
+            if identifier not in grouped and human.has_control(body, identifier):
+                human.draw_control(self.layout, body, identifier, label)
 
 
 FACE_GROUPS = (
@@ -637,17 +638,17 @@ class HUMANMODELING_PT_face_group(bpy.types.Panel):
         return HUMANMODELING_PT_face.poll(context)
 
     def draw(self, context):
-        keys = active_body(context).data.shape_keys
+        body = active_body(context)
         labels = dict(FACE_CONTROLS)
         for identifier in self.identifiers:
-            if property_name(identifier) not in keys:
+            if not human.has_control(body, identifier):
                 continue
             row = self.layout.row()
             if identifier == "skin_relief":
                 # The Displace modifier is driven by max(0, stage - 2): no effect up to the 30-year reference.
-                inactive = keys.get("human_modeling_age", 0.) <= 2.
+                inactive = human.get_value(body, "age", 0.) <= 2.
                 row.active = not inactive
-            row.prop(keys, f'["{property_name(identifier)}"]', text=labels[identifier], slider=True)
+            human.draw_control(row, body, identifier, labels[identifier])
             if identifier == "skin_relief" and inactive:
                 self.layout.label(text="Sans effet avant 30 ans (âge > 2,00)", icon="INFO")
 
@@ -789,7 +790,7 @@ class HUMANMODELING_OT_fit_measurement(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         body = active_body(context)
-        return context.mode == "OBJECT" and body is not None and body.data.get("human_modeling_schema", 0) >= 2
+        return context.mode == "OBJECT" and has_proportions(body)
 
     def invoke(self, context, event):
         try:
@@ -1055,7 +1056,7 @@ class HUMANMODELING_PT_geometry(bpy.types.Panel):
         layout = self.layout
         layout.operator(HUMANMODELING_OT_check_geometry.bl_idname)
         layout.operator(HUMANMODELING_OT_export_geometry.bl_idname)
-        if active_body(context).data.get("human_modeling_surface_revision", 0) < surface_fix.REVISION:
+        if not human.is_native(active_body(context)) and active_body(context).data.get("human_modeling_surface_revision", 0) < surface_fix.REVISION:
             layout.operator(HUMANMODELING_OT_repair_surface.bl_idname)
         layout.label(text="Instantané · relancer après modification")
         raw = active_body(context).get("hm_geometry_report")
@@ -1092,7 +1093,8 @@ class HUMANMODELING_OT_repair_surface(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return HUMANMODELING_OT_check_geometry.poll(context)
+        # Un humain natif porte déjà la correction des paupières internes dans le groupe de nœuds.
+        return HUMANMODELING_OT_check_geometry.poll(context) and not human.is_native(active_body(context))
 
     def execute(self, context):
         try:
@@ -1144,7 +1146,7 @@ CLASSES = (
 
 
 def draw_add_mesh(self, context):
-    self.layout.operator(HUMANMODELING_OT_create.bl_idname, icon="MESH_DATA")
+    self.layout.operator(human.HUMANLOOM_OT_create.bl_idname, icon="MESH_DATA", text="Humain")
 
 
 def register():
