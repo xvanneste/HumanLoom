@@ -7,7 +7,7 @@ import bpy
 import bmesh
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from . import anatomy, landmark_sets, character_presets, measurements, geometry_quality, surface_fix, body_profiles, age_shapes, skin_relief, groom
+from . import anatomy, landmark_sets, character_presets, measurements, geometry_quality, surface_fix, body_profiles, age_shapes, skin_relief, groom, human
 from .proportions import BASE_ID, BODY_CONTROLS, FAT_CONTROLS, MUSCLE_CONTROLS, FACE_CONTROLS, CONTROLS, CURRENT_SCHEMA, bind_control, property_name
 
 ASSET_PATH = Path(__file__).parent / "data" / "realistic.blend"
@@ -1166,10 +1166,12 @@ def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     groom.register()
+    human.register()
     bpy.types.VIEW3D_MT_mesh_add.append(draw_add_mesh)
 
 
 def unregister():
+    human.unregister()
     groom.unregister()
     bpy.types.VIEW3D_MT_mesh_add.remove(draw_add_mesh)
     for cls in reversed(CLASSES):

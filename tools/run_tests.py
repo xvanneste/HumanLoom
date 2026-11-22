@@ -77,7 +77,7 @@ def registry(clone, out):
         "validate_body_mass_neutral": [old, o("body_mass_neutral")], "validate_controls": [o("controls")],
         "validate_extended_body": [o("extended_body")], "validate_geometry_quality": [o("geometry_quality")],
         "validate_global_physique": [o("global_physique")],
-        "validate_human_nodes": [str(clone / "extension/data/human_nodes.blend"), o("human_nodes/resultat.json")], "validate_landmark_sets": [o("landmark_sets")],
+        "validate_human_nodes": [str(clone / "extension/data/human_nodes.blend"), o("human_nodes/resultat.json")], "validate_human_native": [o("human_native/resultat.json")], "validate_landmark_sets": [o("landmark_sets")],
         "validate_mass_render_surface": [o("mass_render_surface")], "validate_mass_transitions": [o("mass_transitions")],
         "validate_measurements": [o("measurements")], "validate_model": [o("model")],
         "validate_modeling_batch": [asset, o("modeling_batch.json"), "0.0", "2.0"],
