@@ -102,7 +102,7 @@ Même schéma que la galerie d'animations (index + cache + recherche + catégori
 | **V2** | Galerie de vêtements (panneau, index, catégories, favoris, tenues) + import de vêtements de l'utilisateur avec ajustement auto | V1, modèle de la galerie d'animations |
 | **V3** | Accessoires + points d'attache + poses de main (téléphone, sac, parapluie) | V1, A3 |
 | **V4** | Simulation de tissu optionnelle (cache, mesure) | V1 |
-| **C1** | Générateur de foule aléatoire (graine, garde-fous, diversité mesurée : pas de clones) | modèles, V2 |
+| **C1** | **Moteur de foule natif** : ensembles d'éléments variables, tirage aléatoire à graine, foule **figée** (enregistrée, modifiée seulement sur demande), garde-fous, diversité mesurée (pas de clones), comportements et trajectoires, évitement, décalage de phase | modèles, V2, A3 |
 | **C2** | Niveaux de détail (LOD) pour personnages éloignés | A2, V1 |
 | **T** | **Test final « Paris Golden Hour »** : exécuté par l'analyste, rapport complet, tableau de performances | tous les lots ci-dessus + A3 |
 
@@ -110,7 +110,19 @@ Ordre global révisé : **A2 → A2b → A3 → V0–V3 → C1, C2 → A4 (vigne
 
 ---
 
+## D bis. Précision de l'utilisateur (2026-11-22) : les manques sont à combler par l'analyste
+
+Les points manquants (moteur de foule, trajectoires, évitement, animations absentes comme le **parapluie**, etc.) seront **réalisés par l'analyste**, en **analysant les autres animations de la bibliothèque** : composition et adaptation d'actions existantes plutôt que renoncement. Conséquences :
+- **Animations manquantes** : inventaire des clips voisins (ex. parapluie = geste de lever le bras + maintien de la main en préhension ; téléphone = bras plié + tête inclinée ; discuter = gestes de bras + orientation de la tête), puis **création d'actions dérivées** par script (mélange de couches NLA, découpe/boucle de segments, retouche de quelques os), étiquetées « dérivée, générée par l'analyste » et mesurées (continuité, absence de glissement). Si un résultat n'est pas crédible, il est signalé tel quel dans le rapport.
+- **Foule (révisé, même jour)** : le moteur de foule devient une **fonctionnalité native de HumanLoom** (lot C1, classe N). Principe : l'utilisateur définit des **ensembles d'éléments variables** (plages de morphologie/âge/sexe, visages, coiffures et couleurs, tenues et pièces de la galerie, accessoires, animations par comportement, vitesses) et un **moteur aléatoire à graine** tire chaque personnage dans ces ensembles. La foule est **figée** : le résultat (graine, tirages, personnages créés) est enregistré dans le fichier et **ne change plus** à la réouverture, au rechargement ni à un changement de réglage ; seule une demande explicite (« Régénérer », « Régénérer ce personnage », changement de graine) la modifie. Les trajectoires, l'évitement simple et le placement sur zones (trottoirs, passages) font aussi partie du moteur (comportements : marche, course, saut, attente, discussion), avec décalage de phase et vitesses variées. Le moteur est utilisé tel quel pour le court métrage du test final.
+- **Livrable vidéo (révisé)** : au lieu d'une simple prévisualisation, un **fichier vidéo d'environ 30 secondes, en cycle (boucle sans raccord visible)**, produit depuis la scène du test (le cycle impose des trajectoires et animations périodiques : personnages qui sortent du champ et rentrent aux positions de départ, cycles de marche/course calés sur la durée). Rendu : Cycles si le budget temps le permet, sinon Eevee, avec le choix annoncé et les temps mesurés ; image 4K fixe en plus.
+- Ces développements ne doivent ajouter aucune dépendance de l'addon livré à des fichiers de la bibliothèque (D-27).
+
+---
+
 ## E. Protocole du test final (réalisé par l'analyste)
+
+**Condition préalable (utilisateur, 2026-11-22)** : le court métrage ne démarre qu'**après** la fin, les tests et la validation de l'addon (tous les lots A, V, C, avec 0 régression, `validate_install` vert, suite complète verte). Pas de scène de test tant que l'addon n'est pas validé ; le film est la réception, pas un moyen de développer.
 
 1. **Isolé** : script exécuté dans un processus Blender 5.2 distinct, avec une installation propre de l'extension (zip), jamais dans la session de l'utilisateur. Machine relevée (CPU, RAM, GPU/VRAM).
 2. **Palier par palier** : 10 → 25 → 50 → 100 → 150 personnages, chaque palier mesuré (génération, habillage, application des animations, fps viewport, temps image, RAM/VRAM), avec arrêt et diagnostic si un palier échoue.

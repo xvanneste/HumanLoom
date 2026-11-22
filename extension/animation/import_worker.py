@@ -48,7 +48,7 @@ def bvh_fps(path):
 
 
 def skeleton_short(skeleton):
-    """Préfixe court d'action (convention UALM) : fin du nom de squelette après « _Meshes_ » (SK_UEFN_Mannequin) ; nom entier sinon."""
+    """Préfixe court d'action (convention UALM) : fin du nom de squelette après « _Meshes_ » ; nom entier sinon."""
     return skeleton.partition("_Meshes_")[2] or skeleton
 
 

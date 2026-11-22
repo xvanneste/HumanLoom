@@ -146,8 +146,7 @@ def _truncated(text):
 def match_actions(rows, blend_names):
     """Nom d'action du .blend pour chaque entrée de l'inventaire (liste parallèle à `rows`, None si introuvable).
     Mesuré : le nom d'action est « <préfixe>__<nom> », tronqué à 63 octets par Blender (suffixe « .001 » en cas de collision après troncature) ;
-    le préfixe est une fin du nom de squelette de l'inventaire (UALM garde le nom court de l'asset : « SK_UEFN_Mannequin », « SK_Echo »,
-    « metahuman_base_skel »…, ou le nom complet en cas de collision : RIGIPO / UE5 « SK_Mannequin »).
+    le préfixe est une fin du nom de squelette de l'inventaire (UALM garde le nom court de l'asset, ou le nom complet en cas de collision entre deux squelettes).
     Règle : pour chaque entrée, on essaie ses préfixes candidats du plus long au plus court ; une action du .blend ne sert qu'une fois."""
     pool = set(blend_names)
     prefixes = sorted({a.partition(ACTION_SEPARATOR)[0] for a in blend_names if ACTION_SEPARATOR in a}, key=lambda p: -len(p))
@@ -158,7 +157,7 @@ def match_actions(rows, blend_names):
         if match:
             by_stem.setdefault(match.group(1), []).append(action)
     resolved = [None] * len(rows)
-    for position in sorted(range(len(rows)), key=lambda p: -len(rows[p][3])):  # squelettes à nom long d'abord (RIGIPO avant UE5)
+    for position in sorted(range(len(rows)), key=lambda p: -len(rows[p][3])):  # squelettes à nom long d'abord
         row = rows[position]
         for prefix in prefixes:
             if not row[3].endswith(prefix):

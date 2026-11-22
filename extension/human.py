@@ -339,6 +339,9 @@ def duplicate_human(context, body):
         if child.type == "CURVES":
             copy.data.surface = clone
             _unshare_groom(copy)
+    for modifier in clone.modifiers:  # le squelette (enfant du corps) est copié avec lui : le modificateur de la copie vise le squelette de la copie
+        if modifier.type == "ARMATURE" and modifier.object in mapping:
+            modifier.object = mapping[modifier.object]
     properties = clone.humanloom
     properties.uuid = _new_uuid()
     for attribute in ("eye_left", "eye_right"):
