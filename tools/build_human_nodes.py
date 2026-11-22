@@ -1,7 +1,7 @@
 """Génère hors ligne `extension/data/human_nodes.blend` : le groupe de nœuds « HL Human » (schéma 10, lot 1).
 
 Usage (long : plusieurs minutes, à faire une seule fois) :
-  blender --background --factory-startup --offline-mode --python tools/build_human_nodes.py -- <sortie.blend> [--tolerance 1e-5] [--report rapport.json]
+  blender --background --factory-startup --offline-mode --python tools/build_human_nodes.py -- <sortie.blend> [--tolerance 1e-5] [--switch] [--mask-bits 0] [--report rapport.json]
 
 Principe (prototype `tools/audit/cproto3_1e4.py`, mesures `docs/audit/mesures-noeuds-c.md`) :
 - les poids de chacune des clés de forme de `extension/data/realistic.blend` sont compilés en nœuds Math à partir des pilotes
@@ -16,6 +16,7 @@ Expressions hors périmètre : yeux, cheveux, relief de peau (modificateur Displ
 import ast
 import hashlib
 import json
+import random
 import re
 import sys
 import time
@@ -32,6 +33,8 @@ from extension.proportions import CONTROLS  # noqa: E402
 ARGS = sys.argv[sys.argv.index("--") + 1:]
 OUT = Path(ARGS[0]).resolve()
 TOL = float(ARGS[ARGS.index("--tolerance") + 1]) if "--tolerance" in ARGS else 1e-5
+SWITCH = "--switch" in ARGS  # contrôles à 0 : branche de leur groupe de couches court-circuitée (Switch paresseux)
+MASK_BITS = int(ARGS[ARGS.index("--mask-bits") + 1]) if "--mask-bits" in ARGS else 0  # bits de mantisse mis à 0 dans les couches (compression)
 REPORT = Path(ARGS[ARGS.index("--report") + 1]).resolve() if "--report" in ARGS else None
 GROUP_NAME = "HL Human"
 MESH_NAME = "HL Human Base"
@@ -149,11 +152,13 @@ def compile_expression(node, env):
 started = time.perf_counter()
 constant_offset = np.zeros(vertex_count * 3, np.float64)
 layers_by_control = defaultdict(list)
+readers = defaultdict(set)
 for key in blocks:
     path = 'key_blocks["' + key.name + '"].value'
     delta = (coords(key) - coords(key.relative_key)).astype(np.float64)
     if key.name == "Morphologie":
         weight = sockets["sex"]
+        driver = None
     elif path in drivers:
         driver = drivers[path]
         weight = compile_expression(ast.parse(driver.expression.strip(), mode="eval"), {v.name: sockets[token(v)] for v in driver.variables})
@@ -166,8 +171,22 @@ for key in blocks:
     if np.abs(delta).max() < 1e-9:
         continue
     weight = math("MINIMUM", math("MAXIMUM", weight, float(key.slider_min)), float(key.slider_max))
-    found = re.search(r"HM · ([a-z_0-9]+)", key.name)
-    layers_by_control[found.group(1) if found else "other:" + key.name].append((weight, delta))
+    # Control of a key: the control read by its driver variable `amount` (bind_control), else the name, else a group of its own.
+    owner = None
+    if driver is not None:
+        amounts = [v for v in driver.variables if v.name in ("amount", "local")]  # `local`: regional muscles (overall + local)
+        if amounts and token(amounts[0]) in CONTROL_IDS:
+            owner = token(amounts[0])
+    if owner is None:
+        found = re.search(r"HM · ([a-z_0-9]+)", key.name)
+        owner = found.group(1) if found and found.group(1) in CONTROL_IDS else None
+    group_name = owner if owner else "other:" + key.name
+    layers_by_control[group_name].append((weight, delta, driver))
+    if driver is not None:  # couplings: a group whose weights read another control (modulators such as fat, muscle, overall)
+        for variable in driver.variables:
+            read = token(variable)
+            if read in CONTROL_IDS and read != owner:
+                readers[read].add(group_name)
 weights_seconds = time.perf_counter() - started
 
 mesh = body.data.copy()
@@ -179,19 +198,41 @@ mesh.vertices.foreach_set("co", (base.astype(np.float64) + constant_offset).asty
 mesh.update()
 accumulated = None
 layer_count = 0
+layers_of = defaultdict(list)
+switched = []
+
+
+def zero_at_zero(control, items, samples=400):
+    """Vrai si tous les poids du groupe valent 0 quand la commande vaut 0, quelles que soient les autres valeurs (essai à graine fixe)."""
+    if control not in CONTROL_IDS or any(driver is None for _, _, driver in items):
+        return False
+    generator = random.Random(11)
+    for trial in range(samples):
+        values = {n: generator.choice((-1., 0., 1., generator.uniform(-1, 1))) for n in CONTROL_IDS}
+        values["sex"], values["age"] = generator.choice((0., 1., generator.uniform(0, 1))), generator.choice((0., 1., 2., 3., generator.uniform(0, 3)))
+        values[control] = 0.
+        for _, _, driver in items:
+            env = {v.name: values[token(v)] for v in driver.variables}
+            if abs(eval(driver.expression, {"__builtins__": {}, "max": max, "min": min, "abs": abs}, env)) > 1e-12:
+                return False
+    return True
+
 layer_digests = []
 for control, items in layers_by_control.items():
-    matrix = np.stack([d for _, d in items])
+    local = None
+    matrix = np.stack([d for _, d, _ in items])
     left, singular, right = np.linalg.svd(matrix, full_matrices=False)
     rank = int((singular > singular[0] * TOL).sum())
     for j in range(rank):
         sign = 1.0 if right[j][np.argmax(np.abs(right[j]))] >= 0 else -1.0  # SVD sign is arbitrary: fix it for determinism
         layer = (sign * singular[j] * right[j]).astype(np.float32)
+        if MASK_BITS:
+            layer = (layer.view(np.uint32) & np.uint32((0xFFFFFFFF << MASK_BITS) & 0xFFFFFFFF)).view(np.float32)
         attribute = mesh.attributes.new("b" + str(layer_count), "FLOAT_VECTOR", "POINT")
         attribute.data.foreach_set("vector", layer)
         layer_digests.append(hashlib.sha256(np.round(layer, 7).tobytes()).hexdigest()[:16])
         mix = None
-        for i, (weight, _) in enumerate(items):
+        for i, (weight, _, _) in enumerate(items):
             coefficient = float(sign * left[i, j])
             if abs(coefficient) < 1e-9:
                 continue
@@ -204,16 +245,37 @@ for control, items in layers_by_control.items():
         scale.operation = "SCALE"
         group.links.new(named.outputs["Attribute"], scale.inputs[0])
         group.links.new(mix, scale.inputs[3])
-        if accumulated is None:
-            accumulated = scale.outputs[0]
+        if local is None:
+            local = scale.outputs[0]
         else:
             add = group.nodes.new("ShaderNodeVectorMath")
             add.operation = "ADD"
-            group.links.new(accumulated, add.inputs[0])
+            group.links.new(local, add.inputs[0])
             group.links.new(scale.outputs[0], add.inputs[1])
-            accumulated = add.outputs[0]
+            local = add.outputs[0]
+        layers_of[control].append("b" + str(layer_count))
         layer_count += 1
+    if local is None:
+        continue
+    if SWITCH and zero_at_zero(control, items):
+        active = math("GREATER_THAN", math("ABSOLUTE", sockets[control]), 1e-12)
+        switch = group.nodes.new("GeometryNodeSwitch")
+        switch.input_type = "VECTOR"
+        group.links.new(active, switch.inputs["Switch"])
+        group.links.new(local, switch.inputs["True"])
+        local = switch.outputs["Output"]
+        switched.append(control)
+    if accumulated is None:
+        accumulated = local
+    else:
+        add = group.nodes.new("ShaderNodeVectorMath")
+        add.operation = "ADD"
+        group.links.new(accumulated, add.inputs[0])
+        group.links.new(local, add.inputs[1])
+        accumulated = add.outputs[0]
 group.links.new(accumulated, set_position.inputs["Offset"])
+mesh["hl_layers"] = json.dumps(layers_of, sort_keys=True)
+mesh["hl_readers"] = json.dumps({k: sorted(v) for k, v in readers.items()}, sort_keys=True)
 remove = group.nodes.new("GeometryNodeRemoveAttribute")
 remove.inputs["Pattern Mode"].default_value = "Wildcard"
 remove.inputs["Name"].default_value = "b*"
@@ -258,7 +320,7 @@ mesh.use_fake_user = True
 OUT.parent.mkdir(parents=True, exist_ok=True)
 bpy.data.libraries.write(str(OUT), {group, mesh}, compress=True)
 report = {
-    "version": VERSION, "tolerance": TOL, "inputs": INPUTS, "keys_total": len(blocks), "control_groups": len(layers_by_control),
+    "version": VERSION, "tolerance": TOL, "switch": SWITCH, "switched_controls": switched, "mask_bits": MASK_BITS, "inputs": INPUTS, "keys_total": len(blocks), "control_groups": len(layers_by_control),
     "basis_layers": layer_count, "math_nodes": counts["math"], "total_nodes": len(group.nodes), "links": len(group.links),
     "vertices": vertex_count, "weights_compile_s": round(weights_seconds, 1), "total_s": round(time.perf_counter() - started, 1),
     "graph_fingerprint": fingerprint, "base_digest": base_digest,

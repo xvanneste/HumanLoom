@@ -5,8 +5,12 @@ Importe `extension` depuis le dépôt (corps de référence créé par l'opérat
 
 Critères (PLAN_SCHEMA_10.md, lot 1) :
 - cage des nœuds contre cage du moteur actuel sur >= 25 états : écart max < 2e-5 m (0,02 mm), écart max par état donné ;
-- (a) médiane >= 20 changements de curseur avec Subsurf niveau 1, nœuds et moteur actuel (ms) ;
+- (a) temps : médiane et p90 de 30 changements de curseur, cage puis Subsurf niveau 1, nœuds et moteur actuel dans la même
+  exécution, UN SEUL objet évalué à la fois (l'autre est masqué) ; ÉCHEC si la médiane des nœuds sur la cage dépasse 33 ms
+  (critère du plan, `DESIGN_NATIF.md` §10) ; le rapport nœuds / moteur est donné à titre indicatif ;
 - (b) rappel d'une commande à 0 : la forme revient au neutre à 1e-6 m (nœuds et moteur) ;
+- (b bis) retrait PHYSIQUE des couches d'une commande (attributs supprimés du maillage) : la commande n'a plus d'effet et le
+  reste est inchangé à 1e-6 m, pour chaque commande qui a des couches (`mesh["hl_layers"]`) ;
 - (c) fichier enregistré puis rouvert SANS l'extension : même forme ;
 - (d) 21 états de `tools/data/neutral_reference.json` : < 1e-5 m.
 Aucun critère n'est assoupli : un dépassement fait échouer le test et la liste des états/contrôles fautifs est écrite."""
@@ -30,6 +34,7 @@ from extension.proportions import CONTROLS
 BLEND, OUT = [Path(p).resolve() for p in sys.argv[sys.argv.index("--") + 1:][:2]]
 OUT.parent.mkdir(parents=True, exist_ok=True)
 CRITERION = 2e-5
+TIME_LIMIT_MS = 33.
 CONTROL_IDS = [c[0] for c in CONTROLS]
 result = {"criterion_m": CRITERION}
 
@@ -69,12 +74,15 @@ def set_nodes(state):
 
 def evaluated(obj):
     obj.update_tag()
-    keys.update_tag()
+    if obj is engine:
+        keys.update_tag()  # ne jamais marquer les clés pour mesurer les nœuds : le moteur serait réévalué aussi
     bpy.context.view_layer.update()
-    mesh_eval = obj.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh()
-    points = np.array([v.co[:] for v in mesh_eval.vertices])
-    obj.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh_clear()
-    return points
+    evaluated_object = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    mesh_eval = evaluated_object.to_mesh()
+    buffer = np.empty(len(mesh_eval.vertices) * 3, np.float32)
+    mesh_eval.vertices.foreach_get("co", buffer)
+    evaluated_object.to_mesh_clear()
+    return buffer.reshape(-1, 3).astype(np.float64)
 
 
 def both(state):
@@ -118,8 +126,11 @@ if failing:  # diagnostic : quels contrôles, seuls à +/-1, sont fautifs dans l
                     culprits.setdefault(r["state"], []).append([control, amount, error])
     result["equivalence"]["culprits"] = culprits
 
-# --- (a) temps d'un changement de curseur avec Subsurf niveau 1 ------------------------------------------------------------
-def timing(setter, obj, runs=30):
+# --- (a) temps d'un changement de curseur ---------------------------------------------------------------------------------
+def timing(setter, obj, other, runs=30):
+    other.hide_viewport = True
+    obj.hide_viewport = False
+    bpy.context.view_layer.update()
     sample = np.random.default_rng(1)
     times = []
     state = {"sex": 1., "age": 2.}
@@ -132,17 +143,22 @@ def timing(setter, obj, runs=30):
     return {"runs": runs, "median_ms": round(statistics.median(times), 1), "p90_ms": round(sorted(times)[int(.9 * runs)], 1)}
 
 
-timings = {"nodes_cage": timing(set_nodes, nodes_obj)}
+timings = {"nodes_cage": timing(set_nodes, nodes_obj, engine)}
 sub_nodes = nodes_obj.modifiers.new("sub", "SUBSURF")
 sub_nodes.levels = 1
-timings["nodes_subsurf1"] = timing(set_nodes, nodes_obj)
+timings["nodes_subsurf1"] = timing(set_nodes, nodes_obj, engine)
 nodes_obj.modifiers.remove(sub_nodes)
-timings["engine_cage"] = timing(set_engine, engine)
+timings["engine_cage"] = timing(set_engine, engine, nodes_obj)
 sub_engine = engine.modifiers.new("sub", "SUBSURF")
 sub_engine.levels = 1
-timings["engine_subsurf1"] = timing(set_engine, engine)
+timings["engine_subsurf1"] = timing(set_engine, engine, nodes_obj)
 engine.modifiers.remove(sub_engine)
-timings["note"] = "CPU, arrière-plan, to_mesh ; dépend de la charge de la machine ; prototype : 58,5 ms (nœuds + Subsurf 1, tolérance 1e-4) contre 42,6 ms (clés)"
+engine.hide_viewport = False
+nodes_obj.hide_viewport = False
+timings["ratio_nodes_over_engine_cage"] = round(timings["nodes_cage"]["median_ms"] / timings["engine_cage"]["median_ms"], 2)
+timings["ratio_nodes_over_engine_subsurf1"] = round(timings["nodes_subsurf1"]["median_ms"] / timings["engine_subsurf1"]["median_ms"], 2)
+timings["limit_nodes_cage_ms"] = TIME_LIMIT_MS
+timings["note"] = "CPU, arrière-plan ; dépend de la charge de la machine ; l'évaluation de to_mesh et la relecture (foreach_get) sont incluses"
 result["timing"] = timings
 
 # --- (b) rappel d'une commande à 0 : retour au neutre à 1e-6 ---------------------------------------------------------------
@@ -162,6 +178,62 @@ for control in CONTROL_IDS:
 result["return_to_neutral"] = {"max_nodes_return_error_m": max(r["nodes_return_error_m"] for r in returns),
                                "max_engine_return_error_m": max(r["engine_return_error_m"] for r in returns),
                                "controls_without_effect_at_1": weak, "per_control": returns}
+
+# --- (b bis) retrait physique des couches ----------------------------------------------------------------------------------
+# Les commandes sont couplées (le pilote d'un groupe peut lire d'autres commandes : graisse, muscle, `muscles` global...).
+# On retire donc les couches de la commande ET celles des groupes qui la lisent (`mesh["hl_readers"]`) : la forme à c = 1 doit
+# alors égaler la forme à c = 0 avec les mêmes couches retirées, à 1e-6 m (rien d'autre ne dépend de c).
+layer_map = json.loads(mesh["hl_layers"])
+readers = json.loads(mesh["hl_readers"])
+base_state = {"sex": .5, "age": 2., "shoulders": .3, "legs": -.4}
+alternate_state = {"sex": .5, "age": 2., "waist": .3, "hips": -.4}
+
+
+def evaluate_trimmed(names, state):
+    trimmed = mesh.copy()
+    for name in names:
+        trimmed.attributes.remove(trimmed.attributes[name])
+    holder = bpy.data.objects.new("trimmed", trimmed)
+    bpy.context.scene.collection.objects.link(holder)
+    trimmed_modifier = holder.modifiers.new("HL Human", "NODES")
+    trimmed_modifier.node_group = group
+    for name, ident in identifier.items():
+        getattr(trimmed_modifier.properties.inputs, ident).value = float(state.get(name, 2. if name == "age" else 0.))
+    nodes_obj.hide_viewport = True
+    holder.update_tag()
+    bpy.context.view_layer.update()
+    ev = holder.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    me = ev.to_mesh()
+    buffer = np.empty(len(me.vertices) * 3, np.float32)
+    me.vertices.foreach_get("co", buffer)
+    ev.to_mesh_clear()
+    nodes_obj.hide_viewport = False
+    bpy.data.objects.remove(holder, do_unlink=True)
+    bpy.data.meshes.remove(trimmed)
+    return buffer.reshape(-1, 3).astype(np.float64)
+
+
+removal = []
+for control, names in layer_map.items():
+    if control not in identifier:
+        continue
+    used = alternate_state if control in base_state else base_state
+    set_nodes(used)
+    without = evaluated(nodes_obj)
+    set_nodes({**used, control: 1.})
+    full = evaluated(nodes_obj)
+    removed_names = list(names)
+    for reader in readers.get(control, []):
+        removed_names += layer_map.get(reader, [])
+    removed_names = sorted(set(removed_names), key=lambda n: int(n[1:]))
+    one = evaluate_trimmed(removed_names, {**used, control: 1.})
+    zero = evaluate_trimmed(removed_names, used)
+    removal.append({"control": control, "own_layers": len(names), "readers": readers.get(control, []), "layers_removed": len(removed_names),
+                    "effect_before_removal_m": float(np.abs(full - without).max()),
+                    "error_after_removal_m": float(np.abs(one - zero).max())})
+result["layer_removal"] = {"controls_tested": len(removal), "max_error_after_removal_m": max(r["error_after_removal_m"] for r in removal),
+                           "controls_without_effect_before_removal": [r["control"] for r in removal if r["effect_before_removal_m"] < 1e-6],
+                           "coupled_controls": {r["control"]: r["readers"] for r in removal if r["readers"]}, "per_control": removal}
 
 # --- (d) référence figée (21 états) ----------------------------------------------------------------------------------------
 reference = neutral.load()
@@ -222,6 +294,9 @@ result["reopen_without_extension"] = {"states": len(errors), "max_error_m": max(
 verdict = {
     "equivalence < 2e-5 m": result["equivalence"]["max_error_m"] < CRITERION,
     "retour au neutre < 1e-6 m (nœuds)": result["return_to_neutral"]["max_nodes_return_error_m"] < 1e-6,
+    "retrait physique des couches : erreur < 1e-6 m, chaque commande avait un effet":
+    result["layer_removal"]["max_error_after_removal_m"] < 1e-6 and not result["layer_removal"]["controls_without_effect_before_removal"],
+    f"temps nœuds sur la cage <= {TIME_LIMIT_MS:g} ms": timings["nodes_cage"]["median_ms"] <= TIME_LIMIT_MS,
     "référence figée < 1e-5 m": result["frozen_reference"]["max_error_m"] < 1e-5,
     "rouvert sans extension identique (< 1e-6 m) et extension absente": result["reopen_without_extension"]["max_error_m"] < 1e-6
     and not result["reopen_without_extension"]["extension_loaded"] and not result["reopen_without_extension"]["extension_enabled"],
@@ -231,6 +306,7 @@ OUT.write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8
 summary = {k: result[k] for k in ("group", "timing", "verdict")}
 summary["equivalence"] = {k: result["equivalence"][k] for k in ("states", "max_error_m", "worst_state", "median_error_m", "failing_states")}
 summary["return_to_neutral"] = {k: result["return_to_neutral"][k] for k in ("max_nodes_return_error_m", "max_engine_return_error_m", "controls_without_effect_at_1")}
+summary["layer_removal"] = {k: result["layer_removal"][k] for k in ("controls_tested", "max_error_after_removal_m", "controls_without_effect_before_removal", "coupled_controls")}
 summary["frozen_reference_max_error_m"] = result["frozen_reference"]["max_error_m"]
 summary["reopen_without_extension"] = result["reopen_without_extension"]
 print("HUMAN_NODES_VALIDATION", json.dumps(summary, ensure_ascii=False))
