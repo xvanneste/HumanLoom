@@ -1,0 +1,278 @@
+{
+ "sex": [
+  "Socket_2",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "age": [
+  "Socket_3",
+  2.0,
+  0.0,
+  3.0
+ ],
+ "shoulders": [
+  "Socket_4",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "waist": [
+  "Socket_5",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "hips": [
+  "Socket_6",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "torso_depth": [
+  "Socket_7",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "neck": [
+  "Socket_8",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "legs": [
+  "Socket_9",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "torso": [
+  "Socket_10",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "whole_body": [
+  "Socket_11",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "adiposity": [
+  "Socket_12",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "fat_abdomen": [
+  "Socket_13",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "fat_flanks": [
+  "Socket_14",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "fat_hips": [
+  "Socket_15",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "fat_thighs": [
+  "Socket_16",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "fat_arms": [
+  "Socket_17",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "fat_face": [
+  "Socket_18",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles": [
+  "Socket_19",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_shoulders": [
+  "Socket_20",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_chest": [
+  "Socket_21",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_back": [
+  "Socket_22",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_arms": [
+  "Socket_23",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_abdomen": [
+  "Socket_24",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_glutes": [
+  "Socket_25",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_thighs": [
+  "Socket_26",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscles_calves": [
+  "Socket_27",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "muscle_definition": [
+  "Socket_28",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "head_width": [
+  "Socket_29",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "head_height": [
+  "Socket_30",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "jaw": [
+  "Socket_31",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "chin": [
+  "Socket_32",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "cheeks": [
+  "Socket_33",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "nose_length": [
+  "Socket_34",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "nose_width": [
+  "Socket_35",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "mouth": [
+  "Socket_36",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "lips": [
+  "Socket_37",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "eye_spacing": [
+  "Socket_38",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "eye_height": [
+  "Socket_39",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "forehead": [
+  "Socket_40",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "ears_size": [
+  "Socket_41",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "ears_angle": [
+  "Socket_42",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "eyelid_aperture": [
+  "Socket_43",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "nose_bridge": [
+  "Socket_44",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "mouth_corner": [
+  "Socket_45",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "facial_asymmetry": [
+  "Socket_46",
+  0.0,
+  -1.0,
+  1.0
+ ],
+ "skin_relief": [
+  "Socket_47",
+  0.0,
+  -1.0,
+  1.0
+ ]
+}

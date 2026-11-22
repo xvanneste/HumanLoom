@@ -31,16 +31,31 @@ FACADE_SKIP = {"Geometry"}
 _SOCKETS = {}
 
 
+SOCKETS_PATH = Path(__file__).parent / "data" / "human_sockets.json"
+
+
+def read_sockets_from_group():
+    """Lit les entrées dans le groupe de nœuds livré (impossible pendant l'enregistrement : `bpy.data` est alors restreint)."""
+    found = {}
+    with bpy.data.libraries.load(str(NODES_PATH), link=False) as (_, target):
+        target.node_groups = [GROUP_NAME]
+    group = target.node_groups[0]
+    for item in group.interface.items_tree:
+        if item.item_type == "SOCKET" and item.in_out == "INPUT" and item.socket_type == "NodeSocketFloat":
+            found[item.name] = (item.identifier, item.default_value, item.min_value, item.max_value)
+    bpy.data.node_groups.remove(group)
+    return found
+
+
 def sockets():
-    """{nom: (identifiant de socket, défaut, min, max)} lu dans le groupe de nœuds livré."""
+    """{nom: (identifiant de socket, défaut, min, max)}.
+
+    Lu dans `data/human_sockets.json`, écrit par `tools/build_human_nodes.py` depuis le groupe et vérifié contre lui par
+    `validate_human_nodes.py` : l'enregistrement de l'extension ne peut pas ouvrir de .blend (`bpy.data` restreint au démarrage)."""
     if not _SOCKETS:
-        with bpy.data.libraries.load(str(NODES_PATH), link=False) as (_, target):
-            target.node_groups = [GROUP_NAME]
-        group = target.node_groups[0]
-        for item in group.interface.items_tree:
-            if item.item_type == "SOCKET" and item.in_out == "INPUT" and item.socket_type == "NodeSocketFloat":
-                _SOCKETS[item.name] = (item.identifier, item.default_value, item.min_value, item.max_value)
-        bpy.data.node_groups.remove(group)
+        import json
+        for name, values in json.loads(SOCKETS_PATH.read_text(encoding="utf-8")).items():
+            _SOCKETS[name] = tuple(values)
     return _SOCKETS
 
 

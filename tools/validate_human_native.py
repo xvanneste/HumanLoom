@@ -50,6 +50,10 @@ def evaluated(obj):
 
 
 addon.register()
+live = human.read_sockets_from_group()
+assert {k: list(v) for k, v in live.items()} == {k: list(v) for k, v in human.sockets().items()}, \
+    "human_sockets.json ne correspond plus au groupe : relancer tools/build_human_sockets.py"
+R["sockets_json_matches_group"] = len(live)
 clear()
 assert bpy.ops.humanloom.create() == {"FINISHED"}
 native = bpy.context.object
