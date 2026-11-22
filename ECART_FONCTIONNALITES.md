@@ -12,6 +12,13 @@ Date : 2026-11-22. Branche `codex/natif`. Demande de l'utilisateur : lister les 
 
 Je n'ai relu aucun de ces outils aujourd'hui : la colonne « Source » dit d'où vient chaque ligne.
 
+## Vérification web du 2026-11-22 (une recherche par outil, pas la documentation complète)
+
+- **MPFB** ([extensions.blender.org](https://extensions.blender.org/add-ons/mpfb/), [docs](https://static.makehumancommunity.org/mpfb/docs/index.html)) : bibliothèque d'assets (vêtements, parties du corps, cheveux), outil MakeClothes intégré, plusieurs rigs + Rigify (IK/FK), poses BVH de style MakeHuman (depuis la 2.0 bêta 1), flux d'expressions récent, peau procédurale (« enhanced » avec pores, « layered », « MakeSkin » par défaut depuis 2.0.8), yeux procéduraux. → **confirme** les lignes 1, 8, 9 ; **corrige** la ligne 8 : MPFB a bien des poses et des expressions, pas seulement des rigs.
+- **Human Generator** ([BlenderNation](https://www.blendernation.com/2021/03/15/human-generator-for-blender-now-available/), [notes V4](https://publish.obsidian.md/human-generator/Releases/V4), avis sur [Blender Market](https://blendermarket.com/products/humgen3d/ratings?page=3)) : création automatisée avec coiffures, tenues, expressions et poses ; **génération par lots** (très appréciée) ; décalques de peau (tatouages, cicatrices, blessures) ; cheveux en particules **avec génération automatique de cartes de cheveux (« haircards »)** pour les logiciels sans cheveux particules. Points faibles cités par des utilisateurs : peu de poses et de vêtements, interpénétration des vêtements. → **confirme** les lignes 5, 11, 19 ; **ajoute** la ligne 20 (cartes de cheveux).
+- **Character Creator 4** ([CGChannel](https://www.cgchannel.com/2023/02/reallusion-releases-character-creator-4-2/), [Reallusion](https://reallusion.com/Character-Creator/dynamic-wrinkle.html)) : rides dynamiques depuis la 4.2 (cartes de normales, de plis, d'occlusion, de rougeur et de flux), jeu étendu de plus de 140 blendshapes faciaux, import de blendshapes personnalisés, aperçu de la physique des vêtements et cheveux. L'**ARKit 52 n'est pas confirmé** par ces sources. → **confirme** les lignes 14, 15.
+- **Non revérifiés** : MB-Lab, Globalskin, Daz, MetaHuman, détails fins de MPFB2.
+
 ## Ce que HumanLoom prévoit déjà (`SUIVI_REPRISE.md` §9, `PLAN_SCHEMA_10.md`)
 
 Lots 2 à 5 du schéma 10 (humain natif, contrôles regroupés, amplitudes ×6) ; repères automatiques (étape 7) ; nouveaux contrôles tronc/membres/visage et types de corps (8) ; UV, matériau de peau « HL Skin », yeux et dents (9) ; dents, langue, gencives (10) ; rig Rigify, expressions FACS/visèmes, « Bake pour export » (11) ; anatomie adulte optionnelle (12) ; cheveux et pilosité natifs, déjà livrés (11 zones, dont sourcils).
@@ -39,6 +46,8 @@ Lots 2 à 5 du schéma 10 (humain natif, contrôles regroupés, amplitudes ×6) 
 | 17 | **Assets du navigateur d'assets** (préréglages, silhouettes, matériaux, poses avec vignettes) | MPFB2, CharMorph (bibliothèques) | A | Idée dans `IDEES.md` §0 ; **pas d'étape dans le plan §9** | Intégration native promise par l'utilisateur |
 | 18 | **Interface multilingue** (textes sources anglais + traductions) | MPFB2, CharMorph | A | Idée dans `IDEES.md` ; **pas d'étape** | Public hors francophone |
 | 19 | **Cheveux « mesh » en bibliothèque (coiffures prêtes, ajustées par shrinkwrap)** | CharMorph (`HairFitter`), MPFB2, Human Generator | A, A, C | Choix inverse : cheveux procéduraux natifs ; **pas de bibliothèque de coiffures prêtes** (les préréglages sont des points de départ artistiques) | Gain de temps ; choix de conception à assumer |
+| 20 | **Cartes de cheveux (« haircards ») générées depuis les cheveux procéduraux**, pour les moteurs sans courbes de cheveux | Human Generator (V4) | web | **Non planifié** ; nos Hair Curves natives ne s'exportent pas telles quelles vers un moteur de jeu | Export vers Unreal/Unity |
+| 21 | **Vêtements : outil de création et d'ajustement dans l'extension** (MakeClothes) | MPFB | web | Voir ligne 1 | Créer ses propres vêtements ajustés |
 
 ## Ce qui est sans doute inutile de copier
 
