@@ -66,6 +66,7 @@ Chaque os reçoit un **score de confiance** ; l'interface montre les appariement
 | **Fa–Fd** | prototype visage (22 repères, 3 poses) → décision ; extraction des poses de Rain ; transfert ; couches d'expression + os de contrôle + « Apply Facial Rig » | après A2b |
 | Fe | galerie de poses faciales, ARKit 52, mixeur facial | |
 | A5 | profils de rigs additionnels (Rigify, Mixamo, MetaHuman corps…) | selon besoin |
+| **V0–V4, C1, C2, T** | galerie de vêtements, accessoires, foule aléatoire, niveaux de détail, test final « Paris Golden Hour » (D-33) | après A3 ; voir `TEST_FINAL_FOULE_PARIS.md` |
 | (dents, langue, gencives) | prérequis de la mâchoire et de la bouche ouverte | à planifier avant Fd |
 
 ## 7. Ce qui ne sera pas promis
