@@ -61,6 +61,35 @@ def category_of(path, root):
     return "/".join(relative.parts) or root.name
 
 
+def find_export(path, cache):
+    """Dossier d'export de l'outil Unreal (UnrealBlenderBridge) qui contient `path` : remonte de 12 niveaux au plus (les dossiers Unreal sont profonds) à la recherche d'un
+    `manifest.json` dont les animations déclarent un fichier (« file »). Retourne (racine, {chemin relatif: entrée}) ou None."""
+    for parent in list(Path(path).resolve().parents)[:12]:
+        key = str(parent)
+        if key not in cache:
+            cache[key] = None
+            manifest = parent / "manifest.json"
+            if manifest.is_file():
+                try:
+                    animations = json.loads(manifest.read_text(encoding="utf-8")).get("animations", {})
+                except (OSError, ValueError, AttributeError):
+                    animations = {}
+                files = {str(item["file"]).replace("\\", "/"): item for item in animations.values() if isinstance(item, dict) and item.get("file")}
+                if files:
+                    cache[key] = (parent, files)
+        if cache[key]:
+            return cache[key]
+    return None
+
+
+def sha1(path):
+    digest = hashlib.sha1()
+    with open(path, "rb") as stream:
+        for block in iter(lambda: stream.read(16 * 1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def read_inventory(library_dir):
     path = Path(library_dir) / INVENTORY
     if not path.is_file():
@@ -99,17 +128,32 @@ def import_sources(sources, library_dir, blender, fps=30.0, timeout=900, limit=N
     library_dir.mkdir(parents=True, exist_ok=True)
     inventory = read_inventory(library_dir)
     before = {str(p): sha256(p) for p, _ in files}
-    report = {"fichiers": [], "ajoutées": 0, "doublons": 0, "inchangés": 0, "échecs": 0}
+    report = {"fichiers": [], "ajoutées": 0, "doublons": 0, "inchangés": 0, "échecs": 0, "ignorés": 0}
+    exports = {}
     with tempfile.TemporaryDirectory(prefix="hl_import_") as work:
         for number, (path, root) in enumerate(files):
             entry = {"source": path.name, "statut": None}
             report["fichiers"].append(entry)
             code = before[str(path)]
+            declared, found = None, None
+            if path.suffix.lower() == ".fbx":
+                found = find_export(path, exports)
+                if found:
+                    declared = found[1].get(path.resolve().relative_to(found[0]).as_posix())
+                    if declared is None:  # FBX d'un dossier d'export qui n'est pas une animation déclarée (ex. maillage de personnage)
+                        entry.update(statut="ignoré", message="Absent des animations du manifest.json (maillage de personnage ou autre fichier)")
+                        report["ignorés"] += 1
+                        continue
+                    entry["metadonnees"] = "déclarées (manifest.json)"
+                    if declared.get("fbx_sha1") and sha1(path) != declared["fbx_sha1"]:
+                        entry["avertissement"] = "Empreinte SHA-1 différente de celle du manifest.json (fichier modifié depuis l'export ?)"
+                else:
+                    entry["metadonnees"] = "heuristique (aucun manifest.json)"
             if code in inventory["imported_sources"]:
                 entry.update(statut="inchangé", actions=inventory["imported_sources"][code].get("actions", []))
                 report["inchangés"] += 1
                 continue
-            job = {"source": str(path), "library_blend": str(library_blend), "fps": fps, "category": category_of(path, root) or category, "limit": limit, "name_filter": name_filter}
+            job = {"source": str(path), "library_blend": str(library_blend), "fps": fps, "category": category_of(path, root) or category, "limit": limit, "name_filter": name_filter, "declared": declared}
             job_path, result_path = Path(work) / f"job{number}.json", Path(work) / f"result{number}.json"
             job_path.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
             command = [str(blender), "--background", "--factory-startup", "--offline-mode", "--python-exit-code", "1", "--python", str(WORKER), "--", str(job_path), str(result_path)]

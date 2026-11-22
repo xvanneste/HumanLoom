@@ -210,6 +210,9 @@ def main():
         (out / f"{name}.log").write_text(text, encoding="utf-8")
         error = next((l for l in reversed(text.splitlines()) if re.search(r"(Error|Exception|AssertionError|FAILED)", l)), "")
         status = "OK" if code == 0 else ("TIMEOUT" if code == -9 else "ÉCHEC")
+        if code == 0 and "RESULT IGNORÉ" in text:  # test qui s'ignore lui-même (ex. bibliothèque d'animations absente) : jamais compté OK
+            status = "IGNORÉ"
+            error = next((l for l in text.splitlines() if "RESULT IGNORÉ" in l), "")
         summary.append({"test": name, "statut": status, "code": code,
                         "secondes": seconds, "args": [Path(a).name if "/" in a or "\\" in a else a for a in args],
                         "derniere_erreur": error[:220]})

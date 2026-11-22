@@ -116,11 +116,42 @@ try:
     wave = animate(arm, "wave"); wave["ualm_fps"] = 30.0; wave.use_fake_user = True
     nod_arm_action = None
     arm.animation_data_clear()
-    nod = animate(arm, "nod"); nod.use_fake_user = True
+    nod = animate(arm, "nod"); nod.use_fake_user = True; nod["ualm_flags"] = "additive"  # chaîne, comme dans la bibliothèque UALM (mesuré)
     bpy.data.libraries.write(str(src / "Packs/pack.blend"), {wave, nod}, fake_user=True)
     (src / "Bad/broken.fbx").write_bytes(b"ceci n'est pas un fichier FBX" * 20)
 
-    source_files = sorted(p for p in src.rglob("*") if p.is_file())
+    # Faux dossier d'export de l'outil Unreal (manifest.json + inventory.json + animations/<squelette>/<dossier>/<Nom>.fbx) : fabriqué ici.
+    export = work / "export"
+    skeleton_id = "Characters_Test_Meshes_SK_TestRig"
+    declared_files = {}
+    arm = build_rig()
+    for kind, folder in (("walk", "Walk"), ("idle", "Idle"), ("wave", "Gestures")):
+        animate(arm, kind); only_current_action(arm); select(arm)
+        relative = f"animations/{skeleton_id}/Characters/Test/Animations/{folder}/Fake_{kind}.fbx"
+        (export / relative).parent.mkdir(parents=True, exist_ok=True)
+        bpy.ops.export_scene.fbx(filepath=str(export / relative), use_selection=True, bake_anim=True)
+        bpy.ops.object.mode_set(mode="POSE")
+        declared_files[kind] = relative
+    mesh_file = export / f"characters/{skeleton_id}/SKM_Fake.fbx"  # maillage de personnage : présent dans le dossier, absent des animations du manifest
+    mesh_file.parent.mkdir(parents=True)
+    bpy.ops.mesh.primitive_cube_add()
+    bpy.ops.export_scene.fbx(filepath=str(mesh_file), use_selection=True)
+    declarations = {  # volontairement différentes de ce que l'heuristique mesurerait
+        "walk": {"root_motion": False, "additive": "NONE", "frame_rate": 24.0, "flags": [], "num_frames": 31},
+        "idle": {"root_motion": True, "additive": "NONE", "frame_rate": 60.0, "flags": ["root_motion"], "num_frames": 31},
+        "wave": {"root_motion": False, "additive": "ROTATION_OFFSET_MESH_SPACE", "frame_rate": 30.0, "flags": ["additive"], "num_frames": 31},
+    }
+    manifest_animations = {}
+    for kind, relative in declared_files.items():
+        sha1 = importer.sha1(export / relative)
+        if kind == "wave":
+            sha1 = "0" * 40  # empreinte volontairement fausse : avertissement attendu
+        manifest_animations[f"/Game/Test/Animations/Fake_{kind}"] = {"id": f"/Game/Test/Animations/Fake_{kind}", "name": f"Fake_{kind}", "folder": f"Characters/Test/Animations/{relative.split('/')[-2]}",
+                                                                   "skeleton": skeleton_id, "file": relative, "fbx_sha1": sha1, "length": 1.0, **declarations[kind]}
+    for name in ("manifest.json", "inventory.json"):
+        (export / name).write_text(json.dumps({"schema": 1, "animations": manifest_animations}), encoding="utf-8")
+
+    source_files = sorted(p for p in src.rglob("*") if p.is_file()) + sorted(p for p in export.rglob("*") if p.is_file())
     sha_before = {p.name: sha(p) for p in source_files}
     library = work / "ma_bibliotheque"
     exe = bpy.app.binary_path
@@ -144,6 +175,7 @@ try:
     check("I5_categories_d_apres_dossier", categories == {"Walk": 1, "Run": 1, "Idle": 1, "Packs": 2}, categories)
     flags = {n: e["root_motion"] for n, e in by_entry.items()}
     check("I6_root_motion_mesure", flags.get("walk") and flags.get("run") and not any(flags[n] for n in ("idle", "wave", "nod")), flags)
+    check("I6b_drapeaux_ualm_en_chaine", by_entry["nod"]["additive"] and not by_entry["nod"]["root_motion"] and not by_entry["wave"]["additive"], {"nod": {"additive": by_entry["nod"]["additive"], "root_motion": by_entry["nod"]["root_motion"]}})
     fps = {n: e["fps"] for n, e in by_entry.items()}
     frames = {n: e["frames"] for n, e in by_entry.items()}
     check("I7_fps_et_images", fps["walk"] == 30 and fps["run"] == 30 and fps["idle"] == 30 and fps["wave"] == 30 and fps["nod"] == 0 and all(abs(frames[n] - 31) <= 1 for n in ("walk", "run", "idle", "wave", "nod")),
@@ -176,6 +208,24 @@ try:
     status = third["fichiers"][0]
     check("I11_doublon_par_contenu", third["ajoutées"] == 0 and third["doublons"] >= 1 and status["statut"] in ("doublon", "échec"),
           {"statut": status["statut"], "message": status.get("message"), "doublons": status.get("doublons")})
+
+    # Dossier d'export de l'outil Unreal : métadonnées DÉCLARÉES (pas l'heuristique), maillages ignorés, empreinte vérifiée.
+    library2 = work / "ma_bibliotheque_export"
+    export_report = importer.import_sources([export], library2, exe)
+    states = {f["source"]: f for f in export_report["fichiers"]}
+    index2, origin2 = index_module.open_index(library2, work / "cache_export")
+    entries2 = {index2.entry(i)["name"]: index2.entry(i) | {"category": index2.category(i)} for i in range(len(index2))}
+    check("E1_statuts_export", [states[f"Fake_{k}.fbx"]["statut"] for k in ("walk", "idle", "wave")] == ["importé"] * 3 and states["SKM_Fake.fbx"]["statut"] == "ignoré"
+          and export_report["ajoutées"] == 3 and export_report["ignorés"] == 1 and export_report["échecs"] == 0 and export_report["sources_modifiées"] == [],
+          {n: {k: v for k, v in f.items() if k != "doublons"} for n, f in states.items()})
+    check("E2_metadonnees_declarees", entries2["Fake_walk"]["fps"] == 24 and entries2["Fake_idle"]["fps"] == 60 and entries2["Fake_idle"]["root_motion"] and not entries2["Fake_walk"]["root_motion"]
+          and entries2["Fake_wave"]["additive"] and states["Fake_walk.fbx"]["metadonnees"].startswith("déclarées"),
+          {n: {"fps": e["fps"], "root_motion": e["root_motion"], "additive": e["additive"]} for n, e in entries2.items()})
+    check("E3_categorie_dossier_unreal", {n: e["category"] for n, e in entries2.items()} == {"Fake_walk": "Walk", "Fake_idle": "Idle", "Fake_wave": "Gestures"}, {n: e["category"] for n, e in entries2.items()})
+    check("E4_empreinte_et_heuristique_de_repli", "SHA-1" in states["Fake_wave.fbx"].get("avertissement", "") and "avertissement" not in states["Fake_walk.fbx"]
+          and by_name["walk.fbx"]["statut"] == "importé" and by_entry["walk"]["root_motion"], states["Fake_wave.fbx"].get("avertissement"))
+    check("E5_noms_d_action_declares", index2.actions is not None and all(a.startswith("SK_TestRig__") for a in index2.actions) and all(e["skeleton"] == skeleton_id for e in entries2.values()),
+          {"actions": index2.actions})
 
     # Garde-fou : un dossier cible qui contient l'inventaire d'un autre outil est refusé (la source n'est jamais modifiée).
     foreign = work / "autre_inventaire"

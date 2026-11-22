@@ -6,7 +6,24 @@ HumanLoom **ne fournit aucune animation**. La galerie lit une bibliothèque qui 
 
 ## 1. Obtenir ses animations
 
-### Depuis Unreal Engine 5 (FBX)
+### Méthode recommandée : exporter tout un projet Unreal avec l'outil du dépôt
+
+Le dossier `tools/unreal_export/` contient les scripts d'export de l'outil personnel de l'auteur (« UnrealBlenderBridge »), qui s'exécutent **dans l'éditeur Unreal**. Ils exportent toutes les `AnimSequence` d'un projet en FBX et écrivent les métadonnées que la galerie sait lire.
+
+**Prérequis**
+- Unreal Engine avec le plugin **Python Editor Script Plugin** activé. L'outil indique avoir été utilisé avec **Unreal Engine 5.8** (le dossier d'export de l'auteur est marqué 5.8.4). **Nous n'avons pas testé d'autre version d'Unreal, ni cette procédure sur votre projet** : seul le lot d'import côté Blender est testé, sur des fichiers synthétiques.
+- Faire **File > Save All** avant l'export : la détection des changements lit les `.uasset` enregistrés.
+- Des animations dont vous détenez les droits d'usage (voir l'avertissement de licence en tête de ce guide).
+
+**Procédure**
+1. Dans la console de l'éditeur Unreal (ou *Tools > Execute Python Script*), vérifier l'API : `py "<dépôt>/tools/unreal_export/unreal/ue_probe.py"` (chaque ligne doit afficher OK).
+2. Lancer l'export : `py "<dépôt>/tools/unreal_export/unreal/run_export.py"`. Options utiles : `--analyze-only` (inventaire sans export), `--out D:/Export`, `--root /Game/Characters`, `--filter Locomotion`. L'export est incrémental (les animations inchangées sont sautées).
+3. Sortie par défaut : `<Projet>/Saved/BlenderExport/` avec `manifest.json`, `inventory.json`, `export_report.json` et `animations/<squelette>/<dossier Unreal>/<Nom>.fbx` (FBX 2020, sans maillage, temps local).
+4. Dans HumanLoom, importer **ce dossier** (bouton « Importer un dossier » de la galerie, ou `importer.import_sources`, voir §2). Ne pointez pas la bibliothèque HumanLoom vers ce dossier : c'est la source, elle n'est jamais modifiée.
+
+**Ce que l'import en tire** (au lieu de l'heuristique) : quand un `manifest.json` est trouvé au-dessus des FBX, chaque FBX listé dans ses `animations` reprend les valeurs **déclarées** : nom, dossier Unreal (devient la catégorie), squelette, cadence, root motion, additif. Les FBX du dossier qui ne sont pas des animations déclarées (par exemple les maillages de `characters/`) sont **ignorés** et comptés comme tels. L'empreinte SHA-1 du FBX est comparée à celle du manifest : un écart produit un avertissement dans le rapport (fichier modifié depuis l'export ?), sans bloquer l'import. Un FBX isolé, sans manifest au-dessus de lui, retombe sur l'heuristique décrite plus bas.
+
+### Depuis Unreal Engine 5 (FBX), à la main
 
 1. Dans le navigateur de contenu, clic droit sur l'**Animation Sequence** → *Asset Actions* → *Export…* (ou *Export* dans la barre de l'éditeur d'animation).
 2. Choisissez le format **FBX** et un dossier dont **le nom sera la catégorie** dans la galerie (voir §3).
@@ -44,7 +61,7 @@ print(rapport["ajoutées"], rapport["doublons"], rapport["inchangés"], rapport[
 - La **bibliothèque** est un dossier qui contient `HumanLoom_Actions.blend` (les actions) et `inventory.json` (l'index lu par la galerie). Choisissez un dossier **dédié** : un dossier contenant déjà l'`inventory.json` d'un autre outil est refusé, pour ne jamais modifier une bibliothèque qui n'est pas la vôtre.
 - **Vos fichiers sources ne sont jamais écrits** : le rapport indique `sources_modifiées` (vide) d'après une empreinte SHA-256 avant et après.
 - **Doublons** : un fichier déjà importé (mêmes octets) est « inchangé » ; une animation de contenu identique sous un autre nom ou dans un autre fichier est un « doublon » (empreinte des courbes) et n'est pas ajoutée deux fois.
-- **Rapport** : chaque fichier a un statut (`importé`, `doublon`, `inchangé`, `échec` avec le message). Les chemins locaux sont retirés des messages.
+- **Rapport** : chaque fichier a un statut (`importé`, `doublon`, `inchangé`, `ignoré` pour un FBX non déclaré d'un dossier d'export, `échec` avec le message), la provenance des métadonnées (`déclarées (manifest.json)` ou `heuristique`) et un éventuel avertissement. Les chemins locaux sont retirés des messages.
 
 ## 3. Catégories, favoris, recherche
 
@@ -58,7 +75,7 @@ print(rapport["ajoutées"], rapport["doublons"], rapport["inchangés"], rapport[
 - Un FBX **ASCII** n'est pas pris en charge par l'importeur de Blender 5.2 (échec consigné) ; utilisez le FBX binaire.
 - Un FBX contenant plusieurs animations crée plusieurs actions (une entrée chacune).
 - Ni le retargeting vers un autre squelette, ni l'export vers Unreal ne sont faits dans cette étape.
-- Ce guide n'a pas été validé sur des fichiers Unreal réels (les tests utilisent des fichiers synthétiques générés par les scripts de `tools/`).
+- Ce guide n'a pas été validé sur des fichiers Unreal réels ni sur votre version d'Unreal (les tests utilisent des fichiers synthétiques, dont un faux dossier d'export avec manifest.json, générés par les scripts de `tools/`).
 
 ## Sources consultées
 - Epic Games, [FBX Animation Pipeline in Unreal Engine](https://dev.epicgames.com/documentation/unreal-engine/fbx-animation-pipeline-in-unreal-engine) : version FBX 2020 attendue, animations à activer à l'export.

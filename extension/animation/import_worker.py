@@ -47,6 +47,20 @@ def bvh_fps(path):
     return None
 
 
+def skeleton_short(skeleton):
+    """Préfixe court d'action (convention UALM) : fin du nom de squelette après « _Meshes_ » (SK_UEFN_Mannequin) ; nom entier sinon."""
+    return skeleton.partition("_Meshes_")[2] or skeleton
+
+
+def parse_flags(value):
+    """`ualm_flags` : chaîne « root_motion,additive » (mesuré sur la bibliothèque UALM) ou liste de chaînes ; autre type → aucun drapeau."""
+    if isinstance(value, str):
+        return [f.strip() for f in re.split(r"[,;| ]+", value) if f.strip()]
+    if isinstance(value, (list, tuple)) or hasattr(value, "to_list"):
+        return [str(f) for f in (value.to_list() if hasattr(value, "to_list") else value) if f]
+    return []
+
+
 def rest_height(armature):
     if armature is None or not armature.data.bones:
         return 0.0
@@ -159,30 +173,44 @@ def main(job_path, result_path):
                     bpy.data.actions.remove(action)
                 continue
             skeleton = (owner.name if owner else None) or action.get("ualm_skeleton") or (action.name.partition("__")[0] if "__" in action.name else "Importé")
-            fps = float(action.get("ualm_fps") or fps_hint or 0.0)
+            declared = job.get("declared") if suffix != ".blend" else None
+            prefix = skeleton
+            if declared:  # dossier d'export de l'outil Unreal : métadonnées déclarées, pas d'heuristique
+                skeleton = declared.get("skeleton") or skeleton
+                prefix = skeleton_short(skeleton)
+                name = declared.get("name") or name
+            fps = float(declared.get("frame_rate") or 0.0) if declared else float(action.get("ualm_fps") or fps_hint or 0.0)
             start, end = action.frame_range
             frames = int(round(end - start)) + 1
             height = rest_height(owner)
-            flags = [f for f in (action.get("ualm_flags") or ()) if f] if suffix == ".blend" else []
-            if suffix != ".blend" and owner is not None and height > 0 and root_travel(action, owner) > ROOT_MOTION_RATIO * height:
+            flags = parse_flags(action.get("ualm_flags")) if suffix == ".blend" else []
+            if declared:
+                flags = [str(f) for f in (declared.get("flags") or ())]
+                if declared.get("root_motion") and "root_motion" not in flags:
+                    flags.append("root_motion")
+                if declared.get("additive") not in (None, "NONE", "") and "additive" not in flags:
+                    flags.append("additive")
+            elif suffix != ".blend" and owner is not None and height > 0 and root_travel(action, owner) > ROOT_MOTION_RATIO * height:
                 flags.append("root_motion")
             category = category_override or job.get("category") or ("Importées/" + source.stem if suffix == ".blend" else "Importées")
-            folder = category_folder(job, category)
-            action_name = safe_name(skeleton, name if suffix != ".blend" else (name.partition("__")[2] or name), taken - {action.name})
+            folder = declared["folder"] if declared and declared.get("folder") else category_folder(job, category)
+            action_name = safe_name(prefix, name if suffix != ".blend" else (name.partition("__")[2] or name), taken - {action.name})
             taken.discard(action.name)
             taken.add(action_name)
             action.name = action_name
             action.use_fake_user = True
-            identifier = f"/Import/{folder}/{action_name}"
-            for key, value in (("ualm_id", identifier), ("ualm_name", action_name.partition("__")[2] or action_name), ("ualm_category", folder.partition("/")[2] or folder),
-                               ("ualm_family", FAMILY), ("ualm_skeleton", skeleton), ("ualm_flags", list(flags)), ("ualm_fps", fps), ("ualm_digest", code),
+            identifier = declared["id"] if declared and declared.get("id") else f"/Import/{folder}/{action_name}"
+            for key, value in (("ualm_id", identifier), ("ualm_name", action_name.partition("__")[2] or action_name), ("ualm_category", declared["folder"] if declared and declared.get("folder") else (folder.partition("/")[2] or folder)),
+                               ("ualm_family", FAMILY), ("ualm_skeleton", skeleton), ("ualm_flags", ",".join(flags)), ("ualm_fps", fps), ("ualm_digest", code),
                                ("ualm_rest_height", height), ("ualm_bone_count", len(owner.data.bones) if owner else 0)):
                 action[key] = value
             result["entries"].append({
                 "id": identifier, "name": action_name.partition("__")[2] or action_name, "action": action_name, "folder": folder, "skeleton": skeleton,
                 "frame_rate": fps, "length": round((frames - 1) / fps, 6) if fps else 0.0, "num_frames": frames, "root_motion": "root_motion" in flags,
                 "additive": "ADDITIVE" if "additive" in flags else "NONE", "flags": flags, "digest": code, "num_curves": curves,
-                "bone_count_hint": len(owner.data.bones) if owner else 0, "rest_height": round(height, 4), "source_format": suffix[1:]})
+                "bone_count_hint": len(owner.data.bones) if owner else 0, "rest_height": round(height, 4), "source_format": suffix[1:],
+                "metadata": "déclarées" if declared else "heuristique",
+                "declared_frames": int(declared.get("num_frames") or 0) if declared else None})
             known[code] = action_name
             result["added"] += 1
 

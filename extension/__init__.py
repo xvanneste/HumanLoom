@@ -8,6 +8,7 @@ import bmesh
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import anatomy, landmark_sets, character_presets, measurements, geometry_quality, surface_fix, body_profiles, age_shapes, skin_relief, groom, human
+from .animation import ui as animation_ui
 from .proportions import BASE_ID, BODY_CONTROLS, FAT_CONTROLS, MUSCLE_CONTROLS, FACE_CONTROLS, CONTROLS, CURRENT_SCHEMA, bind_control, property_name
 
 # Ancien moteur (schéma 9) : l'asset n'est plus livré dans le paquet (lot 5) ; il n'existe que dans le dépôt, sous tools/data.
@@ -1171,10 +1172,12 @@ def register():
         bpy.utils.register_class(cls)
     groom.register()
     human.register()
+    animation_ui.register()
     bpy.types.VIEW3D_MT_mesh_add.append(draw_add_mesh)
 
 
 def unregister():
+    animation_ui.unregister()
     human.unregister()
     groom.unregister()
     bpy.types.VIEW3D_MT_mesh_add.remove(draw_add_mesh)

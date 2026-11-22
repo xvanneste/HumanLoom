@@ -11,4 +11,4 @@ blender_version_max = "5.3.0"
 license = ["SPDX:GPL-3.0-or-later"]
 
 [permissions]
-files = "Importer et exporter des préréglages et rapports de mesures"
+files = "Préréglages, rapports, animations (dossier choisi)"
