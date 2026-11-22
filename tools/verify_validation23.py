@@ -41,7 +41,7 @@ class Links(HTMLParser):
             if name in ('src','href') and value and not value.startswith(('#','http','data:')):
                 assert (OUT/unquote(value)).is_file(),value
 Links().feed((OUT/'index.html').read_text(encoding='utf-8'))
-asset_hash = hashlib.sha256((ROOT/'extension/data/realistic.blend').read_bytes()).hexdigest()
+asset_hash = hashlib.sha256((ROOT/'tools/data/realistic.blend').read_bytes()).hexdigest()
 assert asset_hash == delivery['source_asset_sha256']
 pdf_path = OUT/'output/pdf/Validation-modelisation-0.14.pdf'
 reader=PdfReader(str(pdf_path))

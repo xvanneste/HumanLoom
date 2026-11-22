@@ -1,4 +1,4 @@
-"""T-U1 — audit chiffré du dépliage UV de extension/data/realistic.blend (lecture seule, rien n'est sauvegardé).
+"""T-U1 — audit chiffré du dépliage UV de tools/data/realistic.blend (lecture seule, rien n'est sauvegardé).
 Usage : blender --background --factory-startup --python tools/audit/uv_audit.py -- <sortie.json>
 """
 import bpy, bmesh, sys, json, math
@@ -7,8 +7,8 @@ from pathlib import Path
 
 OUT = Path(sys.argv[-1])
 ROOT = Path(__file__).resolve().parents[2]
-bpy.ops.wm.open_mainfile(filepath=str(ROOT / "extension" / "data" / "realistic.blend"))
-R = {"fichier": "extension/data/realistic.blend", "objets": {}}
+bpy.ops.wm.open_mainfile(filepath=str(ROOT / "tools" / "data" / "realistic.blend"))
+R = {"fichier": "tools/data/realistic.blend", "objets": {}}
 
 
 def tri_stats(me, uvname):

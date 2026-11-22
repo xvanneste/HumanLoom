@@ -1,7 +1,7 @@
 from pathlib import Path
 import bpy,numpy as np
 root=Path(__file__).resolve().parents[1]
-with bpy.data.libraries.load(str(root/'extension/data/realistic.blend'),link=False) as (_,t):t.collections=['Realistic Human Base']
+with bpy.data.libraries.load(str(root/'tools/data/realistic.blend'),link=False) as (_,t):t.collections=['Realistic Human Base']
 body=next(o for o in t.collections[0].objects if o.get('human_modeling_body'))
 print('GROUPS',[g.name for g in body.vertex_groups],flush=True)
 for name in ('Basis','Morphologie'):

@@ -12,5 +12,5 @@ body.data.shape_keys['hm_muscles']=0.
 body.data.shape_keys['hm_whole_body']=0.
 body.data.shape_keys['human_modeling_age']=2.
 for mod in body.modifiers:mod.show_viewport=True
-bpy.data.libraries.write(str(root/'extension/data/realistic.blend'),{col,body.data,*(o.data for o in body.children)},fake_user=True,compress=True)
+bpy.data.libraries.write(str(root/'tools/data/realistic.blend'),{col,body.data,*(o.data for o in body.children)},fake_user=True,compress=True)
 print('REGIONAL18_ASSET_SCHEMA9_READY',flush=True)

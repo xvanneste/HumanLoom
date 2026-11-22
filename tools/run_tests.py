@@ -68,7 +68,7 @@ def registry(clone, out):
     """Arguments propres à chaque script (I-44) ; `o(nom)` = chemin de sortie du test."""
     def o(name):
         return str(out / name)
-    asset = str(clone / "extension/data/realistic.blend")
+    asset = str(clone / "tools/data/realistic.blend")
     old = str(clone / OLD_ASSET)
     return {
         "validate_age_dimensions": [asset, o("age_dimensions")], "validate_age_eye_fit": [asset, o("age_eye_fit")],

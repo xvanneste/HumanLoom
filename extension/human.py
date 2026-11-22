@@ -19,7 +19,7 @@ except ImportError:  # importé à plat par certains scripts de test
     from proportions import AMPLITUDE_FACTORS, MERGED_IN_SCHEMA_10
 
 NODES_PATH = Path(__file__).parent / "data" / "human_nodes.blend"
-ASSET_PATH = Path(__file__).parent / "data" / "realistic.blend"
+EYES_PATH = Path(__file__).parent / "data" / "human_eyes.blend"  # yeux + porteur de relief (tools/build_human_eyes.py)
 GROUP_NAME = "HL Human"
 MESH_NAME = "HL Human Base"
 MODIFIER_NAME = "HL Human"
@@ -269,8 +269,8 @@ def create_human(context, location=None):
     properties.uuid = _new_uuid()
     properties.schema_version = SCHEMA_VERSION
     properties.generator_version = GENERATOR_VERSION
-    with bpy.data.libraries.load(str(ASSET_PATH), link=False) as (_, target):
-        target.objects = ["Corps", "Œil gauche", "Œil droit"]
+    with bpy.data.libraries.load(str(EYES_PATH), link=False) as (_, target):
+        target.objects = ["HL Relief Source", "Œil gauche", "Œil droit"]
     source, *eyes = target.objects
     for attribute, eye in zip(("eye_left", "eye_right"), eyes):
         collection.objects.link(eye)

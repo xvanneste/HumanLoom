@@ -10,7 +10,9 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 from . import anatomy, landmark_sets, character_presets, measurements, geometry_quality, surface_fix, body_profiles, age_shapes, skin_relief, groom, human
 from .proportions import BASE_ID, BODY_CONTROLS, FAT_CONTROLS, MUSCLE_CONTROLS, FACE_CONTROLS, CONTROLS, CURRENT_SCHEMA, bind_control, property_name
 
-ASSET_PATH = Path(__file__).parent / "data" / "realistic.blend"
+# Ancien moteur (schéma 9) : l'asset n'est plus livré dans le paquet (lot 5) ; il n'existe que dans le dépôt, sous tools/data.
+# Dans une extension installée, il est absent : `human_modeling.create` refuse alors de créer un humain de l'ancien moteur.
+ASSET_PATH = Path(__file__).resolve().parent.parent / "tools" / "data" / "realistic.blend"
 ASSET_COLLECTION = "Realistic Human Base"
 BODY_MARKER = "human_modeling_body"
 MORPH_NAME = "Morphologie"
@@ -51,7 +53,7 @@ class HUMANMODELING_OT_create(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.mode == "OBJECT"
+        return context.mode == "OBJECT" and ASSET_PATH.exists()  # absent d'une extension installée : plus d'humain de l'ancien moteur
 
     def execute(self, context):
         try:

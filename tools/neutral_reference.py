@@ -14,7 +14,7 @@ import bpy
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSET = ROOT / "extension/data/realistic.blend"
+ASSET = ROOT / "tools/data/realistic.blend"
 REFERENCE = Path(__file__).resolve().parent / "data/neutral_reference.json"
 SEXES = (0., .5, 1.)
 STAGES = (0., .5, 1., 1.5, 2., 2.5, 3.)

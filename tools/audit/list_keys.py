@@ -1,7 +1,7 @@
 import bpy, sys, json, re
 from pathlib import Path
 OUT = Path(sys.argv[-1]); ROOT = Path(__file__).resolve().parents[2]
-bpy.ops.wm.open_mainfile(filepath=str(ROOT / "extension" / "data" / "realistic.blend"))
+bpy.ops.wm.open_mainfile(filepath=str(ROOT / "tools" / "data" / "realistic.blend"))
 ob = bpy.data.objects["Corps"]; k = ob.data.shape_keys
 names = [b.name for b in k.key_blocks]
 groups = {}

@@ -40,7 +40,7 @@ assert groom.find(body,'SCALP')==hair
 # Registration lifecycle used by installing and reloading an extension.
 addon.unregister();addon.register()
 assert hasattr(bpy.types.Object,'hl_groom') and hasattr(bpy.types.Object,'hl_groom_region')
-report={'reopened':True,'native_dependencies_local':True,'settings_restored':True,'independent_materials':True,'empty_mask_preserves_existing':True,'registration_roundtrip':True,'node_groups_checked':len(seen),'layers':rows,'asset_sha256':hashlib.sha256((ROOT/'extension/data/realistic.blend').read_bytes()).hexdigest()}
+report={'reopened':True,'native_dependencies_local':True,'settings_restored':True,'independent_materials':True,'empty_mask_preserves_existing':True,'registration_roundtrip':True,'node_groups_checked':len(seen),'layers':rows,'asset_sha256':hashlib.sha256((ROOT/'tools/data/realistic.blend').read_bytes()).hexdigest()}
 assert report['asset_sha256']=='0eb9600a06f46d43f17ba5579afdc6614dbe82c450e069bff0f4fe87d33e3413'
 (OUT/'validation-reopen.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
 print('GROOM25_REOPEN_PASS',report,flush=True)

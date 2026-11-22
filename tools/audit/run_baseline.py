@@ -9,7 +9,7 @@ CLONE = Path(sys.argv[1]).resolve()
 OUT = Path(sys.argv[2]).resolve(); OUT.mkdir(parents=True, exist_ok=True)
 FILTER = sys.argv[3] if len(sys.argv) > 3 else ""
 SHIM = Path(__file__).resolve().parent / "shim.py"
-ASSET = CLONE / "extension/data/realistic.blend"
+ASSET = CLONE / "tools/data/realistic.blend"
 OLD = CLONE / "validation/proportions-14/extension-13/data/realistic.blend"
 TOOLS = CLONE / "tools"
 

@@ -30,7 +30,7 @@ for name in ('GeometryNodeDeformCurvesOnSurface', 'GeometryNodeCaptureRestGeomet
         report['nodes'][name] = {'created': False, 'error': str(exc)}
 curves = bpy.data.hair_curves.new('Audit data only')
 report['curves_properties'] = [prop.identifier for prop in curves.bl_rna.properties]
-with bpy.data.libraries.load(str(root / 'extension/data/realistic.blend'), link=False) as (src, dst):
+with bpy.data.libraries.load(str(root / 'tools/data/realistic.blend'), link=False) as (src, dst):
     dst.objects = list(src.objects)
 for obj in dst.objects:
     if obj.type != 'MESH' or not obj.get('human_modeling_body'):

@@ -1,4 +1,4 @@
-"""Génère les fixtures d'anciennes versions manquantes (I-47) à partir de `extension/data/realistic.blend`.
+"""Génère les fixtures d'anciennes versions manquantes (I-47) à partir de `tools/data/realistic.blend`.
 
 Usage : blender --background --factory-startup --python tools/make_legacy_fixtures.py -- <dossier_sortie>
 Produit `adult-original.blend` (corps sans aucun réglage de proportions, schéma absent) et `legacy-03.blend`
@@ -17,7 +17,7 @@ import bpy
 ROOT = Path(__file__).resolve().parents[1]
 OUT = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
 OUT.mkdir(parents=True, exist_ok=True)
-ASSET = ROOT / "extension/data/realistic.blend"
+ASSET = ROOT / "tools/data/realistic.blend"
 COLLECTION = "Realistic Human Base"
 BASE_KEYS = ("Basis", "Morphologie")
 BODY_PROPS = ("human_modeling_age_targets", "age_source", "hm_anatomy_candidate", "hm_surface_frames", "hm_regional_muscles_version")
@@ -78,7 +78,7 @@ def build(name, kept, schema):
     return facts
 
 
-report = {"synthetique": True, "source": "extension/data/realistic.blend",
+report = {"synthetique": True, "source": "tools/data/realistic.blend",
           "adult-original.blend": build("adult-original.blend", (), None),
           "legacy-03.blend": build("legacy-03.blend", ("mouth", "shoulders"), 3)}
 print("FIXTURES_FACTS", json.dumps(report, ensure_ascii=False))

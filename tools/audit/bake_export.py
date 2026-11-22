@@ -7,7 +7,7 @@ import numpy as np
 from pathlib import Path
 OUT = Path(sys.argv[-1]); OUT.mkdir(parents=True, exist_ok=True)
 ROOT = Path(__file__).resolve().parents[2]
-bpy.ops.wm.open_mainfile(filepath=str(ROOT / "extension" / "data" / "realistic.blend"))
+bpy.ops.wm.open_mainfile(filepath=str(ROOT / "tools" / "data" / "realistic.blend"))
 src = bpy.data.objects["Corps"]; k = src.data.shape_keys
 nv = len(src.data.vertices)
 R = {}

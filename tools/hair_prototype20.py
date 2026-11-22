@@ -11,7 +11,7 @@ OUT = ROOT / 'validation/cheveux-20'
 
 def load_body():
     assert bpy.app.version[:2] == (5, 2), 'This prototype requires Blender 5.2.'
-    with bpy.data.libraries.load(str(ROOT / 'extension/data/realistic.blend'), link=False) as (src, dst):
+    with bpy.data.libraries.load(str(ROOT / 'tools/data/realistic.blend'), link=False) as (src, dst):
         dst.collections = ['Realistic Human Base']
     collection = dst.collections[0]
     bpy.context.scene.collection.children.link(collection)

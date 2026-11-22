@@ -71,7 +71,7 @@ def make_plan():
                 c=case(morph,controls={identifier:value})
                 items.extend([view(c,'head',y1,0,f'{label} {value:+.0f} / vue A'),view(c,'head',y2,0,f'{label} {value:+.0f} / vue B')])
             board('10 Reglages du visage',f'{name} - {label} - extremes',items)
-    plan={'version':'0.14.0','schema':9,'pose':'Reference A, sans rig ni modification de pose','cases':cases,'views':views,'boards':boards,'asset_sha256':hashlib.sha256((ROOT/'extension/data/realistic.blend').read_bytes()).hexdigest()}
+    plan={'version':'0.14.0','schema':9,'pose':'Reference A, sans rig ni modification de pose','cases':cases,'views':views,'boards':boards,'asset_sha256':hashlib.sha256((ROOT/'tools/data/realistic.blend').read_bytes()).hexdigest()}
     return plan
 
 

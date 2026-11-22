@@ -1,7 +1,7 @@
 from pathlib import Path
 import bpy,json,numpy as np
 p=Path('C:/Users/xvann/OneDrive/Documents/ChatGPT/BlenderDev')
-with bpy.data.libraries.load(str(p/'extension/data/realistic.blend'),link=False) as (s,d):d.collections=['Realistic Human Base']
+with bpy.data.libraries.load(str(p/'tools/data/realistic.blend'),link=False) as (s,d):d.collections=['Realistic Human Base']
 bpy.context.scene.collection.children.link(d.collections[0]);b=next(o for o in d.collections[0].objects if o.get('human_modeling_body'))
 a=np.array([v.co[:] for v in b.data.vertices]);hi=a[:,2].max();print('BOUNDS',a.min(0),a.max(0))
 for dz in [.04,.08,.12,.16,.20,.24]:

@@ -4,7 +4,7 @@ Usage (long : plusieurs minutes, à faire une seule fois) :
   blender --background --factory-startup --offline-mode --python tools/build_human_nodes.py -- <sortie.blend> [--tolerance 1e-5] [--switch] [--mask-bits 0] [--report rapport.json]
 
 Principe (prototype `tools/audit/cproto3_1e4.py`, mesures `docs/audit/mesures-noeuds-c.md`) :
-- les poids de chacune des clés de forme de `extension/data/realistic.blend` sont compilés en nœuds Math à partir des pilotes
+- les poids de chacune des clés de forme de `tools/data/realistic.blend` sont compilés en nœuds Math à partir des pilotes
   (expressions de sexe, d'âge et de commandes, avec partage des sous-expressions) ;
 - les écarts des clés d'un même contrôle (y compris Atlas14, D-19) sont réduits par SVD en une base locale (une ou plusieurs
   couches de sommets « b<n> » par contrôle) ; seules les couches dont la valeur singulière dépasse `tolerance` x la plus grande
@@ -45,7 +45,7 @@ INPUTS = ["sex", "age"] + CONTROL_IDS
 OPS = {ast.Add: "ADD", ast.Sub: "SUBTRACT", ast.Mult: "MULTIPLY", ast.Div: "DIVIDE"}
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
-with bpy.data.libraries.load(str(ROOT / "extension/data/realistic.blend"), link=False) as (_, target):
+with bpy.data.libraries.load(str(ROOT / "tools/data/realistic.blend"), link=False) as (_, target):
     target.collections = ["Realistic Human Base"]
 collection = target.collections[0]
 bpy.context.scene.collection.children.link(collection)
