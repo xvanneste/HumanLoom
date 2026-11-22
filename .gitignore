@@ -34,3 +34,20 @@ Thumbs.db
 **/DerivedDataCache/
 **/Content/ReferenceImports/
 **/Content/ReferenceGeometry/
+
+# Animations de tiers (D-27) : jamais redistribuees (licences de contenu Unreal non tranchees).
+# La galerie lit la bibliotheque locale de l utilisateur ; index, miniatures et caches restent hors depot.
+*.fbx
+*.bvh
+*.glb
+*.gltf
+*.uasset
+*.umap
+**/animation_library/
+**/animation_cache/
+**/thumbnails/
+inventory.json
+manifest.json
+export_report.json
+Unreal_Animations_Library*.blend
+*_animations.blend
