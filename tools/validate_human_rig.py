@@ -342,14 +342,31 @@ option_visible = "method" in bpy.ops.humanloom.rig_install.get_rna_type().proper
 check("R14_poids_recalcules", abs(sums - 1).max() < 1e-4 and counts.max() <= 4 and (counts == 0).sum() == 0 and armature.get("hl_rig_weights") == skeleton.RECOMPUTED
       and skeleton.status(body)[0] == skeleton.INSTALLED and option_visible,
       {"secondes": round(recompute_seconds, 2), "influences_max": int(counts.max()), "sommets_nus": int((counts == 0).sum()), "méthode_enregistrée": armature.get("hl_rig_weights"), "option_dans_l_interface": option_visible})
-# la liaison de Blender échoue sur une morphologie dont la cage se recoupe : refus net et aucun résidu
+# (1) sexe 0, âge 2,8 : la liaison automatique de Blender échouait tant que la cage se recoupait (I-49). Depuis la couche de dépliage (lot paupières) il n'y a plus de croisement, mais la liaison peut
+# encore échouer (quasi-contacts) : les DEUX issues sont acceptées, à condition que l'échec soit net (aucun résidu) et que la réussite donne des poids valides
 body = new_body(sex=0.0, age=2.8)
+recomputed_ok, message = True, ""
+try:
+    armature = skeleton.install(body, skeleton.RECOMPUTED)
+    counts_15 = np.array([len(v.groups) for v in body.data.vertices])
+except ValueError as error:
+    recomputed_ok, counts_15, message = False, np.array([0]), str(error)
+residue_15 = bool(skeleton.rigs_of(body)) or any(g.name in set(skeleton.bone_names()) for g in body.vertex_groups) or body.modifiers.get(skeleton.MODIFIER_NAME) is not None
+clean = (int(counts_15.max()) <= 4 and int((counts_15 == 0).sum()) == 0) if recomputed_ok else (("stockés" in message) and not residue_15)
+check("R15_poids_recalcules_sur_l_ancienne_morphologie_fautive", clean,
+      {"réussi": recomputed_ok, "message": message[:120], "influences_max": int(counts_15.max()), "sommets_nus": int((counts_15 == 0).sum()), "résidu": residue_15})
+if recomputed_ok:
+    skeleton.remove(body)
+# (2) le chemin d'échec net reste testé : on abaisse la limite de sommets nus pour forcer le refus
+skeleton.BARE_LIMIT = -1.0
 try:
     skeleton.install(body, skeleton.RECOMPUTED)
     failed_cleanly = False
 except ValueError as error:
     failed_cleanly = "stockés" in str(error)
-check("R15_echec_net_des_poids_recalcules", failed_cleanly and not skeleton.rigs_of(body) and not [g for g in body.vertex_groups if g.name in set(skeleton.bone_names())] and not body.modifiers.get(skeleton.MODIFIER_NAME),
+finally:
+    skeleton.BARE_LIMIT = 0.001
+check("R15c_echec_net_des_poids_recalcules", failed_cleanly and not skeleton.rigs_of(body) and not [g for g in body.vertex_groups if g.name in set(skeleton.bone_names())] and not body.modifiers.get(skeleton.MODIFIER_NAME),
       {"refus_net": failed_cleanly, "armature": len(skeleton.rigs_of(body)), "groupes_laissés": len([g for g in body.vertex_groups if g.name in set(skeleton.bone_names())])})
 skeleton.install(body)  # les poids stockés fonctionnent sur la même morphologie
 check("R15b_poids_stockes_sur_la_meme_morphologie", skeleton.status(body)[0] == skeleton.INSTALLED)

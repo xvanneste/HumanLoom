@@ -90,12 +90,19 @@ for state in STATES:
     for name in human.sockets():
         default = 2.0 if name == "age" else 0.0
         setattr(props, name, state.get(name, default))
-    body_error = float(np.abs(evaluated(native) - evaluated(legacy)).max())
+    difference = np.abs(evaluated(native) - evaluated(legacy))
+    unfold = json.loads(native.data["hl_unfold"]) if "hl_unfold" in native.data else None  # couche de dépliage (lot paupières / I-49) : écart borné sur les sommets listés seulement
+    corrected = np.zeros(len(difference), bool)
+    if unfold:
+        corrected[unfold["vertices"]] = True
+    body_error = float(difference[~corrected].max())
+    body_error_corrected = float(difference[corrected].max()) if corrected.any() else 0.0
+    unfold_limit = (unfold["deplacement_max_mm"] / 1000.0 + 2e-5) if unfold else 2e-5
     eye_errors = []
     for attribute, name in (("eye_left", "Œil gauche"), ("eye_right", "Œil droit")):
         eye_errors.append(float(np.abs(evaluated(getattr(props, attribute)) - evaluated(legacy_eyes[name])).max()))
-    rows.append({"state": state, "body_error_m": body_error, "eye_errors_m": eye_errors})
-R["equivalence"] = {"per_state": rows, "max_body_m": max(r["body_error_m"] for r in rows),
+    rows.append({"state": state, "body_error_m": body_error, "body_error_on_corrected_vertices_m": body_error_corrected, "eye_errors_m": eye_errors})
+R["equivalence"] = {"per_state": rows, "max_body_m": max(r["body_error_m"] for r in rows), "max_body_on_corrected_vertices_m": max(r["body_error_on_corrected_vertices_m"] for r in rows), "unfold_limit_m": unfold_limit,
                     "max_eye_m": max(max(r["eye_errors_m"]) for r in rows)}
 
 # --- façade : lecture/écriture -----------------------------------------------------------------------------------------------
@@ -197,7 +204,7 @@ assert hasattr(bpy.types.Object, "humanloom")
 R["register_cycles"] = 3
 
 verdict = {
-    "corps natif = ancien moteur < 2e-5 m": R["equivalence"]["max_body_m"] < 2e-5,
+    "corps natif = ancien moteur < 2e-5 m (hors sommets corrigés ; sur eux : <= déplacement déclaré)": R["equivalence"]["max_body_m"] < 2e-5 and R["equivalence"]["max_body_on_corrected_vertices_m"] <= R["equivalence"]["unfold_limit_m"],
     "yeux natifs = anciens yeux < 2e-5 m": R["equivalence"]["max_eye_m"] < 2e-5,
     "rouvert sans extension identique (corps) < 1e-6 m": body_err < 1e-6 and not reopened["extension_loaded"],
     "rouvert sans extension identique (yeux) < 1e-6 m": eye_err < 1e-6,

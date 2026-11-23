@@ -54,6 +54,21 @@ with bpy.data.libraries.load(str(BLEND), link=False) as (_, target):
     target.node_groups = ["HL Human"]
     target.meshes = ["HL Human Base"]
 group, mesh = target.node_groups[0], target.meshes[0]
+# couche de dépliage (lot paupières / I-49) : le groupe corrige jusqu'à `deplacement_max_mm` des sommets listés (croisements de la tête) ; l'équivalence au moteur historique est exigée EXACTEMENT
+# (2e-5 m) hors de ces sommets, et bornée par le déplacement DÉCLARÉ sur ces sommets
+unfold = json.loads(mesh["hl_unfold"]) if "hl_unfold" in mesh else None
+corrected = np.zeros(len(mesh.vertices), bool)
+if unfold:
+    corrected[unfold["vertices"]] = True
+UNFOLD_LIMIT = (unfold["deplacement_max_mm"] / 1000.0 + 2e-5) if unfold else CRITERION
+
+
+def split_error(difference, mask):
+    """(erreur max hors sommets corrigés, erreur max sur les sommets corrigés)."""
+    d = np.abs(difference)
+    outside = float(d[~mask].max()) if (~mask).any() else 0.0
+    inside = float(d[mask].max()) if mask.any() else 0.0
+    return outside, inside
 nodes_obj = bpy.data.objects.new("HL Human nodes", mesh)
 bpy.context.scene.collection.objects.link(nodes_obj)
 modifier = nodes_obj.modifiers.new("HL Human", "NODES")
@@ -111,11 +126,14 @@ for i in range(20):
 rows = []
 for state in states:
     a, b = both(state)
-    rows.append({"state": state["name"], "max_error_m": float(np.abs(a - b).max())})
+    outside, inside = split_error(a - b, corrected)
+    rows.append({"state": state["name"], "max_error_m": outside, "max_error_on_corrected_vertices_m": inside})
 worst = max(rows, key=lambda r: r["max_error_m"])
 result["equivalence"] = {"states": len(rows), "max_error_m": worst["max_error_m"], "worst_state": worst["state"],
                          "median_error_m": statistics.median(r["max_error_m"] for r in rows), "per_state": rows}
-failing = [r for r in rows if r["max_error_m"] >= CRITERION]
+failing = [r for r in rows if r["max_error_m"] >= CRITERION or r["max_error_on_corrected_vertices_m"] > UNFOLD_LIMIT]
+result["equivalence"]["max_error_on_corrected_vertices_m"] = max(r["max_error_on_corrected_vertices_m"] for r in rows)
+result["equivalence"]["corrected_vertices"] = int(corrected.sum())
 result["equivalence"]["failing_states"] = [r["state"] for r in failing]
 if failing:  # diagnostic : quels contrôles, seuls à +/-1, sont fautifs dans les états en échec
     culprits = {}
@@ -248,7 +266,8 @@ for sex in neutral.SEXES:
         set_nodes({"sex": sex, "age": stage})
         points = evaluated(nodes_obj)[indices]
         expected = np.array(reference["states"][neutral.key(sex, stage)]["points"]).reshape(-1, 3)
-        reference_rows.append({"sex": sex, "stage": stage, "max_error_m": float(np.abs(points - expected).max())})
+        outside, inside = split_error(points - expected, corrected[indices])
+        reference_rows.append({"sex": sex, "stage": stage, "max_error_m": outside, "max_error_on_corrected_vertices_m": inside})
 result["frozen_reference"] = {"states": len(reference_rows), "max_error_m": max(r["max_error_m"] for r in reference_rows),
                               "per_state": reference_rows, "note": "corps seul (yeux non couverts par les nœuds)"}
 
@@ -296,12 +315,12 @@ result["reopen_without_extension"] = {"states": len(errors), "max_error_m": max(
 
 # --- verdict ---------------------------------------------------------------------------------------------------------------
 verdict = {
-    "equivalence < 2e-5 m": result["equivalence"]["max_error_m"] < CRITERION,
+    "equivalence < 2e-5 m (hors sommets corrigés ; sur eux : <= déplacement déclaré)": result["equivalence"]["max_error_m"] < CRITERION and result["equivalence"]["max_error_on_corrected_vertices_m"] <= UNFOLD_LIMIT,
     "retour au neutre < 1e-6 m (nœuds)": result["return_to_neutral"]["max_nodes_return_error_m"] < 1e-6,
     "retrait physique des couches : erreur < 1e-6 m, chaque commande avait un effet":
     result["layer_removal"]["max_error_after_removal_m"] < 1e-6 and not result["layer_removal"]["controls_without_effect_before_removal"],
     f"temps nœuds sur la cage <= {TIME_LIMIT_MS:g} ms": timings["nodes_cage"]["median_ms"] <= TIME_LIMIT_MS,
-    "référence figée < 1e-5 m": result["frozen_reference"]["max_error_m"] < 1e-5,
+    "référence figée < 1e-5 m (hors sommets corrigés ; sur eux : <= déplacement déclaré)": result["frozen_reference"]["max_error_m"] < 1e-5 and max(r["max_error_on_corrected_vertices_m"] for r in reference_rows) <= UNFOLD_LIMIT,
     "rouvert sans extension identique (< 1e-6 m) et extension absente": result["reopen_without_extension"]["max_error_m"] < 1e-6
     and not result["reopen_without_extension"]["extension_loaded"] and not result["reopen_without_extension"]["extension_enabled"],
 }

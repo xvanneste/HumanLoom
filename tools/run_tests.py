@@ -47,7 +47,6 @@ OBSOLETE = {
 }
 # Constats connus : le test échoue parce qu'il mesure un défaut réel, documenté dans SUIVI_REPRISE.md ; statut « ÉCHEC CONNU » (jamais compté OK, jamais régression).
 KNOWN_FAILURES = {
-    "validate_eyelids_native": "I-49 : la cage native se recoupe dans la tête selon le sexe (sexe 0 : 51 paires de triangles dont 8 à moins de 3 cm d'un œil, zone bouche/nez z≈1,50 ; sexe 1 à partir de l'âge 2,8 : 4) ; correction non faite (voir SUIVI_REPRISE F0-h)",
 }
 SHIM = '''import sys, types, runpy
 from pathlib import Path

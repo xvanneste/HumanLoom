@@ -342,6 +342,7 @@ def detach_eyes(body):
 
 
 STORED, RECOMPUTED = "stockes", "recalcules"
+BARE_LIMIT = 0.001  # part maximale de sommets sans poids après la liaison automatique ; au-delà : refus net (les tests la baissent pour provoquer l'échec)
 WEIGHT_METHODS = ((STORED, "Poids stockés", "Poids calculés une fois sur le corps neutre (reproductibles, instantanés)"),
                   (RECOMPUTED, "Recalculer sur la morphologie", "Liaison automatique par chaleur de Blender sur la morphologie actuelle (quelques secondes)"))
 
@@ -390,7 +391,7 @@ def recompute_weights(body, table):
             bpy.data.armatures.remove(data)
     sums = full.sum(1, keepdims=True)
     bare = float((sums[:, 0] == 0).mean())
-    if bare > 0.001:  # la chaleur de Blender échoue sur certaines morphologies (maillage qui se recoupe : I-49) : refus net, pas de poids vides
+    if bare > BARE_LIMIT:  # la chaleur de Blender échoue sur certaines morphologies (maillage qui se recoupe : I-49) : refus net, pas de poids vides
         raise ValueError(f"La liaison automatique de Blender a échoué sur cette morphologie ({bare * 100:.0f} % des sommets sans poids) : utilisez les poids stockés.")
     full /= np.where(sums > 0, sums, 1)
     for limb in ("arm_upper", "arm_lower", "leg_upper", "leg_lower"):
