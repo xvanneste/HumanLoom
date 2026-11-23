@@ -1,0 +1,39 @@
+{
+  "format": "humanloom.dental_reference",
+  "version": 2,
+  "avertissement": "Valeurs de référence anthropométriques pour la future conception des dents (lot F0-f). Aucune valeur n'est présentée comme calibrée cliniquement. Une seule source a été lue dans le texte intégral (Alsahli 2025, population koweïtienne) : ses valeurs sont à utiliser avec prudence (une seule population, modèles 3D en résine). Tout ce qui est « non vérifié » NE DOIT PAS être utilisé.",
+  "valeurs": {
+    "dents_maxillaires_anterieures_adultes": {
+      "source": "Alsahli A., Qali M., Baskaradoss J.K., AlOuda D., Alsaeed M., « Maxillary Anterior Teeth Dimensions: A Biometric Analysis in a Kuwaiti Population », Clinical, Cosmetic and Investigational Dentistry 2025;17:539-548, doi:10.2147/CCIDE.S551820 (accès libre, CC BY-NC). Tables 2 et 3 lues dans le texte intégral.",
+      "population": "126 adultes koweïtiens (84 femmes, 42 hommes), modèles 3D en résine du maxillaire, pied à coulisse numérique 0,01 mm ; largeur et longueur de COURONNE CLINIQUE",
+      "unite": "mm",
+      "statut": "vérifié dans le texte intégral (Table 2 et Table 3). Réserve : le résumé de l'article donne pour les largeurs des écarts-types différents (0,65 / 0,52 / 0,58) de ceux de la Table 2 (0,50 / 0,53 / 0,43) ; les valeurs ci-dessous sont celles des tables.",
+      "tous": {
+        "incisive_centrale": {"largeur_moyenne": 8.83, "largeur_ecart_type": 0.50, "longueur_moyenne": 9.83, "longueur_ecart_type": 1.02},
+        "incisive_laterale": {"largeur_moyenne": 6.83, "largeur_ecart_type": 0.53, "longueur_moyenne": 8.00, "longueur_ecart_type": 0.96},
+        "canine": {"largeur_moyenne": 7.76, "largeur_ecart_type": 0.43, "longueur_moyenne": 9.14, "longueur_ecart_type": 1.07}
+      },
+      "hommes": {
+        "incisive_centrale": {"largeur_moyenne": 8.94, "largeur_ecart_type": 0.53, "longueur_moyenne": 10.36, "longueur_ecart_type": 1.00},
+        "incisive_laterale": {"largeur_moyenne": 6.90, "largeur_ecart_type": 0.55, "longueur_moyenne": 8.52, "longueur_ecart_type": 0.86},
+        "canine": {"largeur_moyenne": 8.00, "largeur_ecart_type": 0.43, "longueur_moyenne": 9.88, "longueur_ecart_type": 1.07}
+      },
+      "femmes": {
+        "incisive_centrale": {"largeur_moyenne": 8.77, "largeur_ecart_type": 0.47, "longueur_moyenne": 9.57, "longueur_ecart_type": 0.94},
+        "incisive_laterale": {"largeur_moyenne": 6.79, "largeur_ecart_type": 0.52, "longueur_moyenne": 7.74, "longueur_ecart_type": 0.91},
+        "canine": {"largeur_moyenne": 7.63, "largeur_ecart_type": 0.37, "longueur_moyenne": 8.78, "longueur_ecart_type": 0.86}
+      }
+    },
+    "incisive_centrale_maxillaire_largeur_autre_etude": {
+      "valeur": 8.71,
+      "source": "PubMed 25858215 (« Biometric analysis of the clinical crown and the width/length ratio in the maxillary anterior region », 2015) : valeurs 8,71 / 6,75 / 7,81 mm (centrale / latérale / canine) rapportées par une recherche web ; la page n'a pas pu être lue (mur de cookies)",
+      "statut": "non vérifié : non utilisé"
+    },
+    "dents_lacteales_dimensions_coronaires": {"valeur": null, "source": "candidates non lues : étude islandaise (Acta Odontologica Scandinavica), étude taïwanaise (JOCPD 25(2))", "statut": "non vérifié"},
+    "dents_posterieures_et_mandibulaires": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
+    "largeur_arcade_et_distance_intercanine": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
+    "dimensions_de_la_langue_adulte": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
+    "hauteur_gingivale": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
+    "usure_des_dents_du_senior": {"valeur": null, "source": "à chercher", "statut": "non vérifié"}
+  }
+}

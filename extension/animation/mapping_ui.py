@@ -140,15 +140,18 @@ class HUMANLOOM_OT_mapping_load(bpy.types.Operator, ImportHelper):
 class HUMANLOOM_UL_mapping(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         source = context.window_manager.hl_map_source
-        row = layout.row(align=True)
-        row.label(text=item.target)
-        if source is not None:
-            row.prop_search(item, "source", source.data, "bones", text="")
-        else:
-            row.label(text=item.source)
-        row.label(text=f"{item.score:.2f}" if item.source and item.method not in ("manuel",) else "")
-        operator = row.operator("humanloom.mapping_clear_row", text="", icon="X", emboss=False)
+        column = layout.column(align=True)  # deux lignes par os : nom cible + score + effacer, puis le champ de recherche de la source sur toute la largeur
+        top = column.row(align=True)
+        top.label(text=item.target)
+        score = top.row(align=True)
+        score.alert = bool(item.source) and 0 < item.score < mapping.LOW_CONFIDENCE
+        score.label(text=f"{item.score:.2f} {item.method}" if item.source and item.method not in ("manuel",) else "")
+        operator = top.operator("humanloom.mapping_clear_row", text="", icon="X", emboss=False)
         operator.index = index
+        if source is not None:
+            column.prop_search(item, "source", source.data, "bones", text="")
+        else:
+            column.label(text=item.source)
 
 
 class HUMANLOOM_PT_mapping(bpy.types.Panel):
@@ -170,7 +173,7 @@ class HUMANLOOM_PT_mapping(bpy.types.Panel):
             duplicate = mapping.duplicates(_rows_as_mapping(wm))
             if duplicate:
                 layout.label(text=f"Conflit : {next(iter(duplicate))} utilisé {len(next(iter(duplicate.values())))} fois", icon="ERROR")
-            layout.template_list("HUMANLOOM_UL_mapping", "", wm, "hl_map_rows", wm, "hl_map_active", rows=10)
+            layout.template_list("HUMANLOOM_UL_mapping", "", wm, "hl_map_rows", wm, "hl_map_active", rows=8)
             layout.operator("humanloom.mapping_save", icon="FILE_TICK")
             mapped = sum(1 for r in wm.hl_map_rows if r.source)
             layout.label(text=f"{mapped} appariés sur {len(wm.hl_map_rows)} · {sum(1 for r in wm.hl_map_rows if r.source and 0 < r.score < mapping.LOW_CONFIDENCE)} à vérifier")

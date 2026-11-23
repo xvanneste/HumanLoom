@@ -52,3 +52,15 @@ Panneau « Animations » (bibliothèque A1c) : sélection d'une animation → **
 
 ## 7. Plan de tests
 `tools/validate_animation_retarget.py` (synthétique : Q1, Q6, Q7, Q8, cache) ; `tools/validate_animation_retarget_library.py` (IGNORÉ sans bibliothèque : Q2, Q3, Q4, Q5) ; planche : 4 images clés d'une animation sur 3 morphologies.
+
+## 8. Mesure du 3e mode (F0-g) — absolu + IK des membres
+Mode `absolu_ik` : mode absolu, puis IK analytique à 2 os sur bras et jambes (la main ou le pied vise la position source relative au bassin, mise à l'échelle par le rapport des hauteurs de bassin, limitée à la portée de NOS segments ; le coude/genou garde la direction de pôle de la source). Mesuré sur les **mêmes 30 actions** de la bibliothèque locale (erreur de position mains/pieds/coudes/genoux relative au bassin, % de la stature) :
+
+| mode | médiane | p95 |
+|---|---|---|
+| copie naïve (référence) | 22,76 | 59,24 |
+| delta | 4,56 | 9,97 |
+| absolu | 3,88 | 7,67 |
+| **absolu + IK** | **2,57** | **7,54** |
+
+Verdict : **meilleur mode retenu par défaut** (`Options.pose_mode`, interface). La médiane passe sous le seuil (≤ 3 %) ; le **95e centile (7,54 %) reste au-dessus du seuil (≤ 6 %) : Q2 reste KO, seuil non assoupli**. Le p95 est donc dominé par des cas que l'IK ne corrige pas (hypothèse non testée : portée limitée des segments plus courts, ou coudes/genoux dont le pôle source est mal défini). Q3 (glissement des pieds : 0 dépassement sur 60, dérive max 0,5 cm), Q4 (boucles : écart supplémentaire 0 %), Q5 (durée : médiane 0,078 s, max 0,12 s) passent avec ce mode. Non mesuré : aspect visuel de la déformation du maillage.

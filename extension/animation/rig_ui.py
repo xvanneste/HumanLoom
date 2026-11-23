@@ -15,16 +15,20 @@ class HUMANLOOM_OT_rig_install(bpy.types.Operator):
     bl_label = "Appliquer le squelette"
     bl_description = "Crée le squelette du corps (80 os, dont `root`) d'après la morphologie actuelle, avec ses poids de peau"
     bl_options = {"REGISTER", "UNDO"}
+    method: bpy.props.EnumProperty(name="Poids de peau", items=skeleton.WEIGHT_METHODS, default=skeleton.STORED)
 
     @classmethod
     def poll(cls, context):
         body = _body(context)
         return body is not None and not skeleton.rigs_of(body)
 
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
     def execute(self, context):
         body = _body(context)
         try:
-            skeleton.install(body)
+            skeleton.install(body, self.method)
         except (ValueError, RuntimeError) as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}

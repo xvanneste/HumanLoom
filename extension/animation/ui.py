@@ -11,12 +11,15 @@ import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, IntProperty, StringProperty
 from bpy_extras.io_utils import ImportHelper
 
-from . import importer
+from . import importer, thumbnails
 from . import index as index_module
-from . import mapping_ui, rig_ui
+from . import mapping_ui, retarget_ui, rig_ui
 
 ADDON_ID = __package__.rpartition(".")[0]
 RESULT_LIMIT = 200
+PAGE_SIZE = 12
+COLUMNS = 3
+_previews = {"collection": None}
 ALL = "__all__"
 OVERRIDE = {}  # tests : {"library_dir": ..., "cache_dir": ...} remplace les préférences
 _state = {"index": None, "user": None, "origin": None, "error": None, "thread": None, "import_result": None, "import_message": "", "categories": []}
@@ -98,7 +101,22 @@ def refresh_results(wm, context=None):
     return len(found)
 
 
+def preview_icon(key, cache_dir):
+    """Identifiant d'icône d'une vignette du cache disque (chargement paresseux), 0 si elle n'existe pas encore."""
+    from bpy.utils import previews
+    path = thumbnails.thumb_path(cache_dir, key)
+    if not path.is_file():
+        return 0
+    if _previews["collection"] is None:
+        _previews["collection"] = previews.new()
+    collection = _previews["collection"]
+    if key not in collection:
+        collection.load(key, str(path), "IMAGE")
+    return collection[key].icon_id
+
+
 def _update_results(self, context):
+    self.hl_anim_page = 0
     refresh_results(self, context)
 
 
@@ -133,6 +151,30 @@ class HUMANLOOM_OT_animation_refresh(bpy.types.Operator):
             self.report({"WARNING"}, _state["error"])
             return {"CANCELLED"}
         self.report({"INFO"}, f"{len(index)} animations ({_state['origin']}), {count} affichées.")
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_animation_select(bpy.types.Operator):
+    bl_idname = "humanloom.animation_select"
+    bl_label = "Choisir cette animation"
+    bl_options = {"INTERNAL"}
+    index: IntProperty()
+
+    def execute(self, context):
+        context.window_manager.hl_anim_active = self.index
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_animation_page(bpy.types.Operator):
+    bl_idname = "humanloom.animation_page"
+    bl_label = "Page"
+    bl_options = {"INTERNAL"}
+    delta: IntProperty()
+
+    def execute(self, context):
+        wm = context.window_manager
+        pages = max(1, -(-len(wm.hl_anim_results) // PAGE_SIZE))
+        wm.hl_anim_page = max(0, min(pages - 1, wm.hl_anim_page + self.delta))
         return {"FINISHED"}
 
 
@@ -246,6 +288,35 @@ class HUMANLOOM_PT_animation_library(bpy.types.Panel):
     bl_category = "Humain"
     bl_options = {"DEFAULT_CLOSED"}
 
+    @staticmethod
+    def draw_grid(context, layout):
+        """Grille de vignettes paginée (3 colonnes × 4 lignes) ; l'animation active est surlignée ; étoile = favori."""
+        wm = context.window_manager
+        library, cache = settings(context)
+        try:
+            directory = cache_directory(cache)
+        except Exception:  # noqa: BLE001 - pas de dossier de cache : icônes génériques
+            directory = None
+        source = wm.hl_map_source.data.name if getattr(wm, "hl_map_source", None) is not None else ""
+        total = len(wm.hl_anim_results)
+        pages = max(1, -(-total // PAGE_SIZE))
+        page = max(0, min(pages - 1, wm.hl_anim_page))
+        grid = layout.grid_flow(row_major=True, columns=COLUMNS, align=True)
+        for position in range(page * PAGE_SIZE, min(total, (page + 1) * PAGE_SIZE)):
+            item = wm.hl_anim_results[position]
+            cell = grid.box().column(align=True)
+            icon_id = preview_icon(thumbnails.key_for(item.entry_id, source), directory) if directory is not None and source else 0
+            if icon_id:
+                cell.template_icon(icon_value=icon_id, scale=4.5)
+            row = cell.row(align=True)
+            button = row.operator("humanloom.animation_select", text=item.name[:11], icon="NONE" if icon_id else "ARMATURE_DATA", depress=(position == wm.hl_anim_active))
+            button.index = position
+            row.operator("humanloom.animation_favorite", text="", icon="SOLO_ON" if item.favorite else "SOLO_OFF", emboss=False).entry_id = item.entry_id
+        row = layout.row(align=True)
+        row.operator("humanloom.animation_page", text="", icon="TRIA_LEFT").delta = -1
+        row.label(text=f"Page {page + 1} / {pages}")
+        row.operator("humanloom.animation_page", text="", icon="TRIA_RIGHT").delta = 1
+
     def draw(self, context):
         layout, wm = self.layout, context.window_manager
         library, _ = settings(context)
@@ -262,7 +333,7 @@ class HUMANLOOM_PT_animation_library(bpy.types.Panel):
             row = layout.row(align=True)
             row.prop(wm, "hl_anim_category", text="")
             row.prop(wm, "hl_anim_favorites", text="", icon="SOLO_ON")
-            layout.template_list("HUMANLOOM_UL_animations", "", wm, "hl_anim_results", wm, "hl_anim_active", rows=8)
+            HUMANLOOM_PT_animation_library.draw_grid(context, layout)
             layout.label(text=f"{_state.get('found', 0)} résultat(s)" + (f" (affichage limité à {RESULT_LIMIT})" if _state.get("found", 0) >= RESULT_LIMIT else ""))
             layout.operator("humanloom.animation_set_category", icon="OUTLINER_COLLECTION")
         row = layout.row(align=True)
@@ -273,7 +344,7 @@ class HUMANLOOM_PT_animation_library(bpy.types.Panel):
         layout.label(text="Vos propres fichiers uniquement (licences : voir le guide).", icon="INFO")
 
 
-CLASSES = (HumanLoomAnimationPreferences, HL_AnimResult, HUMANLOOM_UL_animations, HUMANLOOM_OT_animation_refresh, HUMANLOOM_OT_animation_favorite,
+CLASSES = (HumanLoomAnimationPreferences, HL_AnimResult, HUMANLOOM_UL_animations, HUMANLOOM_OT_animation_refresh, HUMANLOOM_OT_animation_select, HUMANLOOM_OT_animation_page, HUMANLOOM_OT_animation_favorite,
            HUMANLOOM_OT_animation_set_category, HUMANLOOM_OT_animation_import, HUMANLOOM_PT_animation_library)
 
 
@@ -282,22 +353,29 @@ def register():
         bpy.utils.register_class(cls)
     rig_ui.register()
     mapping_ui.register()
+    retarget_ui.register()
     wm = bpy.types.WindowManager
     wm.hl_anim_query = StringProperty(name="Recherche", description="Préfixes de mots (ex. « walk fwd »)", update=_update_results)
     wm.hl_anim_category = EnumProperty(name="Catégorie", items=_category_items, update=_update_results)
     wm.hl_anim_favorites = BoolProperty(name="Favoris seulement", default=False, update=_update_results)
     wm.hl_anim_results = CollectionProperty(type=HL_AnimResult)
     wm.hl_anim_active = IntProperty()
+    wm.hl_anim_page = IntProperty(name="Page", default=0, min=0)
     # Aucun chargement ici : l'index est lu à la demande.
 
 
 def unregister():
+    retarget_ui.unregister()
     mapping_ui.unregister()
     rig_ui.unregister()
     wm = bpy.types.WindowManager
-    for name in ("hl_anim_active", "hl_anim_results", "hl_anim_favorites", "hl_anim_category", "hl_anim_query"):
+    for name in ("hl_anim_page", "hl_anim_active", "hl_anim_results", "hl_anim_favorites", "hl_anim_category", "hl_anim_query"):
         if hasattr(wm, name):
             delattr(wm, name)
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)
+    if _previews["collection"] is not None:
+        from bpy.utils import previews
+        previews.remove(_previews["collection"])
+        _previews["collection"] = None
     _state.update(index=None, user=None, origin=None, error=None, thread=None)

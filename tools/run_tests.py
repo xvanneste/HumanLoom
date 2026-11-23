@@ -43,7 +43,11 @@ SKIP = {"validate_groom_collision29": "travail en cours de l'utilisateur (non su
 OBSOLETE = {
     "validate_controls": "D-21 : acceptation de la migration d'anciens fichiers, abandonnée (aucune migration au schéma 10) ; conservé",
     "validate_presets": "D-21 : acceptation de la migration d'anciens fichiers, abandonnée (aucune migration au schéma 10) ; conservé",
-    "validate_surface_fix": "I-34 : dépend d'un ancien asset non reproductible (82 croisements) ; remplacé par validate_geometry_quality",
+    "validate_surface_fix": "I-34 : dépend d'un ancien asset non reproductible (82 croisements) ; remplacé par validate_eyelids_native (corps natif) et validate_geometry_quality",
+}
+# Constats connus : le test échoue parce qu'il mesure un défaut réel, documenté dans SUIVI_REPRISE.md ; statut « ÉCHEC CONNU » (jamais compté OK, jamais régression).
+KNOWN_FAILURES = {
+    "validate_eyelids_native": "I-49 : la cage native se recoupe dans la tête selon le sexe (sexe 0 : 51 paires de triangles dont 8 à moins de 3 cm d'un œil, zone bouche/nez z≈1,50 ; sexe 1 à partir de l'âge 2,8 : 4) ; correction non faite (voir SUIVI_REPRISE F0-h)",
 }
 SHIM = '''import sys, types, runpy
 from pathlib import Path
@@ -210,6 +214,8 @@ def main():
         (out / f"{name}.log").write_text(text, encoding="utf-8")
         error = next((l for l in reversed(text.splitlines()) if re.search(r"(Error|Exception|AssertionError|FAILED)", l)), "")
         status = "OK" if code == 0 else ("TIMEOUT" if code == -9 else "ÉCHEC")
+        if status == "ÉCHEC" and name in KNOWN_FAILURES:
+            status, error = "ÉCHEC CONNU", KNOWN_FAILURES[name]
         if code == 0 and "RESULT IGNORÉ" in text:  # test qui s'ignore lui-même (ex. bibliothèque d'animations absente) : jamais compté OK
             status = "IGNORÉ"
             error = next((l for l in text.splitlines() if "RESULT IGNORÉ" in l), "")

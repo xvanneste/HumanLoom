@@ -298,6 +298,62 @@ ok_remove = bpy.ops.humanloom.rig_remove() == {"FINISHED"}
 check("R12_interface", ok_install and state_ui == skeleton.INSTALLED and ok_refused and state_old == skeleton.OUTDATED and ok_update and ok_remove and skeleton.status(clone)[0] == skeleton.NOT_INSTALLED
       and any(c[0] == "operator" for c in layout.method_calls), {"installé": state_ui, "double_refusée": ok_refused, "obsolète": state_old})
 
+# --- yeux rattachés à l'os head (installation, mise à jour, retrait, duplication) -------------------------------------------------------------------------
+body = new_body()
+eyes = skeleton.eyes_of(body)
+world_before = [e.matrix_world.copy() for e in eyes]
+armature = skeleton.install(body)
+bpy.context.view_layer.update()
+attached = all(e.parent == armature and e.parent_type == "BONE" and e.parent_bone == "head" for e in eyes)
+drift_install = max(float(np.abs(np.array(e.matrix_world) - np.array(w)).max()) for e, w in zip(eyes, world_before))
+bpy.context.view_layer.update()
+armature.pose.bones["head"].rotation_mode = "XYZ"
+armature.pose.bones["head"].rotation_euler = (0.0, 0.0, 0.5)
+bpy.context.view_layer.update()
+follows = max(float(np.abs(np.array(e.matrix_world) - np.array(w)).max()) for e, w in zip(eyes, world_before)) > 0.01
+armature.pose.bones["head"].rotation_euler = (0.0, 0.0, 0.0)
+human.set_value(body, "age", 2.7)
+skeleton.update(body)
+bpy.context.view_layer.update()
+drift_update = max(float(np.abs(np.array(e.matrix_world) - np.array(w)).max()) for e, w in zip(eyes, world_before))  # au repos, l'œil reste à sa place monde après la repose des os
+near_head = drift_update < 1e-4
+copy = human.duplicate_human(bpy.context, body)
+copy_eyes = skeleton.eyes_of(copy)
+copy_rig = skeleton.rigs_of(copy)[0]
+duplicated = len(copy_eyes) == 2 and all(e.parent == copy_rig and e.parent_bone == "head" and e not in eyes for e in copy_eyes) and human.body_of(copy_eyes[0]) == copy
+skeleton.remove(copy)
+removed_ok = all(e.parent == copy and e.parent_type == "OBJECT" for e in copy_eyes)
+check("R13_yeux_rattaches_a_head", attached and drift_install < 1e-4 and follows and near_head and duplicated and removed_ok and human.body_of(eyes[0]) == body,
+      {"rattachés": attached, "dérive_à_l_installation_m": round(drift_install, 6), "suivent_la_tête": follows, "immobiles_au_repos_après_mise_à_jour": near_head, "dérive_après_mise_à_jour_m": round(drift_update, 6), "copie_indépendante": duplicated, "retrait_restaure_le_parent": removed_ok})
+
+# --- méthode de poids visible dans l'interface : poids recalculés sur la morphologie actuelle ---------------------------------------------------------------
+body = new_body(sex=0.5, age=2.0)
+start = time.perf_counter()
+armature = skeleton.install(body, skeleton.RECOMPUTED)
+recompute_seconds = time.perf_counter() - start
+mesh = body.data
+sums, counts = np.zeros(len(mesh.vertices)), np.zeros(len(mesh.vertices), dtype=int)
+groups = {g.index: g.name for g in body.vertex_groups}
+deform = set(skeleton.deform_names())
+for vertex in mesh.vertices:
+    weights = [g.weight for g in vertex.groups if groups.get(g.group) in deform and g.weight > 1e-6]
+    sums[vertex.index], counts[vertex.index] = sum(weights), len(weights)
+option_visible = "method" in bpy.ops.humanloom.rig_install.get_rna_type().properties
+check("R14_poids_recalcules", abs(sums - 1).max() < 1e-4 and counts.max() <= 4 and (counts == 0).sum() == 0 and armature.get("hl_rig_weights") == skeleton.RECOMPUTED
+      and skeleton.status(body)[0] == skeleton.INSTALLED and option_visible,
+      {"secondes": round(recompute_seconds, 2), "influences_max": int(counts.max()), "sommets_nus": int((counts == 0).sum()), "méthode_enregistrée": armature.get("hl_rig_weights"), "option_dans_l_interface": option_visible})
+# la liaison de Blender échoue sur une morphologie dont la cage se recoupe : refus net et aucun résidu
+body = new_body(sex=0.0, age=2.8)
+try:
+    skeleton.install(body, skeleton.RECOMPUTED)
+    failed_cleanly = False
+except ValueError as error:
+    failed_cleanly = "stockés" in str(error)
+check("R15_echec_net_des_poids_recalcules", failed_cleanly and not skeleton.rigs_of(body) and not [g for g in body.vertex_groups if g.name in set(skeleton.bone_names())] and not body.modifiers.get(skeleton.MODIFIER_NAME),
+      {"refus_net": failed_cleanly, "armature": len(skeleton.rigs_of(body)), "groupes_laissés": len([g for g in body.vertex_groups if g.name in set(skeleton.bone_names())])})
+skeleton.install(body)  # les poids stockés fonctionnent sur la même morphologie
+check("R15b_poids_stockes_sur_la_meme_morphologie", skeleton.status(body)[0] == skeleton.INSTALLED)
+
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False), encoding="utf-8")
 print("RESULT", "FAIL " + ", ".join(failures) if failures else "PASS")

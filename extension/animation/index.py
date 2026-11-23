@@ -320,11 +320,29 @@ def open_index(path, directory, force=False):
     return index, source_type
 
 
-def resolve_actions(index, directory, blend_path):
-    """Associe chaque entrée de l'inventaire à son action du .blend (une seule liste de noms, ~17 s, puis mise en cache). Retourne le nombre
-    d'entrées non résolues. Aucune action n'est chargée ; le .blend n'est pas écrit."""
+def resolve_actions(index, directory, blend_path, deep=True):
+    """Associe chaque entrée de l'inventaire à son action du .blend. 1) règle par noms (`match_actions`, ~98,5 %) ; 2) `deep` : les actions restantes (renommées par l'outil
+    d'export ou tronquées par Blender) sont chargées UNE À UNE pour lire leur propriété `ualm_id`, égale à l'identifiant de l'inventaire. Mise en cache. Retourne le nombre
+    d'entrées non résolues (0 attendu). Aucune action n'est chargée ailleurs ; le .blend n'est pas écrit."""
     if index.actions is None or any(a is None for a in index.actions):
-        index.actions = match_actions(index.rows, [r[0] for r in names_from_blend(blend_path)])
+        names = [r[0] for r in names_from_blend(blend_path)]
+        index.actions = match_actions(index.rows, names)
+        missing = [i for i, a in enumerate(index.actions) if a is None]
+        if deep and missing:
+            import bpy
+            leftover = sorted(set(names) - {a for a in index.actions if a})
+            by_id = {index.rows[i][0]: i for i in missing}
+            for name in leftover:
+                with bpy.data.libraries.load(str(blend_path), link=False) as (_available, wanted):  # une action par chargement (plantage mesuré avec plusieurs)
+                    wanted.actions = [name]
+                action = wanted.actions[0]
+                try:
+                    identifier = str(action.get("ualm_id", "")) if action is not None else ""
+                finally:
+                    if action is not None:
+                        bpy.data.actions.remove(action)
+                if identifier in by_id:
+                    index.actions[by_id.pop(identifier)] = name
         save_cache(directory, index)
     return sum(1 for a in index.actions if a is None)
 

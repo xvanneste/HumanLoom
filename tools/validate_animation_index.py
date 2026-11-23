@@ -164,7 +164,9 @@ try:
               {"entrées": len(fallback), "secondes": round(seconds, 1), "sans_catégorie": fallback.categories()[index_module.UNCATEGORIZED], "actions_chargées": len(bpy.data.actions), "bibliothèques_liées": len(bpy.data.libraries),
                "mêmes_noms_que_inventory": sorted(r[1] for r in fallback.rows) == sorted(r[1] for r in index.rows)})
         # Association inventaire → action du .blend : bijection exacte, mise en cache, rechargement sans relire le .blend.
-        unresolved = index_module.resolve_actions(index, cache, blends[0])
+        unresolved = index_module.resolve_actions(index, cache, blends[0], deep=False)  # règle par noms seule : mesure de la couverture sans lecture des propriétés
+        covered_by_names = len(index) - unresolved
+        deep_unresolved = index_module.resolve_actions(index, cache, blends[0], deep=True)  # lecture de `ualm_id` des actions restantes, une à la fois
         matched = [a for a in index.actions if a is not None]
         reloaded_actions, origin_actions = index_module.open_index(library, cache)
         left = [i for i, a in enumerate(index.actions) if a is None]
@@ -175,9 +177,9 @@ try:
         unused = sorted(set(r[0] for r in fallback.rows) - set(matched))
         # Aucune association fausse : chaque action associée existe dans le .blend et sert une fois ; le reste est signalé, pas deviné
         # (mesuré : actions renommées par UALM, ex. « AS_28 », ou suffixe « _02 » après troncature à 63 octets : seul `ualm_id` sur l'action chargée tranche).
-        check("fallback_actions_associees", len(set(matched)) == len(matched) and set(matched) <= set(r[0] for r in fallback.rows) and len(matched) >= 0.98 * len(index)
-              and origin_actions == "cache" and reloaded_actions.actions == index.actions and fallback.categories()[index_module.UNCATEGORIZED] == 2046 and len(unused) == unresolved,
-              {"associées": len(matched), "non_résolues": unresolved, "par_squelette": by_skeleton, "actions_sans_entrée": len(unused), "rechargées_depuis_le_cache": reloaded_actions.actions == index.actions,
+        check("fallback_actions_associees", len(set(matched)) == len(matched) and set(matched) <= set(r[0] for r in fallback.rows) and len(matched) == len(index) and deep_unresolved == 0
+              and origin_actions == "cache" and reloaded_actions.actions == index.actions and fallback.categories()[index_module.UNCATEGORIZED] == 2046 and len(unused) == 0,
+              {"associées_par_noms": covered_by_names, "non_résolues_par_noms": unresolved, "non_résolues_après_lecture_de_ualm_id": deep_unresolved, "associées": len(matched), "par_squelette": by_skeleton, "actions_sans_entrée": len(unused), "rechargées_depuis_le_cache": reloaded_actions.actions == index.actions,
                "exemple_non_résolu": index.rows[left[0]][1] if left else None, "exemple_action_restante": unused[0] if unused else None})
 
     # C7 : rien de la bibliothèque dans l'extension ni dans le dépôt (ids Unreal, noms), cache hors dépôt.

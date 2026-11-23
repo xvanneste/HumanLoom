@@ -83,6 +83,9 @@ def body_of(obj):
         return obj
     if obj is not None and obj.parent is not None and is_body(obj.parent):
         return obj.parent
+    parent = obj.parent if obj is not None else None
+    if parent is not None and parent.type == "ARMATURE" and parent.parent is not None and is_body(parent.parent):  # œil rattaché à l'os head du squelette du corps
+        return parent.parent
     return None
 
 
@@ -325,14 +328,18 @@ def duplicate_human(context, body):
         collection.objects.link(clone)
     _retarget_drivers(clone, body, clone)
     mapping = {body: clone}
-    for child in body.children:
+    queue = [(child, clone) for child in body.children]
+    while queue:  # enfants du corps puis leurs propres enfants (yeux rattachés à l'os head du squelette)
+        child, new_parent = queue.pop(0)
         copy = child.copy()
         if child.data is not None:
             copy.data = child.data.copy()
         for collection in child.users_collection:
             collection.objects.link(copy)
-        copy.parent = clone
+        copy.parent = new_parent
+        copy.parent_type, copy.parent_bone = child.parent_type, child.parent_bone
         copy.matrix_parent_inverse = child.matrix_parent_inverse.copy()
+        queue.extend((grandchild, copy) for grandchild in child.children)
         mapping[child] = copy
         if child.type == "MESH" and copy.data.shape_keys is not None:
             _retarget_drivers(copy.data.shape_keys, body, clone)

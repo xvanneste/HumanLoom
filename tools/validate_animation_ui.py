@@ -90,7 +90,7 @@ try:
     with mock.patch.object(panel, "layout", layout, create=True):
         panel.draw(mock.MagicMock(layout=layout), context)
     drawn = [c[0] for c in layout.method_calls]
-    check("U7_dessin_du_panneau", "template_list" in drawn and "operator" in drawn and "prop" in drawn, {"appels": sorted(set(drawn))})
+    check("U7_dessin_du_panneau", "grid_flow" in drawn and "operator" in drawn and "prop" in drawn, {"appels": sorted(set(drawn))})
 
     # Import en fil d'arrière-plan d'un glTF généré (processus Blender séparé), puis index mis à jour.
     bpy.ops.object.armature_add()

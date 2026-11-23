@@ -16,6 +16,7 @@ from pathlib import Path
 
 import bpy
 import numpy as np
+from mathutils import Matrix
 
 try:
     from .. import human
@@ -301,8 +302,102 @@ def _set_bones(armature, table):
         edit[entry["name"]].parent = edit[entry["parent"]] if entry["parent"] else None
 
 
-def install(body):
-    """Crée l'armature enfant du corps, les groupes de poids et le modificateur. Lève ValueError si le corps n'est pas natif ou si un rig existe déjà."""
+def eyes_of(body):
+    return [eye for eye in (body.humanloom.eye_left, body.humanloom.eye_right) if eye is not None]
+
+
+def attach_eyes(body, armature):
+    """Rattache les yeux à l'os `head` (parent = os) en conservant leur position monde : au repos, monde = corps @ base de l'œil. À rappeler après toute repose des os."""
+    bone = armature.data.bones.get("head")
+    if bone is None:
+        return 0
+    rest_world = armature.matrix_world @ bone.matrix_local @ Matrix.Translation((0.0, bone.length, 0.0))  # un parent « os » a son origine à la QUEUE de l'os
+    for eye in eyes_of(body):
+        eye.parent = armature
+        eye.parent_type = "BONE"
+        eye.parent_bone = "head"
+        eye.matrix_parent_inverse = rest_world.inverted() @ body.matrix_world
+    return len(eyes_of(body))
+
+
+def detach_eyes(body):
+    """Remet les yeux sous le corps (état d'avant l'installation du rig)."""
+    for eye in eyes_of(body):
+        if eye.parent is not None and eye.parent != body:
+            eye.parent_type = "OBJECT"
+            eye.parent = body
+            eye.matrix_parent_inverse = body.matrix_world.inverted() @ body.matrix_world
+
+
+STORED, RECOMPUTED = "stockes", "recalcules"
+WEIGHT_METHODS = ((STORED, "Poids stockés", "Poids calculés une fois sur le corps neutre (reproductibles, instantanés)"),
+                  (RECOMPUTED, "Recalculer sur la morphologie", "Liaison automatique par chaleur de Blender sur la morphologie actuelle (quelques secondes)"))
+
+
+def recompute_weights(body, table):
+    """Poids par la liaison automatique de Blender (chaleur) sur la cage ACTUELLE et les os de `table` (torsions exclues puis réparties par une rampe en chapeau), 4 influences au plus.
+    Retourne (noms, idx (N, 4), w (N, 4))."""
+    points = cage_points(body)
+    names = [entry["name"] for entry in table]
+    index = {n: i for i, n in enumerate(names)}
+    mesh = body.data
+    scene = bpy.context.scene
+    with _Context():
+        data = bpy.data.armatures.new("hl_tmp_rig")
+        rig = bpy.data.objects.new("hl_tmp_rig", data)
+        scene.collection.objects.link(rig)
+        bench_mesh = bpy.data.meshes.new("hl_tmp_bench")
+        bench_mesh.from_pydata([tuple(p) for p in points], [tuple(e.vertices) for e in mesh.edges], [tuple(p.vertices) for p in mesh.polygons])
+        bench_mesh.update()
+        bench = bpy.data.objects.new("hl_tmp_bench", bench_mesh)
+        scene.collection.objects.link(bench)
+        try:
+            bpy.context.view_layer.objects.active = rig
+            for other in bpy.context.view_layer.objects:
+                other.select_set(False)
+            rig.select_set(True)
+            bpy.ops.object.mode_set(mode="EDIT")
+            _set_bones(rig, table)
+            for edit_bone in data.edit_bones:
+                edit_bone.use_deform = "_twist" not in edit_bone.name and edit_bone.name not in NON_DEFORMING
+            bpy.ops.object.mode_set(mode="OBJECT")
+            bench.select_set(True)
+            rig.select_set(True)
+            bpy.context.view_layer.objects.active = rig
+            bpy.ops.object.parent_set(type="ARMATURE_AUTO")
+            groups = {g.index: g.name for g in bench.vertex_groups}
+            full = np.zeros((len(points), len(names)), dtype=np.float32)
+            for vertex in bench_mesh.vertices:
+                for group in vertex.groups:
+                    full[vertex.index, index[groups[group.group]]] = group.weight
+        finally:
+            bpy.data.objects.remove(bench, do_unlink=True)
+            bpy.data.objects.remove(rig, do_unlink=True)
+            bpy.data.meshes.remove(bench_mesh)
+            bpy.data.armatures.remove(data)
+    sums = full.sum(1, keepdims=True)
+    bare = float((sums[:, 0] == 0).mean())
+    if bare > 0.001:  # la chaleur de Blender échoue sur certaines morphologies (maillage qui se recoupe : I-49) : refus net, pas de poids vides
+        raise ValueError(f"La liaison automatique de Blender a échoué sur cette morphologie ({bare * 100:.0f} % des sommets sans poids) : utilisez les poids stockés.")
+    full /= np.where(sums > 0, sums, 1)
+    for limb in ("arm_upper", "arm_lower", "leg_upper", "leg_lower"):
+        for side in ("L", "R"):
+            base = index[f"{limb}.{side}"]
+            head, tail = np.array(table[base]["head"]), np.array(table[base]["tail"])
+            t = np.clip(((points - head) @ (tail - head)) / ((tail - head) @ (tail - head)), 0.0, 1.0)
+            hat1, hat2 = np.maximum(0, 1 - np.abs(t - 1 / 3) * 3), np.maximum(0, 1 - np.abs(t - 2 / 3) * 3)
+            original = full[:, base].copy()
+            full[:, index[f"{limb}_twist.01.{side}"]] = original * hat1
+            full[:, index[f"{limb}_twist.02.{side}"]] = original * hat2
+            full[:, base] = original * np.clip(1 - hat1 - hat2, 0, 1)
+    order = np.argsort(-full, axis=1)[:, :4]
+    chosen = np.take_along_axis(full, order, axis=1)
+    chosen /= chosen.sum(1, keepdims=True)
+    return names, order.astype(np.int16), chosen.astype(np.float32)
+
+
+def install(body, method=STORED):
+    """Crée l'armature enfant du corps, les groupes de poids et le modificateur. Lève ValueError si le corps n'est pas natif ou si un rig existe déjà. `method` : poids stockés (défaut) ou recalculés."""
     state, problems = status(body)
     if state == NEEDS_CONFIGURATION and not rigs_of(body):
         raise ValueError(problems[0])
@@ -311,6 +406,7 @@ def install(body):
     data = load_anchors()
     points = cage_points(body)
     table = bone_table(joints(points, data))
+    computed = recompute_weights(body, table) if method == RECOMPUTED else None  # avant tout effet de bord : un échec ne laisse rien derrière lui
     with _Context():
         armature_data = bpy.data.armatures.new(ARMATURE_NAME)
         armature_data.display_type = "STICK"
@@ -326,7 +422,9 @@ def install(body):
         _set_bones(armature, table)
         bpy.ops.object.mode_set(mode="OBJECT")
         armature[FINGERPRINT] = fingerprint(body)
-        _apply_weights(body, [entry["name"] for entry in table])
+        attach_eyes(body, armature)
+        _apply_weights(body, [entry["name"] for entry in table], computed)
+        armature["hl_rig_weights"] = method
         modifier = body.modifiers.new(MODIFIER_NAME, "ARMATURE")
         modifier.object = armature
         body_index = list(body.modifiers).index(body.modifiers[human.MODIFIER_NAME])
@@ -334,8 +432,8 @@ def install(body):
     return armature
 
 
-def _apply_weights(body, names):
-    weights = np.load(WEIGHTS_FILE, allow_pickle=False)
+def _apply_weights(body, names, computed=None):
+    weights = {"names": computed[0], "idx": computed[1], "w": computed[2]} if computed else np.load(WEIGHTS_FILE, allow_pickle=False)
     stored = [str(n) for n in weights["names"]]
     if stored != names:
         raise ValueError("Les poids stockés ne correspondent pas à la table d'os (régénérer avec tools/build_human_rig.py).")
@@ -362,12 +460,14 @@ def update(body):
         _set_bones(armature, table)
         bpy.ops.object.mode_set(mode="OBJECT")
     armature[FINGERPRINT] = fingerprint(body)
+    attach_eyes(body, armature)
     return armature
 
 
 def remove(body):
     """Retire armature, groupes de poids de nos os et modificateur ; ne touche à aucun autre groupe ni modificateur. Retourne le nombre d'éléments retirés."""
     removed = 0
+    detach_eyes(body)
     modifier = body.modifiers.get(MODIFIER_NAME)
     if modifier is not None and modifier.type == "ARMATURE":
         body.modifiers.remove(modifier)
