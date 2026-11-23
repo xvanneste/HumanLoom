@@ -67,6 +67,35 @@ REMOVED_IN_SCHEMA_10 = ("corpulence", "body_mass")
 # Schéma 10 (lot 3 bis, décision D-26) : deux paires de contrôles proches sont fusionnées. Le contrôle fusionné garde le nom du premier ;
 # le second n'est plus une entrée du groupe de nœuds : ses couches lisent la valeur du premier (les deux champs s'ajoutent).
 MERGED_IN_SCHEMA_10 = {"lip_thickness": "lips", "jaw_angle": "jaw"}
+# Commandes de visage ajoutées au groupe de nœuds APRÈS sa génération (tools/build_face_layers.py) : entrées du groupe qui ne viennent pas des clés de forme de l'ancien moteur.
+# `mouth_open` : correctif d'ouverture de bouche, PILOTÉ par la rotation de l'os `jaw` (skeleton.attach_mouth_driver), 0 = fermée, 1 = ouverte à 30°.
+FACE_COMMANDS = ("mouth_open", "brow_up", "brow_down", "brow_inner_up", "smile_L", "smile_R", "cheek_puff", "lip_pucker", "nose_wrinkle", "mouth_down", "blink_L", "blink_R",
+                 "eye_wide", "eye_squint", "brow_together", "upper_lip_raise", "lip_stretch", "lips_press", "chin_raise")
+# Commandes pilotes (lot visage) : libellés de l'interface (`mouth_open` n'est pas affichée : elle est pilotée par la mâchoire). Amplitudes : voir `extension/data/face_reference.json` et `mesh["hl_face_layers"]`.
+FACE_COMMAND_LABELS = {"brow_up": "Sourcils levés", "brow_down": "Sourcils froncés", "brow_inner_up": "Sourcils : intérieur levé", "smile_L": "Sourire gauche", "smile_R": "Sourire droit",
+                       "cheek_puff": "Joues gonflées", "lip_pucker": "Lèvres en avant", "nose_wrinkle": "Nez plissé", "mouth_down": "Commissures abaissées", "blink_L": "Clignement gauche", "blink_R": "Clignement droit",
+                       "eye_wide": "Yeux grands ouverts", "eye_squint": "Yeux plissés", "brow_together": "Sourcils rapprochés", "upper_lip_raise": "Lèvre supérieure relevée",
+                       "lip_stretch": "Lèvres étirées", "lips_press": "Lèvres serrées", "chin_raise": "Menton relevé"}
+# Expressions prédéfinies : ÉCRITES PAR NOUS (D-34), combinaisons de commandes, non calibrées.
+FACE_PRESETS = {
+    "neutre": {},
+    # Combinaisons d'AU : Table 3 de Clark et al. 2020 (Front Psychol 11:920, doi:10.3389/fpsyg.2020.00920, règles de correspondance du guide des investigateurs FACS) et Table 1 de Lazzeri et al. 2015 (Front Bioeng
+    # Biotechnol 3:64, doi:10.3389/fbioe.2015.00064), LUES via Europe PMC. Les intensités ci-dessous sont NOS choix (artistiques), jamais des intensités FACS.
+    # JOIE = 12 ; 6+12
+    "joie": {"smile_L": 1.0, "smile_R": 1.0, "eye_squint": 0.8, "cheek_puff": 0.25},
+    # SURPRISE = 1+2+5+26/27
+    "surprise": {"brow_up": 1.0, "brow_inner_up": 0.4, "eye_wide": 1.0, "_jaw": 16.0},
+    # TRISTESSE = 1+4 ; 1+4+11/15 ; 1+4+15+17
+    "tristesse": {"brow_inner_up": 1.0, "brow_down": 0.6, "brow_together": 0.6, "mouth_down": 1.0, "chin_raise": 0.7},
+    # COLÈRE = 4+5+7+23/24 (variantes : +10, +22, +25/26)
+    "colere": {"brow_down": 1.0, "brow_together": 0.8, "eye_wide": 0.7, "eye_squint": 0.5, "lips_press": 1.0},
+    # PEUR = 1+2+4+5+20+25/26/27
+    "peur": {"brow_up": 0.8, "brow_inner_up": 0.8, "brow_down": 0.3, "brow_together": 0.6, "eye_wide": 1.0, "lip_stretch": 1.0, "_jaw": 8.0},
+    # DÉGOÛT = 9/10 ; 9/10+17 ; 9/10+16+25/26 (le AU4 des sourcils vient de la colonne « FACE » de Lazzeri 2015, pas de la règle FACS)
+    "degout": {"nose_wrinkle": 1.0, "upper_lip_raise": 1.0, "chin_raise": 0.6, "brow_down": 0.3},
+    "clignement": {"blink_L": 1.0, "blink_R": 1.0},
+}
+# Clé « _jaw » : angle d'ouverture de la mâchoire en degrés, appliqué à l'os `jaw` si le squelette est installé (le correctif `mouth_open` suit alors tout seul).
 NATIVE_CONTROLS = tuple(control for control in CONTROLS if control[0] not in REMOVED_IN_SCHEMA_10 and control[0] not in MERGED_IN_SCHEMA_10)
 
 # Schéma 10 (lot 4, I-45, D-18) : facteur d'amplitude des contrôles « timides », selon l'âge. Un tuple = facteur aux stades d'âge

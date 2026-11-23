@@ -12,6 +12,7 @@ Ce module ne lit aucun .blend au chargement (règle d'enregistrement) ; les donn
 """
 import hashlib
 import json
+import math
 from pathlib import Path
 
 import bpy
@@ -440,6 +441,7 @@ def install(body, method=STORED):
         _apply_weights(body, [entry["name"] for entry in table], computed)
         from . import dental  # dents, gencives, langue : rattachés à head et jaw (lot F0-f)
         dental.install(body, armature)
+        attach_mouth_driver(body, armature)
         armature["hl_rig_weights"] = method
         modifier = body.modifiers.new(MODIFIER_NAME, "ARMATURE")
         modifier.object = armature
@@ -462,6 +464,67 @@ def _apply_weights(body, names, computed=None):
                 groups[int(indices[vertex, slot])].add([vertex], weight, "REPLACE")
     if JAW in names:
         _apply_jaw_weights(body)
+
+
+MOUTH_OPEN_DEGREES = 30.0  # ouverture pour laquelle le correctif `mouth_open` vaut 1 (voir tools/build_face_layers.py)
+
+
+def mouth_driver_path(body):
+    """Chemin de la propriété du modificateur `HL Human` qui porte `mouth_open`, ou None si le groupe n'a pas cette entrée."""
+    if not human.is_native(body) or "mouth_open" not in human.sockets():
+        return None
+    return f'modifiers["{human.MODIFIER_NAME}"].properties.inputs.{human.sockets()["mouth_open"][0]}.value'
+
+
+def attach_mouth_driver(body, armature):
+    """Pilote `mouth_open` par la rotation locale de l'os `jaw` : |rotation X| / 30°, borné à 1. Le correctif suit ainsi toute animation de la mâchoire (pose, action, NLA)."""
+    path = mouth_driver_path(body)
+    if path is None:
+        return False
+    body.driver_remove(path)
+    fcurve = body.driver_add(path)
+    driver = fcurve.driver
+    driver.type = "SCRIPTED"
+    variable = driver.variables.new()
+    variable.name = "rx"
+    variable.type = "TRANSFORMS"
+    target = variable.targets[0]
+    target.id = armature
+    target.bone_target = JAW
+    target.transform_type = "ROT_X"
+    target.transform_space = "LOCAL_SPACE"
+    driver.expression = f"min(1.0, abs(rx) / {math.radians(MOUTH_OPEN_DEGREES):.6f})"
+    return True
+
+
+def open_jaw(body, degrees):
+    """Ouvre (ou ferme avec 0) la mâchoire de `degrees` degrés par la pose de l'os `jaw` ; le sens de rotation est celui qui descend la pointe de l'os. Retourne False sans squelette."""
+    rigs = rigs_of(body)
+    if not rigs:
+        return False
+    pose = rigs[0].pose.bones.get(JAW)
+    if pose is None:
+        return False
+    pose.rotation_mode = "XYZ"
+    if degrees == 0:
+        pose.rotation_euler = (0.0, 0.0, 0.0)
+        return True
+    pose.rotation_euler = (math.radians(degrees), 0.0, 0.0)
+    bpy.context.view_layer.update()
+    low_plus = (rigs[0].matrix_world @ pose.tail).z
+    pose.rotation_euler = (0.0, 0.0, 0.0)
+    bpy.context.view_layer.update()
+    rest = (rigs[0].matrix_world @ pose.tail).z
+    sign = 1.0 if low_plus < rest else -1.0
+    pose.rotation_euler = (sign * math.radians(degrees), 0.0, 0.0)
+    return True
+
+
+def detach_mouth_driver(body):
+    path = mouth_driver_path(body)
+    if path is not None and body.animation_data is not None and any(f.data_path == path for f in body.animation_data.drivers):
+        body.driver_remove(path)
+        human.set_value(body, "mouth_open", 0.0)
 
 
 def _apply_jaw_weights(body):
@@ -514,6 +577,7 @@ def update(body, dental=False):
 def remove(body):
     """Retire armature, groupes de poids de nos os et modificateur ; ne touche à aucun autre groupe ni modificateur. Retourne le nombre d'éléments retirés."""
     removed = 0
+    detach_mouth_driver(body)
     detach_eyes(body)
     from . import dental
     removed += dental.remove(body)

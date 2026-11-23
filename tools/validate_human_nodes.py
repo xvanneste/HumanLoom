@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import extension as addon
 import neutral_reference as neutral
-from extension.proportions import AMPLITUDE_FACTORS, CONTROLS, NATIVE_CONTROLS
+from extension.proportions import AMPLITUDE_FACTORS, CONTROLS, FACE_COMMANDS, NATIVE_CONTROLS
 
 BLEND, OUT = [Path(p).resolve() for p in sys.argv[sys.argv.index("--") + 1:][:2]]
 OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -74,7 +74,7 @@ bpy.context.scene.collection.objects.link(nodes_obj)
 modifier = nodes_obj.modifiers.new("HL Human", "NODES")
 modifier.node_group = group
 identifier = {s.name: s.identifier for s in group.interface.items_tree if s.item_type == "SOCKET" and s.in_out == "INPUT" and s.socket_type == "NodeSocketFloat"}
-assert set(identifier) == {"sex", "age", *CONTROL_IDS}, set(identifier) ^ {"sex", "age", *CONTROL_IDS}
+assert set(identifier) == {"sex", "age", *CONTROL_IDS, *FACE_COMMANDS}, set(identifier) ^ {"sex", "age", *CONTROL_IDS, *FACE_COMMANDS}
 result["group"] = {"nodes": len(group.nodes), "links": len(group.links), "layers": sum(a.startswith("b") and a[1:].isdigit() for a in mesh.attributes.keys()),
                    "fingerprint": group.get("hl_graph_fingerprint"), "tolerance": group.get("hl_tolerance"), "blend_bytes": BLEND.stat().st_size}
 

@@ -349,6 +349,9 @@ def duplicate_human(context, body):
     for modifier in clone.modifiers:  # le squelette (enfant du corps) est copié avec lui : le modificateur de la copie vise le squelette de la copie
         if modifier.type == "ARMATURE" and modifier.object in mapping:
             modifier.object = mapping[modifier.object]
+    for old_object, new_object in mapping.items():  # pilotes du corps qui lisent un enfant (ex. `mouth_open` lit l'os `jaw` du squelette) : ils lisent la copie
+        if old_object is not body:
+            _retarget_drivers(clone, old_object, new_object)
     properties = clone.humanloom
     properties.uuid = _new_uuid()
     for attribute in ("eye_left", "eye_right"):

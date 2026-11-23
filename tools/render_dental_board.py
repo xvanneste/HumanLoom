@@ -44,6 +44,8 @@ for label, values in MORPHOLOGIES.items():
         if best is None or z < best[0]:
             best = (z, sign)
     pose.rotation_euler = (best[1] * math.radians(ANGLE), 0, 0)
+    if human.has_control(body, "mouth_open"):  # correctif d'ouverture (convergence des commissures, lèvre basse lissée) : proportionnel à l'angle, 1 à 30°
+        human.set_value(body, "mouth_open", min(1.0, ANGLE / 30.0))
     bpy.context.view_layer.update()
     body.display_type = "WIRE"
     for modifier in body.modifiers:  # la cage seulement (le Subsurf alourdit le fil de fer)

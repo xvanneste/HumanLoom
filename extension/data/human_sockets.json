@@ -274,5 +274,119 @@
   0.0,
   -1.0,
   1.0
+ ],
+ "mouth_open": [
+  "Socket_48",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "brow_up": [
+  "Socket_49",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "brow_down": [
+  "Socket_50",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "brow_inner_up": [
+  "Socket_51",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "smile_L": [
+  "Socket_52",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "smile_R": [
+  "Socket_53",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "cheek_puff": [
+  "Socket_54",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "lip_pucker": [
+  "Socket_55",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "nose_wrinkle": [
+  "Socket_56",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "mouth_down": [
+  "Socket_57",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "blink_L": [
+  "Socket_58",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "blink_R": [
+  "Socket_59",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "eye_wide": [
+  "Socket_60",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "eye_squint": [
+  "Socket_61",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "brow_together": [
+  "Socket_62",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "upper_lip_raise": [
+  "Socket_63",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "lip_stretch": [
+  "Socket_64",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "lips_press": [
+  "Socket_65",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "chin_raise": [
+  "Socket_66",
+  0.0,
+  0.0,
+  1.0
  ]
 }

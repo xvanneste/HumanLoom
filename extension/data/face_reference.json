@@ -1,21 +1,106 @@
 {
   "format": "humanloom.face_reference",
-  "version": 1,
+  "version": 3,
   "avertissement": "Références de visage pour les lots paupières et expressions. AUCUNE valeur n'a été lue dans un texte intégral : les lignes « rapporté par une recherche » viennent de résumés de résultats de recherche et NE DOIVENT PAS être utilisées pour régler des amplitudes avant lecture de l'article.",
   "valeurs": {
     "fente_palpebrale_hauteur_adultes_mm": {
-      "valeurs_rapportees": {"population_australienne_adultes": 8.7, "population_australienne_hommes": 9.0, "population_australienne_femmes": 8.5, "population_turque": "9,7 à 9,9", "population_coreenne": "8,0 à 8,2", "sud_indiens_hommes": 11.3, "sud_indiens_femmes": 11.6},
+      "valeurs_rapportees": {
+        "population_australienne_adultes": 8.7,
+        "population_australienne_hommes": 9.0,
+        "population_australienne_femmes": 8.5,
+        "population_turque": "9,7 à 9,9",
+        "population_coreenne": "8,0 à 8,2",
+        "sud_indiens_hommes": 11.3,
+        "sud_indiens_femmes": 11.6
+      },
       "source": "résultats de recherche web (articles PMC10371930, PMC5586704, PMC3562989, PMC3482776 ; l'article australien exact n'est pas identifié) : non lus",
       "statut": "rapporté par une recherche, à vérifier : non utilisé",
       "note": "la hauteur diminue avec l'âge d'après le résumé ; varie selon la population"
     },
     "fente_palpebrale_largeur_adultes_mm": {
-      "valeurs_rapportees": {"sud_indiens_hommes": 31.1, "sud_indiens_femmes": 29.9},
+      "valeurs_rapportees": {
+        "sud_indiens_hommes": 31.1,
+        "sud_indiens_femmes": 29.9
+      },
       "source": "idem (étude sur des adultes sud-indiens de 18 à 26 ans, photographies de face)",
       "statut": "rapporté par une recherche, à vérifier : non utilisé"
     },
-    "epaisseur_de_la_paupiere": {"valeur": null, "source": "recherche sans résultat", "statut": "non vérifié"},
-    "ecart_entre_le_globe_et_la_paupiere": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
-    "amplitudes_d_expression": {"valeur": null, "source": "à chercher avant chaque lot de commandes", "statut": "non vérifié"}
+    "epaisseur_de_la_paupiere": {
+      "valeur": null,
+      "source": "recherche sans résultat",
+      "statut": "non vérifié"
+    },
+    "ecart_entre_le_globe_et_la_paupiere": {
+      "valeur": null,
+      "source": "à chercher",
+      "statut": "non vérifié"
+    },
+    "amplitudes_d_expression": {
+      "valeur": null,
+      "source": "brow_down, brow_inner_up, lip_pucker, nose_wrinkle, mouth_down : aucune donnée lue",
+      "statut": "non vérifié : amplitudes provisoires de modélisation"
+    },
+    "ouverture_maximale_de_la_bouche": {
+      "valeur_lue": {
+        "moyenne_mm": 48.01,
+        "ecart_type_mm": 7.6,
+        "n": 376,
+        "intervalle_de_confiance_95_mm": [
+          47.31,
+          48.71
+        ],
+        "minimum_mm": 23,
+        "maximum_mm": 70
+      },
+      "population": "376 enfants et adolescents sans anomalie (âge 12,2 ± 3,2 ans, 5,7 à 19,6 ; 44 % de filles) d'une clinique dentaire hospitalière (Cincinnati) ; mesure à la règle, de l'incisive centrale haute à l'incisive centrale basse (bord libre), 2e ou 3e essai",
+      "source": "Campbell R., Trego B., Gosnell E.S., Fenchel M., Cully J.L., Wang J., « Maximum mouth opening in patients with cleft lip and palate or craniofacial anomalies compared with non-affected controls: A cross-sectional study », Int J Paediatr Dent 2025;35(3):484-491, doi:10.1111/ipd.13259 (PMID 39252211), lue via Europe PMC (PMC11979317), valeurs de l'abstract et du Tableau 1",
+      "statut": "lu (texte intégral partiel via Europe PMC). L'effet du sexe n'est pas significatif (F 0,37, p 0,54), l'effet de l'âge l'est (F 87,94, p < 0,001) ; le détail par âge est dans une figure NON lue : valeur adulte NON lue",
+      "ecart_avec_notre_modele": "notre ouverture centrale lèvre à lèvre est de 40,1 mm à 30° (neutre) et 37,9 à 38,2 mm (homme âgé, femme jeune) ; elle n'est PAS comparable à une distance inter-incisive d'enfants (même ordre de grandeur, population différente, mesure différente)"
+    },
+    "ouverture_maximale_adultes_citee_dans_une_revue": {
+      "valeurs_rapportees": {
+        "femmes_mm": 53,
+        "hommes_mm": 59
+      },
+      "source": "Scolaro A. et al., « Efficacy of Kinematic Parameters for Assessment of Temporomandibular Joint Function and Disfunction: A Systematic Review and Meta-Analysis », Bioengineering 2022;9(7):269, doi:10.3390/bioengineering9070269 (PMC9311583), qui cite Travell (référence de seconde main non consultée)",
+      "statut": "valeur citée de seconde main dans un article lu partiellement : à confirmer avant usage ; la méta-analyse conclut par ailleurs à une ouverture plus grande chez les femmes de 0,65 mm (IC 95 % -0,36 à 1,66, I² 90 %) sur 3 études"
+    },
+    "exposition_des_incisives_hautes_au_repos": {
+      "valeur": null,
+      "source": "résultats de recherche : Al Wazzan 2004 (J Contemp Dent Pract 5(1):53-62) et Khan & Abbas 2014 (J Coll Physicians Surg Pak 24(12):931-4, femmes ≈ 2,93 mm : lecture incomplète d'un extrait) ; articles non lus",
+      "statut": "non vérifié : les 3 mm provisoires du modèle ne reposent sur aucune source lue"
+    },
+    "excursions_de_marqueurs_2d_adultes_sains": {
+      "source": "Baude M., Hutin E., Gracies J.M., « A Bidimensional System of Facial Movement Analysis Conception and Reliability in Adults », BioMed Res Int 2015;2015:812961, doi:10.1155/2015/812961 (PMC4486482), Tableau 1, lu via Europe PMC (texte intégral)",
+      "population": "10 adultes sains (6 femmes), 39 ± 12 ans ; vidéo 2D, marqueurs peints, trois évaluateurs ; fiabilité jugée FAIBLE par les auteurs pour les muscles du bas du visage",
+      "valeurs_mm": {
+        "elevation_des_sourcils": {
+          "droite": 13.2,
+          "ecart_type_d": 2.6,
+          "gauche": 13.6,
+          "ecart_type_g": 2.8
+        },
+        "sourire_zygomatique": {
+          "droite": 8.8,
+          "ecart_type_d": 1.7,
+          "gauche": 7.3,
+          "ecart_type_g": 1.7
+        },
+        "joues_gonflees": {
+          "droite": 5.6,
+          "ecart_type_d": 2.1,
+          "gauche": 4.8,
+          "ecart_type_g": 2.5
+        },
+        "fermeture_des_yeux_marqueur_de_paupiere": {
+          "droite": 4.2,
+          "ecart_type_d": 1.6,
+          "gauche": 4.0,
+          "ecart_type_g": 1.4
+        }
+      },
+      "statut": "lu (valeurs en cm dans l'article, converties en mm) ; marqueurs 2D, un seul groupe d'âge, pas de ventilation par sexe : réserve forte. Utilisé pour brow_up (13,4 mm), smile_L/R (8,05 mm), cheek_puff (5,2 mm) ; la fermeture des yeux n'est PAS reprise (définition du marqueur différente)",
+      "ecart_avec_notre_modele": "amplitudes atteintes à 100 % dans la cage (déplacement maximal d'un sommet = valeur publiée) ; ce n'est pas une validation : le déplacement d'un sommet de la cage n'est pas l'excursion d'un marqueur de peau 2D"
+    }
   }
 }

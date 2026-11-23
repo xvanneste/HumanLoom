@@ -420,6 +420,33 @@ for label, values in (("neutre", {}), ("femme_jeune", {"sex": 1.0, "age": 1.0}),
 check("J1_machoire_ouverture", all(r["parent"] == "head" and r["sommets_pondérés"] >= 500 and 20 <= r["menton_descend_mm"] <= 35 and r["fente_ouverte_mm"] >= 25
                                    and r["triangles_retournés"] <= 40 and r["retour_au_repos_mm"] < 1e-3 for r in jaw_rows.values()), jaw_rows)
 
+# J2 : correctif d'ouverture `mouth_open` piloté par la mâchoire : les commissures se rapprochent (largeur de bouche diminuée de 2 à 8 % à 30°), le pilote suit l'angle, la copie a son propre pilote
+body = new_body()
+rig = skeleton.install(body)
+slit = np.load(skeleton.JAW_FILE, allow_pickle=False)
+slit_ids = np.concatenate([slit["slit_upper"], slit["slit_lower"]])
+pose = rig.pose.bones[skeleton.JAW]
+pose.rotation_mode = "XYZ"
+closed_cage = cage_with_rig(body)
+best_sign = max((1.0, -1.0), key=lambda sg: (setattr(pose, "rotation_euler", (sg * math.radians(20), 0, 0)), closed_cage[skeleton.JAW_CHIN, 2] - cage_with_rig(body)[skeleton.JAW_CHIN, 2])[1])
+widths, drives = {}, {}
+for angle in (0, 15, 30, 45):
+    pose.rotation_euler = (best_sign * math.radians(angle), 0, 0)
+    widths[angle] = round(float(2 * np.abs(cage_with_rig(body)[slit_ids, 0]).max()) * 1000, 2)
+    drives[angle] = round(human.get_value(body, "mouth_open"), 3)
+pose.rotation_euler = (best_sign * math.radians(30), 0, 0)
+cage_with_rig(body)
+clone = human.duplicate_human(bpy.context, body)
+clone_rig = skeleton.rigs_of(clone)[0]
+clone_rig.pose.bones[skeleton.JAW].rotation_mode = "XYZ"
+clone_rig.pose.bones[skeleton.JAW].rotation_euler = (best_sign * math.radians(15), 0, 0)
+bpy.context.view_layer.update()
+cage_with_rig(clone)
+independent = abs(human.get_value(clone, "mouth_open") - 0.5) < 0.01 and abs(human.get_value(body, "mouth_open") - 1.0) < 0.01
+ratio = widths[30] / widths[0]
+check("J2_convergence_des_commissures_et_pilote", 0.92 <= ratio <= 0.98 and drives[0] == 0.0 and abs(drives[15] - 0.5) < 0.01 and drives[30] == 1.0 and drives[45] == 1.0 and independent,
+      {"largeur_mm_par_angle": widths, "pilote_par_angle": drives, "rapport_30_sur_0": round(ratio, 4), "copie_independante": independent})
+
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False), encoding="utf-8")
 print("RESULT", "FAIL " + ", ".join(failures) if failures else "PASS")

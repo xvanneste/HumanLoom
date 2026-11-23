@@ -9,7 +9,7 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import anatomy, landmark_sets, character_presets, measurements, geometry_quality, surface_fix, body_profiles, age_shapes, skin_relief, groom, human
 from .animation import ui as animation_ui
-from .proportions import BASE_ID, BODY_CONTROLS, FAT_CONTROLS, MUSCLE_CONTROLS, FACE_CONTROLS, CONTROLS, CURRENT_SCHEMA, bind_control, property_name
+from .proportions import BASE_ID, BODY_CONTROLS, FAT_CONTROLS, MUSCLE_CONTROLS, FACE_CONTROLS, CONTROLS, CURRENT_SCHEMA, FACE_COMMANDS, FACE_COMMAND_LABELS, FACE_PRESETS, bind_control, property_name
 
 # Ancien moteur (schéma 9) : l'asset n'est plus livré dans le paquet (lot 5) ; il n'existe que dans le dépôt, sous tools/data.
 # Dans une extension installée, il est absent : `human_modeling.create` refuse alors de créer un humain de l'ancien moteur.
@@ -140,6 +140,32 @@ class HUMANMODELING_OT_smooth(bpy.types.Operator):
         if body.modifiers.get(SURFACE_MODIFIER):
             self.report({"INFO"}, "L’aperçu lissé est déjà actif : réglez le niveau dans « Subdivision ».")
         add_smooth_preview(body)
+        return {"FINISHED"}
+
+
+class HUMANMODELING_OT_face_preset(bpy.types.Operator):
+    bl_idname = "humanloom.face_preset"
+    bl_label = "Expression prédéfinie"
+    bl_description = "Règle les commandes d'expression du visage (combinaisons écrites par HumanLoom, non calibrées) ; « Neutre » les remet à zéro"
+    bl_options = {"REGISTER", "UNDO"}
+    preset: bpy.props.StringProperty(name="Expression", default="neutre")
+
+    @classmethod
+    def poll(cls, context):
+        body = human.body_of(context.active_object)
+        return body is not None and human.is_native(body) and human.has_control(body, "smile_L")
+
+    def execute(self, context):
+        body = human.body_of(context.active_object)
+        values = FACE_PRESETS.get(self.preset)
+        if values is None:
+            self.report({"ERROR"}, "Expression inconnue : " + self.preset)
+            return {"CANCELLED"}
+        for name in FACE_COMMANDS:
+            if name != "mouth_open" and human.has_control(body, name):
+                human.set_value(body, name, float(values.get(name, 0.0)))
+        from .animation import skeleton as _skeleton  # mâchoire : clé « _jaw » des expressions (degrés), si le squelette est installé
+        _skeleton.open_jaw(body, float(values.get("_jaw", 0.0)))
         return {"FINISHED"}
 
 
@@ -642,7 +668,11 @@ class HUMANMODELING_PT_face_group(bpy.types.Panel):
 
     def draw(self, context):
         body = active_body(context)
-        labels = dict(FACE_CONTROLS)
+        labels = {**dict(FACE_CONTROLS), **FACE_COMMAND_LABELS}
+        if "expressions" in self.__class__.__name__:
+            row = self.layout.row(align=True)
+            for key in FACE_PRESETS:
+                row.operator("humanloom.face_preset", text=key.capitalize()).preset = key
         for identifier in self.identifiers:
             if not human.has_control(body, identifier):
                 continue
@@ -661,6 +691,8 @@ def _face_group_class(key, label, identifiers):
 
 
 FACE_GROUP_CLASSES = tuple(_face_group_class(*group) for group in FACE_GROUPS)
+# Expressions (commandes pilotes du groupe de nœuds) : sous-panneau à part, hors de FACE_GROUPS (ces commandes ne sont pas des contrôles de morphologie)
+FACE_EXPRESSIONS_CLASS = _face_group_class("expressions", "Expressions (commandes pilotes)", tuple(c for c in FACE_COMMANDS if c != "mouth_open"))
 
 
 class HUMANMODELING_PT_presets(bpy.types.Panel):
@@ -1110,6 +1142,7 @@ class HUMANMODELING_OT_repair_surface(bpy.types.Operator):
 
 
 CLASSES = (
+    HUMANMODELING_OT_face_preset,
     HUMANMODELING_OT_create,
     HUMANMODELING_OT_height,
     HUMANMODELING_OT_smooth,
@@ -1141,6 +1174,7 @@ CLASSES = (
     HUMANMODELING_PT_muscles,
     HUMANMODELING_PT_face,
     *FACE_GROUP_CLASSES,
+    FACE_EXPRESSIONS_CLASS,
     HUMANMODELING_PT_presets,
     HUMANMODELING_PT_measurements,
     HUMANMODELING_PT_anatomy,
