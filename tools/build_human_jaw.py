@@ -19,7 +19,9 @@ sys.path.insert(0, str(ROOT))
 import extension as addon  # noqa: E402
 from extension.animation import skeleton  # noqa: E402
 
-OUT = ROOT / "extension" / "data" / "human_jaw_weights.npz"
+import os  # noqa: E402
+OUT = Path(os.environ["HL_JAW_OUT"]) if os.environ.get("HL_JAW_OUT") else ROOT / "extension" / "data" / "human_jaw_weights.npz"
+WIDE = os.environ.get("HL_JAW_WIDE", "1") == "1"  # estompage large (menton 150 mm, oreille 75 mm) : essai conjoint avec des poids du cou lissés
 addon.register()
 bpy.ops.humanloom.create()
 body = bpy.context.object
@@ -74,8 +76,12 @@ corner_x = float(np.abs(P[slit_vertices, 0]).max())  # commissure : au-delà, la
 lateral = smooth((np.abs(P[:, 0]) - (corner_x - 0.014)) / 0.024)  # transition progressive : l'ouverture doit être ovale, pas rectangulaire
 ramp = ramp * (1 - lateral) + 0.022 * lateral
 w = smooth(0.5 + (s - P[:, 2]) / (2 * ramp))
-w *= 1.0 - smooth((P[:, 1] - (hinge_y - 0.010)) / 0.030)  # estompage vers l'oreille (élargi à 75 mm : la torsion du cou à 45° retournait 190 triangles, R6)
-w *= smooth((P[:, 2] - (chin_z - 0.065)) / 0.055)  # sous le menton : 65 mm (à 100 et 150 mm la torsion du cou à 45°, R6, retournait 190 triangles)
+if WIDE:
+    w *= 1.0 - smooth((P[:, 1] - (hinge_y - 0.035)) / 0.075)
+    w *= smooth((P[:, 2] - (chin_z - 0.150)) / 0.130)
+else:
+    w *= 1.0 - smooth((P[:, 1] - (hinge_y - 0.010)) / 0.030)  # estompage vers l'oreille (élargi à 75 mm : la torsion du cou à 45° retournait 190 triangles, R6)
+    w *= smooth((P[:, 2] - (chin_z - 0.065)) / 0.055)  # sous le menton : 65 mm (à 100 et 150 mm la torsion du cou à 45°, R6, retournait 190 triangles)
 # les sommets de la fente : 0 / 1 au milieu des lèvres, mais les commissures suivent la mâchoire À MOITIÉ (le muscle orbiculaire et les muscles des joues les retiennent) : les deux lèvres
 # convergent vers 0,5 au coin, ce qui donne une ouverture en lentille et non un rectangle
 ellipse = np.sqrt(np.clip(1.0 - (np.abs(P[:, 0]) / corner_x) ** 2, 0.0, 1.0))  # écart des deux lèvres à x : e(x) = sqrt(1 - (x / x_coin)^2), soit une ouverture en LENTILLE (ellipse)
