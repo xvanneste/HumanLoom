@@ -66,7 +66,7 @@ Légende : **N** = natif HumanLoom (dans l'addon livré) ; **B** = fait avec Ble
 2. La qualité de l'environnement dépendra de ce qu'on peut construire sans assets tiers redistribués ; ce n'est pas une fonctionnalité de HumanLoom.
 3. Le fichier .blend du test contiendra des animations de la bibliothèque locale de l'utilisateur : il **ne sera pas commité** (D-27, `.gitignore`).
 4. La physique textile et l'éclaboussure sont des pistes **à mesurer**, pas des promesses.
-5. Les visages animés (expressions) ne sont pas indispensables à ce test : les gros plans de la caméra D se feront avec le visage neutre si le lot facial n'est pas livré, ce qui sera indiqué.
+5. **(Révisé 2026-11-23, utilisateur)** L'**animation du visage et de la bouche fait partie du court métrage** : les lots visage (dents/langue/gencives, expressions écrites par nous D-34, « Apply Facial Rig », parole/ouverture de mâchoire via l'os `jaw`) deviennent un prérequis du test final et ne passent plus après lui. Les gros plans de la caméra D, les personnages qui discutent et ceux qui sourient/parlent s'appuient dessus. L'ouverture de bouche (os `jaw`) est validée à l'œil par l'utilisateur.
 
 ---
 

@@ -44,7 +44,7 @@ FINGER_NAMES = ("thumb", "index", "middle", "ring", "pinky")
 
 def derive(rename, prefix="", scale=1.0, offset=(0.0, 0.0, 0.0), extra=None, shuffle=None, flip_x=False, noise=0.0, x_scale=1.0):
     """Squelette source : `rename(nom_cible) -> nom_source | None` ; parent = plus proche ancêtre conservé ; retourne (Skeleton, vérité {cible: source})."""
-    kept = {b["name"]: rename(b["name"]) for b in table}
+    kept = {b["name"]: rename(b["name"]) for b in table if b["name"] != skeleton.JAW}  # les bibliothèques de corps n'ont pas de mâchoire
     kept = {k: (prefix + v) for k, v in kept.items() if v}
     def kept_parent(name):
         parent = by_name[name]["parent"]

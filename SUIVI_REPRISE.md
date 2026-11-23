@@ -444,3 +444,9 @@ Mesuré sur les 30 mêmes actions : absolu 3,88 % / 7,67 %, delta 4,56 / 9,97, *
 
 ### F0-f. Dents, langue, gencives : NON RÉALISÉ (2026-11-23)
 Seuls `CONCEPTION_F0_DENTS.md` et `extension/data/dental_reference.json` existent : 3 valeurs publiées rapportées par recherche (à vérifier dans l'article), tout le reste « non vérifié ». Aucun objet, os `jaw`, poids, validateur ni planche. Reste : lire les tables sources, poser les repères de bouche, créer la fente buccale (liée à I-49), générer, peser, tester.
+
+### F0-f/h. Chantier bouche : étape 1 (2026-11-23, après le commit 3126048)
+`CONCEPTION_F0_BOUCHE.md` : la cage native a déjà une cavité buccale fermée derrière les lèvres (planches de visualisation par `scratchpad/mouth_view.py`, non versionnées) ; corrige « pas de cavité ». Rien dans les données n'est modifié. Reste : mesure par sommets de la fente/cavité sur 3 morphologies, vérification des repliements I-49 (lèvres interpénétrées ?), os `jaw` + poids, planche bouche ouverte/fermée à valider, puis dents ; ouverture maximale de bouche : donnée publiée non lue (non vérifié).
+
+### F0-f. Dents, gencives, langue : réalisé (2026-11-23, sans commit)
+`extension/animation/dental.py` (3 objets procéduraux sous le rig : dents hautes/head, dents basses et langue/jaw), `dental_reference.json` v3 (publié Alsahli 2025 pour incisives/canines supérieures ; bloc « provisoires » non vérifié pour le reste), `tools/validate_dental.py` (D1-D9), `tools/render_dental_board.py`, `tools/render_mouth_board.py` (dents). Intégration : `skeleton.install/remove/update(dental=True)`. Limites : voir `CONCEPTION_F0_DENTS.md` §5 (coins de bouche en « rails », dents hautes libres sous le palais, formes génériques, langue rigide, paramètres provisoires, update rapide sans dents).

@@ -92,7 +92,7 @@ try:
     refused = False
 except ValueError:
     refused = True
-check("R1_statuts_installation", state0 == skeleton.NOT_INSTALLED and state1 == skeleton.INSTALLED and refused and len(armature.data.bones) == len(names) == 80
+check("R1_statuts_installation", state0 == skeleton.NOT_INSTALLED and state1 == skeleton.INSTALLED and refused and len(armature.data.bones) == len(names) == 81
       and armature.parent == body and len(skeleton.rigs_of(body)) == 1,
       {"avant": state0, "après": state1, "problèmes": problems1, "double_installation_refusée": refused, "os": len(armature.data.bones)})
 modifier_index = [m.name for m in body.modifiers]
@@ -270,7 +270,7 @@ print("REOUVERTURE", ok, len(bodies), len(armatures), [len(a.data.bones) for a i
 ''', encoding="utf-8")
     run = subprocess.run([bpy.app.binary_path, "--background", "--factory-startup", "--offline-mode", str(path), "--python", str(probe)], capture_output=True, text=True, timeout=300)
     line = next((l for l in run.stdout.splitlines() if l.startswith("REOUVERTURE")), "")
-    check("R10_reouverture_sans_l_extension", "True 2 2 [80, 80]" in line and "extension_active False" in line, line)
+    check("R10_reouverture_sans_l_extension", "True 2 2 [81, 81]" in line and "extension_active False" in line, line)
 finally:
     shutil.rmtree(work, ignore_errors=True)
 clone_armature_data, clone_armature_object = clone_rigs[0].data.name, clone_rigs[0].name
@@ -279,7 +279,7 @@ residue = {"armatures_du_corps": len(skeleton.rigs_of(clone)), "modificateur": c
            "groupes": sum(1 for g in clone.vertex_groups if g.name in set(skeleton.bone_names())), "donnees_d_armature_restantes": int(clone_armature_data in bpy.data.armatures.keys()),
            "objets_armature_restants": int(clone_armature_object in bpy.data.objects.keys())}
 other_groups = [g.name for g in clone.vertex_groups]
-check("R11_retrait_sans_residu", removed == 1 + 79 + 1 and not any(residue.values()) and skeleton.status(clone)[0] == skeleton.NOT_INSTALLED and skeleton.status(body)[0] == skeleton.INSTALLED and len(skeleton.rigs_of(body)) == 1,
+check("R11_retrait_sans_residu", removed == 1 + 80 + 1 + 3 and not any(residue.values()) and skeleton.status(clone)[0] == skeleton.NOT_INSTALLED and skeleton.status(body)[0] == skeleton.INSTALLED and len(skeleton.rigs_of(body)) == 1,
       {"retirés": removed, "résidu": residue, "groupes_restants": other_groups[:5], "l_original_intact": skeleton.status(body)[0]})
 
 # --- interface : panneau et opérateurs ------------------------------------------------------------------------------------------------------------------
@@ -353,6 +353,55 @@ check("R15_echec_net_des_poids_recalcules", failed_cleanly and not skeleton.rigs
       {"refus_net": failed_cleanly, "armature": len(skeleton.rigs_of(body)), "groupes_laissés": len([g for g in body.vertex_groups if g.name in set(skeleton.bone_names())])})
 skeleton.install(body)  # les poids stockés fonctionnent sur la même morphologie
 check("R15b_poids_stockes_sur_la_meme_morphologie", skeleton.status(body)[0] == skeleton.INSTALLED)
+
+# --- mâchoire (lot F0) : os `jaw` sous `head`, ouverture mesurée sur 3 morphologies (mesures de NOTRE modèle, aucune valeur publiée) -------------------------------------------
+import math  # noqa: E402
+
+
+def cage_with_rig(target):
+    saved = [(m, m.show_viewport) for m in target.modifiers]
+    for m in target.modifiers:
+        m.show_viewport = m.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME)
+    human.touch(target)
+    bpy.context.view_layer.update()
+    evaluated = target.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    eval_mesh = evaluated.to_mesh()
+    buffer = np.empty(len(eval_mesh.vertices) * 3, np.float32)
+    eval_mesh.vertices.foreach_get("co", buffer)
+    evaluated.to_mesh_clear()
+    for m, state in saved:
+        m.show_viewport = state
+    return buffer.reshape(-1, 3).astype(np.float64)
+
+
+jaw_rows = {}
+for label, values in (("neutre", {}), ("femme_jeune", {"sex": 1.0, "age": 1.0}), ("homme_age", {"sex": 0.0, "age": 3.0})):
+    body = new_body(**values)
+    rig = skeleton.install(body)
+    bone = rig.data.bones.get(skeleton.JAW)
+    group = body.vertex_groups.get(skeleton.JAW)
+    jaw_vertices = [v.index for v in body.data.vertices if any(g.group == group.index and g.weight > 0 for g in v.groups)]
+    closed = cage_with_rig(body)
+    pose = rig.pose.bones[skeleton.JAW]
+    pose.rotation_mode = "XYZ"
+    drops = {}
+    for sign in (1.0, -1.0):
+        pose.rotation_euler = (sign * math.radians(20), 0, 0)
+        trial = cage_with_rig(body)
+        drops[sign] = (closed[skeleton.JAW_CHIN, 2] - trial[skeleton.JAW_CHIN, 2], trial)
+    sign = max(drops, key=lambda k: drops[k][0])
+    drop, opened = drops[sign]
+    a, b = skeleton.JAW_SLIT
+    triangles = np.array([p.vertices[:3] for p in body.data.polygons])
+    flip = int(((np.cross(closed[triangles[:, 1]] - closed[triangles[:, 0]], closed[triangles[:, 2]] - closed[triangles[:, 0]])
+                 * np.cross(opened[triangles[:, 1]] - opened[triangles[:, 0]], opened[triangles[:, 2]] - opened[triangles[:, 0]])).sum(1) < 0).sum())
+    pose.rotation_euler = (0, 0, 0)
+    at_rest = cage_with_rig(body)
+    jaw_rows[label] = {"parent": bone.parent.name if bone.parent else None, "sommets_pondérés": len(jaw_vertices), "menton_descend_mm": round(float(drop) * 1000, 1),
+                       "fente_ouverte_mm": round(float(np.linalg.norm(opened[a] - opened[b])) * 1000, 1), "fente_fermée_mm": round(float(np.linalg.norm(closed[a] - closed[b])) * 1000, 1),
+                       "triangles_retournés": flip, "retour_au_repos_mm": round(float(np.abs(at_rest - closed).max()) * 1000, 4)}
+check("J1_machoire_ouverture", all(r["parent"] == "head" and r["sommets_pondérés"] >= 500 and 20 <= r["menton_descend_mm"] <= 35 and r["fente_ouverte_mm"] >= 25
+                                   and r["triangles_retournés"] <= 40 and r["retour_au_repos_mm"] < 1e-3 for r in jaw_rows.values()), jaw_rows)
 
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False), encoding="utf-8")

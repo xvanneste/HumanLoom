@@ -1,0 +1,21 @@
+{
+  "format": "humanloom.face_reference",
+  "version": 1,
+  "avertissement": "Références de visage pour les lots paupières et expressions. AUCUNE valeur n'a été lue dans un texte intégral : les lignes « rapporté par une recherche » viennent de résumés de résultats de recherche et NE DOIVENT PAS être utilisées pour régler des amplitudes avant lecture de l'article.",
+  "valeurs": {
+    "fente_palpebrale_hauteur_adultes_mm": {
+      "valeurs_rapportees": {"population_australienne_adultes": 8.7, "population_australienne_hommes": 9.0, "population_australienne_femmes": 8.5, "population_turque": "9,7 à 9,9", "population_coreenne": "8,0 à 8,2", "sud_indiens_hommes": 11.3, "sud_indiens_femmes": 11.6},
+      "source": "résultats de recherche web (articles PMC10371930, PMC5586704, PMC3562989, PMC3482776 ; l'article australien exact n'est pas identifié) : non lus",
+      "statut": "rapporté par une recherche, à vérifier : non utilisé",
+      "note": "la hauteur diminue avec l'âge d'après le résumé ; varie selon la population"
+    },
+    "fente_palpebrale_largeur_adultes_mm": {
+      "valeurs_rapportees": {"sud_indiens_hommes": 31.1, "sud_indiens_femmes": 29.9},
+      "source": "idem (étude sur des adultes sud-indiens de 18 à 26 ans, photographies de face)",
+      "statut": "rapporté par une recherche, à vérifier : non utilisé"
+    },
+    "epaisseur_de_la_paupiere": {"valeur": null, "source": "recherche sans résultat", "statut": "non vérifié"},
+    "ecart_entre_le_globe_et_la_paupiere": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
+    "amplitudes_d_expression": {"valeur": null, "source": "à chercher avant chaque lot de commandes", "statut": "non vérifié"}
+  }
+}

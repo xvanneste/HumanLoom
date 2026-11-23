@@ -10,6 +10,7 @@ Ce guide couvre, dans l'ordre : installer l'extension, créer un humain, poser l
 ## 2. Créer un humain et poser le squelette
 - **Ajouter ▸ Maillage ▸ Humain** (ou le bouton du panneau Humain). Réglez la morphologie dans la barre latérale (touche N, onglet Humain).
 - Panneau **Squelette du corps** → **Appliquer le squelette** : choisir les poids de peau, **stockés** (instantané, reproductible) ou **recalculés** sur la morphologie actuelle (quelques secondes ; peut échouer sur une morphologie dont la cage se recoupe, un message l'indique et rien n'est créé).
+- La mâchoire est l'os `jaw` (enfant de `head`) : les lèvres du bas, le menton et le plancher de la bouche la suivent ; la bouche s'ouvre en tournant `jaw` autour de l'axe X (20° ≈ 3 cm de fente sur nos modèles : mesure de notre modèle, pas une donnée clinique). Le squelette crée aussi dents, gencives et langue (procédurales, adaptées à l'âge et au sexe ; seules les largeurs/longueurs des incisives et canines supérieures sont des données publiées, le reste est provisoire). Elles sont mises à jour avec le squelette et retirées avec lui.
 - Statuts : *Non installé*, *Installé*, *Obsolète* (la morphologie a changé : **Mettre à jour le squelette** repose les os sans toucher aux poids ni aux animations), *À configurer* (rig incomplet ou en double). **Retirer le squelette** supprime armature, groupes de poids et modificateur. Les yeux suivent l'os `head`.
 - Dupliquer l'humain copie son squelette.
 

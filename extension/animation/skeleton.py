@@ -27,6 +27,11 @@ VERSION = 1
 DATA = Path(__file__).resolve().parent.parent / "data"
 ANCHORS_FILE = DATA / "human_rig_anchors.json"
 WEIGHTS_FILE = DATA / "human_rig_weights.npz"
+JAW = "jaw"  # os de la mâchoire (enfant de `head`) : poids propres dans `human_jaw_weights.npz` (règle géométrique, `tools/build_human_jaw.py`), appliqués par-dessus les poids stockés
+JAW_FILE = DATA / "human_jaw_weights.npz"
+JAW_SLIT = (7986, 8004)  # sommets (lèvre basse, lèvre haute) de la fente labiale sur la ligne médiane : la topologie est fixe, donc les indices valent pour toute morphologie
+JAW_CHIN = 7977  # pointe du menton (gnathion) sur la ligne médiane
+JAW_HINGE = (0.55, 0.30)  # PROVISOIRE (non vérifié, pas de donnée publiée lue) : profondeur de l'axe de la mâchoire (fraction de la profondeur de la tête) et hauteur au-dessus de la fente (fraction de la distance fente-sommet du crâne)
 NON_DEFORMING = ("root",)  # os de contrôle sans poids : `root` (origine au sol, porte le déplacement global ; gestionnaire de root motion, lot A3)
 MODIFIER_NAME = "HL Rig"
 ARMATURE_NAME = "HL Rig"
@@ -82,6 +87,12 @@ def joints(points, data):
     j["root_head"] = np.array([0.0, j["P0"][1], zmin])  # au sol, sous le bassin
     j["root_tail"] = j["root_head"] + np.array([0.0, -0.06 * stature, 0.0])
     j["head_base"], j["head_top"] = a["head_base"], a["head_top"]
+    if len(points) > max(JAW_SLIT + (JAW_CHIN,)):  # (la table fictive de `bone_names` n'a pas de géométrie)
+        slit_z = float((points[JAW_SLIT[0], 2] + points[JAW_SLIT[1], 2]) / 2)
+        head_zone = points[:, 2] > zmax - 0.15 * stature
+        y_min, y_max = float(points[head_zone, 1].min()), float(points[head_zone, 1].max())
+        j["jaw_hinge"] = np.array([0.0, y_min + JAW_HINGE[0] * (y_max - y_min), slit_z + JAW_HINGE[1] * (zmax - slit_z)])
+        j["jaw_tip"] = np.array([0.0, points[JAW_CHIN, 1], points[JAW_CHIN, 2]])
     j["neck_mid"] = _lerp(a["neck_base"], a["head_base"], 0.5)
     for side, sign in (("L", 1.0), ("R", -1.0)):
         s = f".{side}"
@@ -144,6 +155,7 @@ def bone_table(j):
     bone("neck.01", "spine.05", "P6", "neck_mid")
     bone("neck.02", "neck.01", "neck_mid", "head_base")
     bone("head", "neck.02", "head_base", "head_top")
+    bone(JAW, "head", "jaw_hinge", "jaw_tip")
     for side in ("L", "R"):
         s = f".{side}"
         bone("clavicle" + s, "spine.05", "clav_head" + s, "shoulder" + s)
@@ -338,6 +350,7 @@ def recompute_weights(body, table):
     """Poids par la liaison automatique de Blender (chaleur) sur la cage ACTUELLE et les os de `table` (torsions exclues puis réparties par une rampe en chapeau), 4 influences au plus.
     Retourne (noms, idx (N, 4), w (N, 4))."""
     points = cage_points(body)
+    table = [entry for entry in table if entry["name"] != JAW]  # la mâchoire n'entre pas dans la liaison automatique : ses poids viennent de `human_jaw_weights.npz`
     names = [entry["name"] for entry in table]
     index = {n: i for i, n in enumerate(names)}
     mesh = body.data
@@ -424,6 +437,8 @@ def install(body, method=STORED):
         armature[FINGERPRINT] = fingerprint(body)
         attach_eyes(body, armature)
         _apply_weights(body, [entry["name"] for entry in table], computed)
+        from . import dental  # dents, gencives, langue : rattachés à head et jaw (lot F0-f)
+        dental.install(body, armature)
         armature["hl_rig_weights"] = method
         modifier = body.modifiers.new(MODIFIER_NAME, "ARMATURE")
         modifier.object = armature
@@ -435,24 +450,52 @@ def install(body, method=STORED):
 def _apply_weights(body, names, computed=None):
     weights = {"names": computed[0], "idx": computed[1], "w": computed[2]} if computed else np.load(WEIGHTS_FILE, allow_pickle=False)
     stored = [str(n) for n in weights["names"]]
-    if stored != names:
+    if stored != [n for n in names if n != JAW]:
         raise ValueError("Les poids stockés ne correspondent pas à la table d'os (régénérer avec tools/build_human_rig.py).")
-    groups = [None if name in NON_DEFORMING else (body.vertex_groups.get(name) or body.vertex_groups.new(name=name)) for name in names]
+    groups = [None if name in NON_DEFORMING else (body.vertex_groups.get(name) or body.vertex_groups.new(name=name)) for name in stored]
     indices, values = weights["idx"], weights["w"]
     for vertex in range(len(indices)):
         for slot in range(indices.shape[1]):
             weight = float(values[vertex, slot])
             if weight > 0.0:
                 groups[int(indices[vertex, slot])].add([vertex], weight, "REPLACE")
+    if JAW in names:
+        _apply_jaw_weights(body)
 
 
-def update(body):
-    """Repose les os d'après la morphologie actuelle : poids et actions conservés (les repères sont définis par règle)."""
+def _apply_jaw_weights(body):
+    """Mâchoire : chaque sommet de la zone donne au groupe `jaw` la part `w` de son poids sur `head` (jamais plus : ce qui suit le cou reste sur le cou, la torsion du cou
+    n'est pas changée). Au plus 4 influences : si le sommet en aurait 5, la plus faible (hors tête et mâchoire) est reversée sur la tête."""
+    data = np.load(JAW_FILE, allow_pickle=False)
+    group = body.vertex_groups.get(JAW) or body.vertex_groups.new(name=JAW)
+    head = body.vertex_groups["head"]
+    mesh = body.data
+    for vertex, weight in zip(data["idx"].tolist(), data["w"].tolist()):
+        current = {g.group: g.weight for g in mesh.vertices[vertex].groups}
+        share = current.get(head.index, 0.0)
+        moved = min(weight, share)
+        if moved <= 0.0:
+            continue
+        if len(current) >= 4 and group.index not in current:
+            others = [k for k in current if k not in (head.index, group.index)]
+            if others:
+                weakest = min(others, key=lambda k: current[k])
+                head.add([vertex], share + current[weakest], "REPLACE")
+                body.vertex_groups[weakest].remove([vertex])
+                share += current[weakest]
+        head.add([vertex], share - moved, "REPLACE")
+        group.add([vertex], moved, "REPLACE")
+
+
+def update(body, dental=False):
+    """Repose les os d'après la morphologie actuelle : poids et actions conservés (les repères sont définis par règle). `dental=True` régénère aussi dents, gencives et langue (l'ajustement
+    dans la cavité coûte de 0,2 à 3 s : l'interface le demande, le chemin rapide de la seule repose des os ne le fait pas ; sans régénération les dents gardent leur ancienne place)."""
     rigs = rigs_of(body)
     if len(rigs) != 1:
         raise ValueError("Aucun rig (ou plusieurs) : rien à mettre à jour.")
     armature = rigs[0]
-    table = bone_table(joints(cage_points(body), load_anchors()))
+    points = cage_points(body)
+    table = bone_table(joints(points, load_anchors()))
     with _Context():
         bpy.context.view_layer.objects.active = armature
         armature.select_set(True)
@@ -461,6 +504,9 @@ def update(body):
         bpy.ops.object.mode_set(mode="OBJECT")
     armature[FINGERPRINT] = fingerprint(body)
     attach_eyes(body, armature)
+    if dental:
+        from . import dental as dental_module
+        dental_module.update(body, armature, points)
     return armature
 
 
@@ -468,6 +514,8 @@ def remove(body):
     """Retire armature, groupes de poids de nos os et modificateur ; ne touche à aucun autre groupe ni modificateur. Retourne le nombre d'éléments retirés."""
     removed = 0
     detach_eyes(body)
+    from . import dental
+    removed += dental.remove(body)
     modifier = body.modifiers.get(MODIFIER_NAME)
     if modifier is not None and modifier.type == "ARMATURE":
         body.modifiers.remove(modifier)

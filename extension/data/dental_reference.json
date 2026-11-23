@@ -1,7 +1,7 @@
 {
   "format": "humanloom.dental_reference",
-  "version": 2,
-  "avertissement": "Valeurs de référence anthropométriques pour la future conception des dents (lot F0-f). Aucune valeur n'est présentée comme calibrée cliniquement. Une seule source a été lue dans le texte intégral (Alsahli 2025, population koweïtienne) : ses valeurs sont à utiliser avec prudence (une seule population, modèles 3D en résine). Tout ce qui est « non vérifié » NE DOIT PAS être utilisé.",
+  "version": 3,
+  "avertissement": "Valeurs de référence anthropométriques pour la future conception des dents (lot F0-f). Aucune valeur n'est présentée comme calibrée cliniquement. Une seule source a été lue dans le texte intégral (Alsahli 2025, population koweïtienne) : ses valeurs sont à utiliser avec prudence (une seule population, modèles 3D en résine). Tout ce qui est « non vérifié » NE DOIT PAS être utilisé. Le bloc « provisoires » contient les paramètres NON VÉRIFIÉS utilisés pour modéliser ce que la littérature lue ne couvre pas : ce sont des choix de modélisation de ce projet, signalés comme tels, à remplacer dès qu'une source est lue.",
   "valeurs": {
     "dents_maxillaires_anterieures_adultes": {
       "source": "Alsahli A., Qali M., Baskaradoss J.K., AlOuda D., Alsaeed M., « Maxillary Anterior Teeth Dimensions: A Biometric Analysis in a Kuwaiti Population », Clinical, Cosmetic and Investigational Dentistry 2025;17:539-548, doi:10.2147/CCIDE.S551820 (accès libre, CC BY-NC). Tables 2 et 3 lues dans le texte intégral.",
@@ -9,19 +9,64 @@
       "unite": "mm",
       "statut": "vérifié dans le texte intégral (Table 2 et Table 3). Réserve : le résumé de l'article donne pour les largeurs des écarts-types différents (0,65 / 0,52 / 0,58) de ceux de la Table 2 (0,50 / 0,53 / 0,43) ; les valeurs ci-dessous sont celles des tables.",
       "tous": {
-        "incisive_centrale": {"largeur_moyenne": 8.83, "largeur_ecart_type": 0.50, "longueur_moyenne": 9.83, "longueur_ecart_type": 1.02},
-        "incisive_laterale": {"largeur_moyenne": 6.83, "largeur_ecart_type": 0.53, "longueur_moyenne": 8.00, "longueur_ecart_type": 0.96},
-        "canine": {"largeur_moyenne": 7.76, "largeur_ecart_type": 0.43, "longueur_moyenne": 9.14, "longueur_ecart_type": 1.07}
+        "incisive_centrale": {
+          "largeur_moyenne": 8.83,
+          "largeur_ecart_type": 0.5,
+          "longueur_moyenne": 9.83,
+          "longueur_ecart_type": 1.02
+        },
+        "incisive_laterale": {
+          "largeur_moyenne": 6.83,
+          "largeur_ecart_type": 0.53,
+          "longueur_moyenne": 8.0,
+          "longueur_ecart_type": 0.96
+        },
+        "canine": {
+          "largeur_moyenne": 7.76,
+          "largeur_ecart_type": 0.43,
+          "longueur_moyenne": 9.14,
+          "longueur_ecart_type": 1.07
+        }
       },
       "hommes": {
-        "incisive_centrale": {"largeur_moyenne": 8.94, "largeur_ecart_type": 0.53, "longueur_moyenne": 10.36, "longueur_ecart_type": 1.00},
-        "incisive_laterale": {"largeur_moyenne": 6.90, "largeur_ecart_type": 0.55, "longueur_moyenne": 8.52, "longueur_ecart_type": 0.86},
-        "canine": {"largeur_moyenne": 8.00, "largeur_ecart_type": 0.43, "longueur_moyenne": 9.88, "longueur_ecart_type": 1.07}
+        "incisive_centrale": {
+          "largeur_moyenne": 8.94,
+          "largeur_ecart_type": 0.53,
+          "longueur_moyenne": 10.36,
+          "longueur_ecart_type": 1.0
+        },
+        "incisive_laterale": {
+          "largeur_moyenne": 6.9,
+          "largeur_ecart_type": 0.55,
+          "longueur_moyenne": 8.52,
+          "longueur_ecart_type": 0.86
+        },
+        "canine": {
+          "largeur_moyenne": 8.0,
+          "largeur_ecart_type": 0.43,
+          "longueur_moyenne": 9.88,
+          "longueur_ecart_type": 1.07
+        }
       },
       "femmes": {
-        "incisive_centrale": {"largeur_moyenne": 8.77, "largeur_ecart_type": 0.47, "longueur_moyenne": 9.57, "longueur_ecart_type": 0.94},
-        "incisive_laterale": {"largeur_moyenne": 6.79, "largeur_ecart_type": 0.52, "longueur_moyenne": 7.74, "longueur_ecart_type": 0.91},
-        "canine": {"largeur_moyenne": 7.63, "largeur_ecart_type": 0.37, "longueur_moyenne": 8.78, "longueur_ecart_type": 0.86}
+        "incisive_centrale": {
+          "largeur_moyenne": 8.77,
+          "largeur_ecart_type": 0.47,
+          "longueur_moyenne": 9.57,
+          "longueur_ecart_type": 0.94
+        },
+        "incisive_laterale": {
+          "largeur_moyenne": 6.79,
+          "largeur_ecart_type": 0.52,
+          "longueur_moyenne": 7.74,
+          "longueur_ecart_type": 0.91
+        },
+        "canine": {
+          "largeur_moyenne": 7.63,
+          "largeur_ecart_type": 0.37,
+          "longueur_moyenne": 8.78,
+          "longueur_ecart_type": 0.86
+        }
       }
     },
     "incisive_centrale_maxillaire_largeur_autre_etude": {
@@ -29,11 +74,114 @@
       "source": "PubMed 25858215 (« Biometric analysis of the clinical crown and the width/length ratio in the maxillary anterior region », 2015) : valeurs 8,71 / 6,75 / 7,81 mm (centrale / latérale / canine) rapportées par une recherche web ; la page n'a pas pu être lue (mur de cookies)",
       "statut": "non vérifié : non utilisé"
     },
-    "dents_lacteales_dimensions_coronaires": {"valeur": null, "source": "candidates non lues : étude islandaise (Acta Odontologica Scandinavica), étude taïwanaise (JOCPD 25(2))", "statut": "non vérifié"},
-    "dents_posterieures_et_mandibulaires": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
-    "largeur_arcade_et_distance_intercanine": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
-    "dimensions_de_la_langue_adulte": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
-    "hauteur_gingivale": {"valeur": null, "source": "à chercher", "statut": "non vérifié"},
-    "usure_des_dents_du_senior": {"valeur": null, "source": "à chercher", "statut": "non vérifié"}
+    "dents_lacteales_dimensions_coronaires": {
+      "valeur": null,
+      "source": "candidates non lues : étude islandaise (Acta Odontologica Scandinavica), étude taïwanaise (JOCPD 25(2))",
+      "statut": "non vérifié"
+    },
+    "dents_posterieures_et_mandibulaires": {
+      "valeur": null,
+      "source": "à chercher",
+      "statut": "non vérifié"
+    },
+    "largeur_arcade_et_distance_intercanine": {
+      "valeur": null,
+      "source": "à chercher",
+      "statut": "non vérifié"
+    },
+    "dimensions_de_la_langue_adulte": {
+      "valeur": null,
+      "source": "à chercher",
+      "statut": "non vérifié"
+    },
+    "hauteur_gingivale": {
+      "valeur": null,
+      "source": "à chercher",
+      "statut": "non vérifié"
+    },
+    "usure_des_dents_du_senior": {
+      "valeur": null,
+      "source": "à chercher",
+      "statut": "non vérifié"
+    }
+  },
+  "provisoires": {
+    "statut": "non vérifié (provisoire : choix de modélisation, aucune source lue)",
+    "largeurs_superieures_mm": {
+      "premolaire_1": 7.0,
+      "premolaire_2": 7.0,
+      "molaire_1": 10.0,
+      "molaire_2": 9.5
+    },
+    "largeurs_inferieures_mm": {
+      "incisive_centrale": 5.5,
+      "incisive_laterale": 6.0,
+      "canine": 7.0,
+      "premolaire_1": 7.0,
+      "premolaire_2": 7.5,
+      "molaire_1": 11.0,
+      "molaire_2": 10.5
+    },
+    "hauteurs_couronne_mm": {
+      "premolaire": 7.5,
+      "molaire": 7.0,
+      "facteur_inferieures": 0.85
+    },
+    "epaisseur_vestibulo_linguale_mm": {
+      "incisive_centrale": 7.0,
+      "incisive_laterale": 6.5,
+      "canine": 8.0,
+      "premolaire_1": 9.0,
+      "premolaire_2": 9.0,
+      "molaire_1": 10.5,
+      "molaire_2": 10.0
+    },
+    "dentition_lacteale": {
+      "age_max": 0.5,
+      "facteur_taille": 0.8,
+      "dents_par_cote": [
+        "incisive_centrale",
+        "incisive_laterale",
+        "canine",
+        "molaire_1",
+        "molaire_2"
+      ]
+    },
+    "dentition_adulte_dents_par_cote": [
+      "incisive_centrale",
+      "incisive_laterale",
+      "canine",
+      "premolaire_1",
+      "premolaire_2",
+      "molaire_1",
+      "molaire_2"
+    ],
+    "usure_senior_mm": {
+      "age": 3.0,
+      "perte_de_hauteur_incisives_canines": 1.0
+    },
+    "arcade": {
+      "demi_largeur_derniere_dent_mm_adulte": 27.0,
+      "stature_de_reference_m": 1.665,
+      "recul_arcade_inferieure_mm": 1.5,
+      "retrait_derriere_la_fente_mm": 2.0,
+      "decalage_inferieures_vers_l_arriere_mm": 2.0
+    },
+    "gencive": {
+      "hauteur_au_dessus_de_la_couronne_mm": 8.0,
+      "marge_mm": 1.0
+    },
+    "langue": {
+      "longueur_mm_adulte": 60.0,
+      "epaisseur_mm_adulte": 22.0,
+      "retrait_depuis_la_fente_mm": 8.0,
+      "jeu_sous_le_plan_d_occlusion_mm": 4.0
+    },
+    "fente_dents_mm": 0.3,
+    "exposition_verticale": {
+      "exposition_incisives_hautes_sous_le_bord_labial_mm": 3.0,
+      "recouvrement_vertical_mm": 1.0,
+      "statut": "non vérifié (provisoire) : ordre de grandeur « quelques mm » demandé par la revue, aucune source lue"
+    }
   }
 }

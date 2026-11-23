@@ -13,7 +13,7 @@ def _body(context):
 class HUMANLOOM_OT_rig_install(bpy.types.Operator):
     bl_idname = "humanloom.rig_install"
     bl_label = "Appliquer le squelette"
-    bl_description = "Crée le squelette du corps (80 os, dont `root`) d'après la morphologie actuelle, avec ses poids de peau"
+    bl_description = "Crée le squelette du corps (81 os, dont `root` et la mâchoire `jaw`) d'après la morphologie actuelle, avec ses poids de peau"
     bl_options = {"REGISTER", "UNDO"}
     method: bpy.props.EnumProperty(name="Poids de peau", items=skeleton.WEIGHT_METHODS, default=skeleton.STORED)
 
@@ -49,7 +49,7 @@ class HUMANLOOM_OT_rig_update(bpy.types.Operator):
 
     def execute(self, context):
         try:
-            skeleton.update(_body(context))
+            skeleton.update(_body(context), dental=True)
         except (ValueError, RuntimeError) as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
