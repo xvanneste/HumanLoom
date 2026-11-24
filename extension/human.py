@@ -320,10 +320,10 @@ def _retarget_drivers(owner_id, old, new):
                     target.id = new
 
 
-def duplicate_human(context, body):
+def duplicate_human(context, body, share_mesh=False):
     """Copie complète et indépendante : corps, yeux, repères, cheveux (données, groupes de nœuds et matériaux propres), nouvel UUID."""
     clone = body.copy()
-    clone.data = body.data.copy()
+    clone.data = body.data if share_mesh else body.data.copy()  # `share_mesh` (foule) : le maillage de base et ses couches de morphologie sont partagés ; seules les entrées du modificateur diffèrent
     for collection in body.users_collection:
         collection.objects.link(clone)
     _retarget_drivers(clone, body, clone)

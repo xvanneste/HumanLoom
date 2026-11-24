@@ -440,7 +440,7 @@ def recompute_weights(body, table):
     return names, order.astype(np.int16), chosen.astype(np.float32)
 
 
-def install(body, method=STORED):
+def install(body, method=STORED, weights=True):
     """Crée l'armature enfant du corps, les groupes de poids et le modificateur. Lève ValueError si le corps n'est pas natif ou si un rig existe déjà. `method` : poids stockés (défaut) ou recalculés."""
     state, problems = status(body)
     if state == NEEDS_CONFIGURATION and not rigs_of(body):
@@ -467,7 +467,8 @@ def install(body, method=STORED):
         bpy.ops.object.mode_set(mode="OBJECT")
         armature[FINGERPRINT] = fingerprint(body)
         attach_eyes(body, armature)
-        _apply_weights(body, [entry["name"] for entry in table], computed)
+        if weights:  # `weights=False` : le maillage partagé (foule) porte déjà les groupes et les poids
+            _apply_weights(body, [entry["name"] for entry in table], computed)
         from . import dental  # dents, gencives, langue : rattachés à head et jaw (lot F0-f)
         dental.install(body, armature)
         attach_mouth_driver(body, armature)

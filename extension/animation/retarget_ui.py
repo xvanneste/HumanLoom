@@ -66,7 +66,8 @@ def convert(context, entry, action_name):
     links = {row.target: row.source for row in wm.hl_map_rows if row.source}
     if mapping.duplicates(links):
         raise ValueError("Conflit dans le mapping : une même source sert plusieurs os.")
-    options = retarget.Options(pose_mode=wm.hl_ret_pose, root_motion=wm.hl_ret_root, translation_scale=wm.hl_ret_scale if wm.hl_ret_scale > 0 else None)
+    options = retarget.Options(pose_mode=wm.hl_ret_pose, root_motion=wm.hl_ret_root, translation_scale=wm.hl_ret_scale if wm.hl_ret_scale > 0 else None,
+                               ik_limbs=("arm", "leg") if wm.hl_ret_ik_arms else ("leg",))
     key = retarget.signature(source, links, options, f"{entry['id']}|{action_name}")
     _library, cache = ui.settings(context)
     directory = ui.cache_directory(cache)
@@ -248,6 +249,7 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
         column = layout.column(align=True)
         column.prop(wm, "hl_ret_pose", text="Pose")
         column.prop(wm, "hl_ret_root", text="Root motion")
+        column.prop(wm, "hl_ret_ik_arms", text="IK des bras (contacts mains-objets)")
         column.prop(wm, "hl_ret_speed", text="Vitesse")
         row = column.row(align=True)
         row.prop(wm, "hl_ret_trim_start", text="Début")
@@ -266,7 +268,7 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
 
 
 CLASSES = (HUMANLOOM_OT_animation_apply, HUMANLOOM_OT_animation_publish_favorites, HUMANLOOM_OT_animation_thumbnails, HUMANLOOM_PT_animation_apply)
-WINDOW_PROPERTIES = ("hl_ret_pose", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
+WINDOW_PROPERTIES = ("hl_ret_pose", "hl_ret_ik_arms", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
 
 
 def register():
@@ -281,6 +283,7 @@ def register():
     wm.hl_ret_speed = FloatProperty(name="Vitesse", default=1.0, min=0.1, max=8.0, description="1 = vitesse d'origine ; 2 = deux fois plus rapide")
     wm.hl_ret_trim_start = IntProperty(name="Début", default=0, min=0, description="Première image conservée (0 = début)")
     wm.hl_ret_trim_end = IntProperty(name="Fin", default=0, min=0, description="Dernière image conservée (0 = fin)")
+    wm.hl_ret_ik_arms = BoolProperty(name="IK des bras", default=True, description="Contacts mains-objets (parapluie, téléphone) : les mains sont replacées par IK à la position de celles de la source ; coupé, les bras copient les directions de la source (meilleure fidélité de pose, mains moins exactes)")
     wm.hl_ret_scale = FloatProperty(name="Échelle", default=0.0, min=0.0, description="Échelle des translations du bassin (0 = rapport automatique des hauteurs de bassin)")
 
 
