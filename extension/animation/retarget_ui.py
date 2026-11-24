@@ -275,7 +275,7 @@ def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     wm = bpy.types.WindowManager
-    wm.hl_ret_pose = EnumProperty(name="Mode de pose", items=((retarget.ABSOLUTE_IK, "Absolu + IK des membres", "Directions de la source, puis mains et pieds replacés par IK à 2 os malgré des segments plus courts (mesuré : 2,57 % de la stature en médiane)"),
+    wm.hl_ret_pose = EnumProperty(name="Mode de pose", items=((retarget.ABSOLUTE_IK, "Absolu + IK des jambes", "Directions de la source, puis pieds replacés par IK à 2 os (jambes seules par défaut ; case « IK des bras » pour les contacts mains-objets) ; mesuré : coudes et genoux 1,2 % de la stature en médiane, mains et pieds 0,8 %"),
                                                                 (retarget.ABSOLUTE, "Absolu", "Le personnage reprend les directions monde de la source"),
                                                                 (retarget.DELTA, "Delta", "Rotations relatives au repos de la source")), default=retarget.ABSOLUTE_IK)
     wm.hl_ret_root = EnumProperty(name="Root motion", items=((retarget.KEEP, "Conserver", "Le déplacement reste sur le bassin"), (retarget.IN_PLACE, "Sur place", "Déplacement horizontal retiré"),
@@ -283,7 +283,7 @@ def register():
     wm.hl_ret_speed = FloatProperty(name="Vitesse", default=1.0, min=0.1, max=8.0, description="1 = vitesse d'origine ; 2 = deux fois plus rapide")
     wm.hl_ret_trim_start = IntProperty(name="Début", default=0, min=0, description="Première image conservée (0 = début)")
     wm.hl_ret_trim_end = IntProperty(name="Fin", default=0, min=0, description="Dernière image conservée (0 = fin)")
-    wm.hl_ret_ik_arms = BoolProperty(name="IK des bras", default=True, description="Contacts mains-objets (parapluie, téléphone) : les mains sont replacées par IK à la position de celles de la source ; coupé, les bras copient les directions de la source (meilleure fidélité de pose, mains moins exactes)")
+    wm.hl_ret_ik_arms = BoolProperty(name="IK des bras", default=False, description="Contacts mains-objets (parapluie, téléphone) : les mains sont replacées par IK à la position de celles de la source (mesuré : fidélité de pose moins bonne, mains à 2,4 % / 6,9 % contre 0,8 % / 1,8 %) ; décoché (défaut), les bras copient les directions de la source")
     wm.hl_ret_scale = FloatProperty(name="Échelle", default=0.0, min=0.0, description="Échelle des translations du bassin (0 = rapport automatique des hauteurs de bassin)")
 
 

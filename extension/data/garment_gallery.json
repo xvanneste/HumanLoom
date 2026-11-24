@@ -1,0 +1,107 @@
+[
+ {
+  "id": "t_shirt",
+  "label": "T-shirt",
+  "categorie": "Hauts",
+  "couche": "dessous",
+  "vignette": "t_shirt.png"
+ },
+ {
+  "id": "chemise",
+  "label": "Chemise à manches longues",
+  "categorie": "Hauts",
+  "couche": "haut",
+  "vignette": "chemise.png"
+ },
+ {
+  "id": "pull",
+  "label": "Pull",
+  "categorie": "Hauts",
+  "couche": "haut",
+  "vignette": "pull.png"
+ },
+ {
+  "id": "veste",
+  "label": "Veste",
+  "categorie": "Vestes",
+  "couche": "veste",
+  "vignette": "veste.png"
+ },
+ {
+  "id": "manteau",
+  "label": "Manteau court",
+  "categorie": "Vestes",
+  "couche": "manteau",
+  "vignette": "manteau.png"
+ },
+ {
+  "id": "pantalon",
+  "label": "Pantalon",
+  "categorie": "Bas",
+  "couche": "bas",
+  "vignette": "pantalon.png"
+ },
+ {
+  "id": "jean",
+  "label": "Jean",
+  "categorie": "Bas",
+  "couche": "bas",
+  "vignette": "jean.png"
+ },
+ {
+  "id": "short",
+  "label": "Short",
+  "categorie": "Bas",
+  "couche": "bas",
+  "vignette": "short.png"
+ },
+ {
+  "id": "chaussures",
+  "label": "Chaussures",
+  "categorie": "Chaussures",
+  "couche": "chaussures",
+  "vignette": "chaussures.png"
+ },
+ {
+  "id": "bottes",
+  "label": "Bottes",
+  "categorie": "Chaussures",
+  "couche": "chaussures",
+  "vignette": "bottes.png"
+ },
+ {
+  "id": "chaussettes",
+  "label": "Chaussettes",
+  "categorie": "Chaussures",
+  "couche": "chaussettes",
+  "vignette": "chaussettes.png"
+ },
+ {
+  "id": "bonnet",
+  "label": "Bonnet",
+  "categorie": "Couvre-chefs",
+  "couche": "couvre-chef",
+  "vignette": "bonnet.png"
+ },
+ {
+  "id": "casquette",
+  "label": "Casquette (calotte)",
+  "categorie": "Couvre-chefs",
+  "couche": "couvre-chef",
+  "vignette": "casquette.png"
+ },
+ {
+  "id": "echarpe",
+  "label": "Écharpe",
+  "categorie": "Accessoires",
+  "couche": "cou",
+  "vignette": "echarpe.png"
+ },
+ {
+  "id": "gants",
+  "label": "Gants",
+  "categorie": "Accessoires",
+  "couche": "mains",
+  "vignette": "gants.png"
+ }
+]

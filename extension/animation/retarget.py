@@ -63,7 +63,7 @@ class Options:
     pose_mode: str = ABSOLUTE_IK
     root_motion: str = KEEP
     translation_scale: float = None   # None : rapport des hauteurs de bassin (automatique)
-    ik_limbs: tuple = ("arm", "leg")  # membres corrigés par l'IK en mode absolu+IK (« arm » : bras, « leg » : jambes)
+    ik_limbs: tuple = ("leg",)  # membres corrigés par l'IK en mode absolu+IK : défaut « jambes seules » (validé à l'œil le 2026-11-24) ; ajouter « arm » pour les contacts mains-objets
     limb_blend: float = 0.0           # mode absolu+IK : 0 = la main/le pied vise la position de la source mise à l'échelle du BASSIN ; 1 = à l'échelle de la LONGUEUR DU MEMBRE (rapport des longueurs de segments), depuis l'épaule/la hanche
 
 
@@ -321,7 +321,7 @@ def trim_and_speed(result, start=0, end=None, speed=1.0):
     return Result(quat, loc, report)
 
 
-def limb_ik(source, target, mapping, s_world, rotations, positions, scale, local_rest, limb_blend=0.0, ik_limbs=("arm", "leg")):
+def limb_ik(source, target, mapping, s_world, rotations, positions, scale, local_rest, limb_blend=0.0, ik_limbs=("leg",)):
     """Compensation de la longueur des membres (mode `absolu_ik`) : la main ou le pied cible vise la position de celle de la source, relative au bassin et mise à l'échelle
     (`scale`), dans la limite de la portée de NOS segments ; le coude ou le genou garde la direction de pôle de la source. IK analytique à 2 os, vectorisée sur les images ;
     modifie `rotations` (orientations monde du haut et du bas du membre) sur place. Retourne la liste des membres corrigés."""
