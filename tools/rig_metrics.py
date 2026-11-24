@@ -46,6 +46,7 @@ class Region:
                 pairs.setdefault(key, []).append(t)
         adjacent = np.array([v for v in pairs.values() if len(v) == 2])
         self.adjacent = adjacent[self.tri_in[adjacent[:, 0]] & self.tri_in[adjacent[:, 1]]] if len(adjacent) else adjacent
+        self.rest_dots = np.einsum('ij,ij->i', self.rest_n[self.adjacent[:, 0]], self.rest_n[self.adjacent[:, 1]]) if len(self.adjacent) else np.zeros(0)
         self.selection = section_selection(rest, axis_head, axis_unit, pivot, distance)
         self.rest_section = section_area(rest, self.selection) if len(self.selection) >= 8 else None
 
@@ -55,7 +56,7 @@ class Region:
         predicted = np.einsum("tij,tj->ti", tri_rotations, self.rest_n)
         flips = int(((np.einsum("ij,ij->i", n, predicted) < 0) & self.tri_in).sum())
         dots = np.einsum("ij,ij->i", n[self.adjacent[:, 0]], n[self.adjacent[:, 1]])
-        folded = np.unique(self.adjacent[dots < 0.0].ravel())  # plis : deux triangles voisins à plus de 90° l'un de l'autre (dièdre replié)
+        folded = np.unique(self.adjacent[(dots < 0.0) & (self.rest_dots >= 0.0)].ravel())  # plis NOUVEAUX : deux triangles voisins à plus de 90° l'un de l'autre alors qu'ils ne l'étaient pas au repos
         e = self.edges[self.edge_in]
         stretch = float((np.linalg.norm(points[e[:, 0]] - points[e[:, 1]], axis=1) / np.maximum(self.rest_len[self.edge_in], 1e-9)).max())
         row = {"retournees": flips, "etirement_max": round(stretch, 2), "aire_surface": round(float(a[self.tri_in].sum()) / self.rest_surface, 3), "plis": int(len(folded))}
@@ -66,8 +67,8 @@ class Region:
 
 def failures(row):
     out = []
-    if row["retournees"] > THRESHOLDS["retournees_max"]:
-        out.append("retournees")
+    if row["plis"] > THRESHOLDS["retournees_max"]:
+        out.append("plis")  # « retournées » (rotation rigide de l'os dominant) est INFORMATIVE seulement : mal posée à fort angle (CONCEPTION_RIG_CORRECTIFS.md §6)
     if row["etirement_max"] >= THRESHOLDS["etirement_max"]:
         out.append("etirement")
     for key in ("aire_section", "aire_surface"):

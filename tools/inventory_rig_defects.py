@@ -30,7 +30,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 TAG = ARGS[ARGS.index("--tag") + 1] if "--tag" in ARGS else "base"
 ALL = {"defaut": {}, "femme_jeune": {"sex": 1.0, "age": 1.0}, "homme_age": {"sex": 0.0, "age": 3.0}, "gabarit": {"legs": 1.0, "torso": -1.0}, "inverse": {"legs": -1.0, "torso": 1.0}}
 MORPHS = {k: ALL[k] for k in (ARGS[ARGS.index("--morphs") + 1].split(",") if "--morphs" in ARGS else ["defaut", "femme_jeune", "homme_age"])}
-THRESHOLDS = {"aire_min": 0.85, "aire_max": 1.10, "pincement_min": 0.90, "retournees_max": 2, "etirement_max": 3.0}
+THRESHOLDS = {"aire_min": 0.85, "aire_max": 1.10, "pincement_min": 0.90, "retournees_max": 2, "plis_max": 2, "etirement_max": 3.0}
 S = "L"
 addon.register()
 
@@ -145,6 +145,16 @@ def run_morph(label, values):
     f["epaule_frontal"] = dict(sh, angles=[0, 45, 90, 135, 180], pose=lambda a: {f"arm_upper.{S}": rot(2, fr * a)})
     f["epaule_intermediaire"] = dict(sh, angles=[0, 45, 90, 135, 180], pose=lambda a: {f"arm_upper.{S}": euler(sg * a * 0.7071, 0, fr * a * 0.7071)})
     f["epaule_extension"] = dict(sh, angles=[0, 30, 60], pose=lambda a: {f"arm_upper.{S}": rot(0, -sg * a)})
+    clavs = {}
+    for axis_ in (0, 2):
+        for sign_ in (1.0, -1.0):
+            pose({f"clavicle.{S}": rot(axis_, 20 * sign_)})
+            clavs[(axis_, sign_)] = float(world_head(f"arm_upper.{S}")[2])
+    pose({})
+    cax, csg = max(clavs, key=clavs.get)
+    wide = dict(pivot=f"arm_upper.{S}", axis=f"arm_upper.{S}", dist=0.05, R=0.27)  # zone LARGE : inclut le cou, la mâchoire et le trapèze
+    f["epaule_rythme_frontal_zone_large"] = dict(wide, angles=[0, 45, 90, 135, 180], pose=lambda a: {f"arm_upper.{S}": rot(2, fr * a * 2 / 3), f"clavicle.{S}": rot(cax, csg * a / 3)})
+    f["epaule_rythme_sagittal_zone_large"] = dict(wide, angles=[0, 45, 90, 135, 180], pose=lambda a: {f"arm_upper.{S}": rot(0, sg * a * 2 / 3), f"clavicle.{S}": rot(cax, csg * a / 3)})
     f["epaule_rotation_neutre"] = dict(sh, angles=[-60, -30, 0, 30, 60, 90], pose=lambda a: {f"arm_upper.{S}": rot(1, a)}, roll=True)
     f["epaule_rotation_levee90"] = dict(sh, angles=[-60, 0, 60], pose=lambda a: {f"arm_upper.{S}": euler(0, a, fr * 90)})
     # clavicule
@@ -181,6 +191,11 @@ def run_morph(label, values):
     f["tronc_torsion"] = dict(trunk, angles=[-45, -20, 0, 20, 45], pose=lambda a: {"spine.02": rot(1, a / 3), "spine.03": rot(1, a / 3), "spine.04": rot(1, a / 3)})
     f["tronc_inclinaison"] = dict(trunk, angles=[-30, -15, 0, 15, 30], pose=lambda a: {"spine.02": rot(2, a / 3), "spine.03": rot(2, a / 3), "spine.04": rot(2, a / 3)})
 
+    pm = {}
+    for t, tri in enumerate(tris):
+        for k in range(3):
+            pm.setdefault((min(tri[k], tri[(k + 1) % 3]), max(tri[k], tri[(k + 1) % 3])), []).append(t)
+    adjacent_pairs = np.array([v for v in pm.values() if len(v) == 2])
     results = {}
     for name, spec in f.items():
         pivot = head(spec["pivot"])
@@ -190,6 +205,8 @@ def run_morph(label, values):
         sel = section(rest, spec["axis"], spec["pivot"], spec["dist"])
         rest_section = area_of(rest, sel) if len(sel) >= 8 else None
         rest_surface = float(rest_a[tri_in].sum())
+        pair_candidates = adjacent_pairs[tri_in[adjacent_pairs[:, 0]] & tri_in[adjacent_pairs[:, 1]]]
+        rest_dots = np.einsum("ij,ij->i", rest_n[pair_candidates[:, 0]], rest_n[pair_candidates[:, 1]])
         rows = {}
         limb_bins = None
         if spec.get("roll"):
@@ -210,7 +227,9 @@ def run_morph(label, values):
                 if float(n[i] @ (rotations.get(tri_bone[i], np.eye(3)) @ rest_n[i])) < 0.0:
                     flips += 1
             stretch = float((np.linalg.norm(pts[edges[edge_in][:, 0]] - pts[edges[edge_in][:, 1]], axis=1) / np.maximum(rest_len[edge_in], 1e-9)).max())
-            row = {"retournees": flips, "etirement_max": round(stretch, 2), "aire_surface": round(float(a[tri_in].sum()) / rest_surface, 3)}
+            dots = np.einsum("ij,ij->i", n[pair_candidates[:, 0]], n[pair_candidates[:, 1]])
+            plis = int(len(np.unique(pair_candidates[(dots < 0.0) & (rest_dots[...] >= 0.0)].ravel())))  # plis NOUVEAUX : pliés à la pose, pas au repos
+            row = {"retournees": flips, "plis": plis, "etirement_max": round(stretch, 2), "aire_surface": round(float(a[tri_in].sum()) / rest_surface, 3)}
             if rest_section is not None:
                 row["aire_section"] = round(area_of(pts, sel) / rest_section, 3)
             if limb_bins is not None:
@@ -230,8 +249,8 @@ def run_morph(label, values):
         bad = []
         for angle, r in rows.items():
             fails = []
-            if r["retournees"] > THRESHOLDS["retournees_max"]:
-                fails.append("retournees")
+            if r["plis"] > THRESHOLDS["plis_max"]:
+                fails.append("plis")  # « retournées » (rotation rigide de l'os dominant) est mesurée à titre d'INFORMATION seulement : mal posée à fort angle (CONCEPTION_RIG_CORRECTIFS.md §6)
             if r["etirement_max"] >= THRESHOLDS["etirement_max"]:
                 fails.append("etirement")
             for key in ("aire_section", "aire_surface"):

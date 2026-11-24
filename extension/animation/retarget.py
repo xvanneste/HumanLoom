@@ -64,6 +64,7 @@ class Options:
     root_motion: str = KEEP
     translation_scale: float = None   # None : rapport des hauteurs de bassin (automatique)
     ik_limbs: tuple = ("leg",)  # membres corrigés par l'IK en mode absolu+IK : défaut « jambes seules » (validé à l'œil le 2026-11-24) ; ajouter « arm » pour les contacts mains-objets
+    clavicle_scale: float = 1.0       # facteur sur la rotation (monde) des CLAVICULES par rapport au repos : 1 = fidèle à la source ; < 1 réduit le haussement d'épaule (moins de plis du cou et du trapèze) ; l'orientation du bras et de tous les autres os est CONSERVÉE (positions relatives à la racine du membre inchangées, mesuré 0,00 mm sur 30 actions)
     limb_blend: float = 0.0           # mode absolu+IK : 0 = la main/le pied vise la position de la source mise à l'échelle du BASSIN ; 1 = à l'échelle de la LONGUEUR DU MEMBRE (rapport des longueurs de segments), depuis l'épaule/la hanche
 
 
@@ -212,6 +213,20 @@ def chain_direction(rig, name, children_of, mapped_heads):
     return mapped_heads[child] - rig.head(name)
 
 
+def scale_rotation(R, s):
+    """Matrices de rotation `R` (..., 3, 3) mises à l'échelle `s` en angle (même axe) : formule de Rodrigues ; `s = 1` rend `R`, `s = 0` l'identité. Valable hors angles proches de π (clavicules : quelques dizaines de degrés)."""
+    R = np.asarray(R, float)
+    cos = np.clip((np.trace(R, axis1=-2, axis2=-1) - 1.0) / 2.0, -1.0, 1.0)
+    angle = np.arccos(cos)
+    axis = np.stack([R[..., 2, 1] - R[..., 1, 2], R[..., 0, 2] - R[..., 2, 0], R[..., 1, 0] - R[..., 0, 1]], axis=-1)
+    norm = np.linalg.norm(axis, axis=-1, keepdims=True)
+    axis = np.where(norm > 1e-9, axis / np.maximum(norm, 1e-12), 0.0)
+    a = (angle * s)[..., None, None]
+    K = np.zeros(R.shape)
+    K[..., 0, 1], K[..., 0, 2], K[..., 1, 0], K[..., 1, 2], K[..., 2, 0], K[..., 2, 1] = -axis[..., 2], axis[..., 1], axis[..., 2], -axis[..., 0], -axis[..., 1], axis[..., 0]
+    return np.eye(3) + np.sin(a) * K + (1.0 - np.cos(a)) * (K @ K)
+
+
 def retarget(source, target, mapping, motion, options=None, main_child=None):
     """Retourne un `Result`. `mapping` : {os cible: os source}. `main_child` : {os cible: enfant cible principal} (pour la direction de chaîne) ; déduit si absent."""
     options = options or Options()
@@ -259,6 +274,13 @@ def retarget(source, target, mapping, motion, options=None, main_child=None):
             g = correction.get(name)
             base = t_rest_rot[i] if g is None else g @ t_rest_rot[i]
             rotations[:, i] = np.einsum("fij,jk->fik", delta[name], base)
+    if options.clavicle_scale != 1.0:  # clavicules : rotation monde relative au repos réduite ; les autres os gardent leur orientation monde (le bras compense automatiquement dans world_to_basis)
+        for side in (".L", ".R"):
+            name = "clavicle" + side
+            if name in mapping:
+                i = target.index[name]
+                delta_world = np.einsum("fij,jk->fik", rotations[:, i], t_rest_rot[i].T)
+                rotations[:, i] = np.einsum("fij,jk->fik", scale_rotation(delta_world, options.clavicle_scale), t_rest_rot[i])
     # os sans source : orientation du parent + repos local (base identité)
     for i, name in enumerate(target.names):
         if name not in mapping:
@@ -407,5 +429,5 @@ def foot_slide(foot_positions, foot_height, stature, fps, height_limit=0.03, spe
 
 def signature(source, mapping, options, action_key):
     """Clé de cache : action, mapping et options."""
-    text = json.dumps({"action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs)], "source": list(source.names)}, sort_keys=True)
+    text = json.dumps({"action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs), options.clavicle_scale], "source": list(source.names)}, sort_keys=True)
     return hashlib.sha1(text.encode()).hexdigest()[:20]

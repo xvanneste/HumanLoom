@@ -90,6 +90,24 @@ for mode in (retarget.ABSOLUTE, retarget.DELTA, retarget.ABSOLUTE_IK):
     check(f"Q1_circuit_ferme_{mode}", np.median(error) <= 0.1 and error.max() <= 0.5 and position_error.max() <= 0.001,
           {"orientation_mediane_deg": round(float(np.median(error)), 6), "orientation_max_deg": round(float(error.max()), 6), "position_max_mm": round(float(position_error.max()) * 1000, 6)})
 
+# Q1b : clavicule limitée — seule la clavicule change (orientation monde de tous les autres os conservée) ; son angle par rapport au repos est réduit du facteur demandé
+full = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP))
+half = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_scale=0.5))
+world_full, world_half = retarget.forward_kinematics(target, full.loc, full.quat), retarget.forward_kinematics(target, half.loc, half.quat)
+ci = {target.index["clavicle.L"], target.index["clavicle.R"]}
+others = [i for i in range(count) if i not in ci]
+rot_diff = np.abs(world_full[:, others, :3, :3] - world_half[:, others, :3, :3]).max()
+
+
+def angle_to_rest(world, i):
+    delta = np.einsum("fij,jk->fik", world[:, i, :3, :3], target.rest[i][:3, :3].T)
+    return np.degrees(np.arccos(np.clip((np.trace(delta, axis1=-2, axis2=-1) - 1) / 2, -1, 1)))
+
+
+ratio = np.median([np.median(angle_to_rest(world_half, i) / np.maximum(angle_to_rest(world_full, i), 1e-6)) for i in ci])
+check("Q1b_clavicule_limitee", rot_diff < 1e-5 and abs(float(ratio) - 0.5) < 0.02 and retarget.Options().clavicle_scale == 1.0,
+      {"ecart_orientation_monde_autres_os": float(rot_diff), "rapport_angle_clavicule": round(float(ratio), 4), "defaut": retarget.Options().clavicle_scale})
+
 # Q7 : gestionnaire de root motion
 by_mode = {}
 for mode in (retarget.IN_PLACE, retarget.KEEP, retarget.EXTRACT):
