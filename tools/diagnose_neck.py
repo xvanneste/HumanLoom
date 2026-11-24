@@ -37,6 +37,11 @@ POSES = [
     ("rotation_R6_45", [("neck.01", 1, 20 / 45), ("neck.02", 1, 25 / 45)], 45),
 ]
 IMAGE_POSES = ("axiale_60", "flexion_45", "extension_30", "inclinaison_30")
+if "--angles" in ARGS:  # restes avant le court-métrage : rotation axiale et flexion à des angles élevés (ex. --angles 60,70,80), images pour le plus grand
+    values = [int(v) for v in ARGS[ARGS.index("--angles") + 1].split(",")]
+    POSES = [(f"axiale_{v}", [("neck.01", 1, 1 / 3), ("neck.02", 1, 2 / 3)], v) for v in values] + [(f"flexion_{v}", [("neck.01", 0, 1 / 3), ("neck.02", 0, 1 / 3), ("head", 0, 1 / 3)], v) for v in values]
+    IMAGE_POSES = (f"axiale_{max(values)}", f"flexion_{max(values)}")
+VIEWS = (("face", (0, -1, 0)), ("trois_quarts", (0.7, -0.7, 0.2)), ("profil", (1, 0, 0))) if "--angles" in ARGS else (("face", (0, -1, 0)), ("profil", (1, 0, 0)), ("trois_quarts", (0.7, -0.7, 0.2)), ("arriere", (0, 1, 0)))
 addon.register()
 if "--jaw-weights" in ARGS:  # poids de mâchoire de rechange (essais)
     skeleton.JAW_FILE = Path(ARGS[ARGS.index("--jaw-weights") + 1])
@@ -47,7 +52,7 @@ if "--weights" in ARGS:  # poids de rechange (essais) : fichier .npz au format d
 def evaluate_cage(body):
     saved = [(m, m.show_viewport) for m in body.modifiers]
     for m in body.modifiers:
-        m.show_viewport = m.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME)
+        m.show_viewport = m.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME, skeleton.DQS_MODIFIER)
     human.touch(body)
     bpy.context.view_layer.update()
     evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
@@ -161,7 +166,7 @@ for label, values in MORPHOLOGIES.items():
                    "compression_min_cou_tete": round(float(stretch[near_edges].min()), 3), "etirement_max_total": round(float(stretch.max()), 3)}
             rows.setdefault(name, {})["signe_" + ("+" if sign > 0 else "-")] = row
             if IMAGES and name in IMAGE_POSES and sign > 0:
-                for view, direction in (("face", (0, -1, 0)), ("profil", (1, 0, 0)), ("trois_quarts", (0.7, -0.7, 0.2)), ("arriere", (0, 1, 0))):
+                for view, direction in VIEWS:
                     render(points, body, colors, OUT / f"cou_{TAG}_{label}_{name}_{view}.png", direction, centre, 0.42)
             for bone, _a, _f in rotations:
                 rig.pose.bones[bone].rotation_euler = (0, 0, 0)

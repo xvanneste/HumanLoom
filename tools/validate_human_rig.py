@@ -65,7 +65,7 @@ def evaluate_cage(body):
     saved = [(m, m.show_viewport) for m in body.modifiers]
     try:
         for modifier in body.modifiers:
-            modifier.show_viewport = modifier.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME)
+            modifier.show_viewport = modifier.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME, skeleton.DQS_MODIFIER)
         human.touch(body)
         bpy.context.view_layer.update()
         evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
@@ -279,7 +279,7 @@ residue = {"armatures_du_corps": len(skeleton.rigs_of(clone)), "modificateur": c
            "groupes": sum(1 for g in clone.vertex_groups if g.name in set(skeleton.bone_names())), "donnees_d_armature_restantes": int(clone_armature_data in bpy.data.armatures.keys()),
            "objets_armature_restants": int(clone_armature_object in bpy.data.objects.keys())}
 other_groups = [g.name for g in clone.vertex_groups]
-check("R11_retrait_sans_residu", removed == 1 + 80 + 1 + 3 and not any(residue.values()) and skeleton.status(clone)[0] == skeleton.NOT_INSTALLED and skeleton.status(body)[0] == skeleton.INSTALLED and len(skeleton.rigs_of(body)) == 1,
+check("R11_retrait_sans_residu", removed == 1 + 80 + 2 + 2 + 3 and not any(residue.values()) and skeleton.status(clone)[0] == skeleton.NOT_INSTALLED and skeleton.status(body)[0] == skeleton.INSTALLED and len(skeleton.rigs_of(body)) == 1,
       {"retirés": removed, "résidu": residue, "groupes_restants": other_groups[:5], "l_original_intact": skeleton.status(body)[0]})
 
 # --- interface : panneau et opérateurs ------------------------------------------------------------------------------------------------------------------
@@ -378,7 +378,7 @@ import math  # noqa: E402
 def cage_with_rig(target):
     saved = [(m, m.show_viewport) for m in target.modifiers]
     for m in target.modifiers:
-        m.show_viewport = m.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME)
+        m.show_viewport = m.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME, skeleton.DQS_MODIFIER)
     human.touch(target)
     bpy.context.view_layer.update()
     evaluated = target.evaluated_get(bpy.context.evaluated_depsgraph_get())

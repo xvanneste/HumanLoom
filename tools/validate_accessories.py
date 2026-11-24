@@ -86,19 +86,24 @@ check("A2_points_d_attache_sans_penetration", all(d < 0.06 for d in palm.values(
       {"paume_a_la_tete_de_main_m": {k: round(v, 3) for k, v in palm.items()}, "sac_a_dos_sommets_a_l_interieur": inside, "sac_a_dos_distance_min_au_dos_m": round(float(back_gap), 4), "lunettes_a_l_interieur": glasses_inside,
        "lunettes_distance_min_au_visage_m": round(float(glasses_min), 4), "lunettes_centre_a_l_axe_des_yeux_m": round(float(np.linalg.norm(glasses_centre[[0, 2]] - eyes[[0, 2]])), 4)})
 
-# A3 suit l'os
+# A3 suit l'os : la position du téléphone DANS LE REPÈRE DE LA MAIN ne change pas quand le bras tourne (il est décalé de la paume : seul le repère de la main compte)
 phone = placed["telephone"]
-before = world_points(phone).mean(axis=0)
-hand_before = A._hand_frame(rig, "R")[0]
+
+
+def in_hand_frame():
+    bpy.context.view_layer.update()
+    origin, hx, hy, hz = A._hand_frame(rig, "R")
+    return (world_points(phone).mean(axis=0) - origin) @ np.stack([hx, hy, hz], axis=1), origin
+
+
+local_before, hand_before = in_hand_frame()
 rig.pose.bones["arm_upper.R"].rotation_mode = "XYZ"
 rig.pose.bones["arm_upper.R"].rotation_euler = Euler((0.0, 0.0, np.radians(-60.0)))
-bpy.context.view_layer.update()
-after = world_points(phone).mean(axis=0)
-hand_after = A._hand_frame(rig, "R")[0]
-moved_phone, moved_hand = after - before, hand_after - hand_before
+local_after, hand_after = in_hand_frame()
 rig.pose.bones["arm_upper.R"].rotation_euler = (0.0, 0.0, 0.0)
 bpy.context.view_layer.update()
-check("A3_l_accessoire_suit_l_os", float(np.linalg.norm(moved_hand)) > 0.2 and float(np.linalg.norm(moved_phone - moved_hand)) < 0.02, {"deplacement_main_m": round(float(np.linalg.norm(moved_hand)), 3), "ecart_telephone_main_m": round(float(np.linalg.norm(moved_phone - moved_hand)), 4)})
+check("A3_l_accessoire_suit_l_os", float(np.linalg.norm(hand_after - hand_before)) > 0.2 and float(np.linalg.norm(local_after - local_before)) < 0.003,
+      {"deplacement_main_m": round(float(np.linalg.norm(hand_after - hand_before)), 3), "ecart_repere_main_m": round(float(np.linalg.norm(local_after - local_before)), 5)})
 
 # A4 préhension
 A.release_grasp(body, "R")
@@ -174,6 +179,41 @@ ok_ops &= bpy.ops.humanloom.grasp(side="R", pose="ouvrir") == {"FINISHED"} and f
 ok_ops &= bpy.ops.humanloom.grasp(side="R", pose="poignee", amount=1.0) == {"FINISHED"}
 ok_ops &= bpy.ops.humanloom.accessory_remove(piece="sac_a_main") == {"FINISHED"} and not A.accessories_of(body9)
 check("A9_operateurs_et_panneau", ok_ops and hasattr(bpy.types, "HUMANLOOM_PT_accessories"), {"operateurs": ok_ops})
+
+# A10 téléphone : vraie forme avec écran (2 matériaux), pose « à l'oreille » mesurée, retrait propre
+bodyp, rigp = fresh()
+phone = A.add_accessory(bodyp, "telephone")
+two_materials = len(phone.data.materials) == 2 and {p.material_index for p in phone.data.polygons} == {0, 1}
+report = A.pose_phone_ear(bodyp, "R")
+bpy.context.view_layer.update()
+pts = world_points(phone)
+target, head_centre = A.ear_target(bodyp, "R")
+screen_idx = max((p for p in phone.data.polygons if p.material_index == 1), key=lambda p: p.center[2])  # face avant de la plaque d'écran
+screen_normal = np.array((phone.matrix_world.to_3x3() @ screen_idx.normal)[:])
+to_head = head_centre - pts.mean(axis=0)
+to_head /= np.linalg.norm(to_head)
+screen_angle = float(np.degrees(np.arccos(np.clip(screen_normal / np.linalg.norm(screen_normal) @ to_head, -1, 1))))
+check("A10_telephone_ecran_et_oreille", two_materials and report["ecart_mm"] <= 15.0 and report["angle_normale_deg"] <= 45.0 and screen_angle <= 60.0,
+      {"deux_materiaux": two_materials, "ecart_mm": report["ecart_mm"], "angle_normale_deg": report["angle_normale_deg"], "ecran_vers_tete_deg": round(screen_angle, 1), "limites": "écart ≤ 15 mm, normale paume ≤ 45°, écran ≤ 60° de la tête (recherche aléatoire, posture de modélisation non issue de données publiées)"})
+A.remove_accessory(phone)
+A.reset_hand(bodyp, "R")
+
+# A11 parapluie tenu : tige verticale dans le poing (mesures sur le maillage monde)
+bodyu, rigu = fresh()
+rows = {}
+for key in ("parapluie_ferme", "parapluie_ouvert"):
+    umbrella = A.add_accessory(bodyu, key)
+    bpy.context.view_layer.update()
+    up = world_points(umbrella)
+    extent = up.max(axis=0) - up.min(axis=0)
+    rows[key] = {"etendue_m": extent.round(3).tolist()}
+    if key == "parapluie_ferme":
+        rows[key]["vertical"] = bool(extent[2] > 0.8 and extent[0] < 0.10 and extent[1] < 0.10)
+    else:
+        rows[key]["vertical"] = bool(extent[2] > 0.8 and abs(extent[0] - extent[1]) < 0.05)
+    A.remove_accessory(umbrella)
+hand_rest = np.array([float(a) for a in rigu.pose.bones["arm_lower.R"].rotation_euler])
+check("A11_parapluie_tenu_vertical", all(r["vertical"] for r in rows.values()) and float(np.abs(hand_rest).max()) < 1e-6, {**rows, "bras_remis_a_zero": float(np.abs(hand_rest).max()) < 1e-6})
 
 # A8 aucun nom de tiers
 text = (ROOT / "extension" / "accessories.py").read_text(encoding="utf-8")

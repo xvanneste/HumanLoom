@@ -36,6 +36,9 @@ JAW_HINGE = (0.55, 0.30)  # PROVISOIRE (non vérifié, pas de donnée publiée l
 EYE_BONES = ("eye.L", "eye.R")  # os du regard (enfants de `head`) : portent les yeux (objets), sans poids de peau
 NON_DEFORMING = ("root",) + EYE_BONES  # os de contrôle sans poids : `root` (origine au sol, porte le déplacement global ; gestionnaire de root motion, lot A3)
 MODIFIER_NAME = "HL Rig"
+DQS_MODIFIER = "HL Rig DQS"  # second modificateur Armature (quaternions duals, « Preserve Volume ») limité aux membres distaux par un groupe de sommets ; MODIFIER_NAME reste la liaison linéaire (épaules, tronc, cou, tête)
+GROUP_LBS, GROUP_DQS = "HL LBS", "HL DQS"  # masques binaires COMPLÉMENTAIRES : chaque sommet est déformé par un seul des deux modificateurs (la frontière est placée là où les deux méthodes coïncident : poids sur un seul os)
+TWIST_CONSTRAINT = "HL Torsion"
 ARMATURE_NAME = "HL Rig"
 MARKER = "hl_rig"
 FINGERPRINT = "hl_rig_fingerprint"
@@ -473,11 +476,82 @@ def install(body, method=STORED, weights=True):
         dental.install(body, armature)
         attach_mouth_driver(body, armature)
         armature["hl_rig_weights"] = method
+        attach_twist(armature)
         modifier = body.modifiers.new(MODIFIER_NAME, "ARMATURE")
         modifier.object = armature
+        modifier.vertex_group = GROUP_LBS
+        dqs = body.modifiers.new(DQS_MODIFIER, "ARMATURE")
+        dqs.object = armature
+        dqs.use_deform_preserve_volume = True
+        dqs.vertex_group = GROUP_DQS
         body_index = list(body.modifiers).index(body.modifiers[human.MODIFIER_NAME])
-        body.modifiers.move(len(body.modifiers) - 1, body_index + 1)
+        body.modifiers.move(len(body.modifiers) - 2, body_index + 1)
+        body.modifiers.move(len(body.modifiers) - 1, body_index + 2)
     return armature
+
+
+def attach_twist(armature):
+    """Torsion de l'avant-bras : le roulis de la main (pronation / supination) est réparti sur les deux os de torsion de 0 (coude) à 1 (poignet), fractions 1/3 et 2/3 (centres des chapeaux de poids) : copie de la rotation
+    autour de l'axe de l'os (Y), repère local, ordre d'Euler YXZ (torsion d'abord ; l'axe médian X reste dans ±90° pour les flexions du poignet). Règle de modélisation, non issue de données publiées.
+    Pas de contrainte de torsion sur le bras, la cuisse et la jambe : la copie du roulis propre d'un segment qui fléchit de plus de 90° (épaule, hanche, genou) tombe sur l'ambiguïté des angles d'Euler (mesuré : faces
+    retournées par centaines) ; ces segments sont traités par les quaternions duals (voir DQS_MODIFIER)."""
+    for side in ("L", "R"):
+        for number, share in ((1, 1 / 3), (2, 2 / 3)):
+            pose_bone = armature.pose.bones.get(f"arm_lower_twist.0{number}.{side}")
+            if pose_bone is None:
+                continue
+            pose_bone.rotation_mode = "XYZ"
+            for old in [c for c in pose_bone.constraints if c.name == TWIST_CONSTRAINT]:
+                pose_bone.constraints.remove(old)
+            constraint = pose_bone.constraints.new("COPY_ROTATION")
+            constraint.name = TWIST_CONSTRAINT
+            constraint.target, constraint.subtarget = armature, f"hand.{side}"
+            constraint.use_x = constraint.use_z = False
+            constraint.use_y = True
+            constraint.euler_order = "YXZ"
+            constraint.mix_mode = "REPLACE"
+            constraint.target_space = constraint.owner_space = "LOCAL"
+            constraint.influence = share
+
+
+DQS_BASES = ("arm_lower", "hand", "leg_upper", "leg_lower", "foot", "toe", "index", "middle", "ring", "pinky", "thumb")
+
+
+DQS_MIN = 0.0  # part minimale du poids sur les os distaux pour qu'un sommet passe aux quaternions duals (0 : au moins une influence)
+DQS_HIP = True  # la hanche (cuisse) est-elle en quaternions duals ?
+
+
+def in_dqs_zone(name):
+    base = name.split(".")[0]
+    if base == "leg_upper" and not DQS_HIP:
+        return False
+    return base in DQS_BASES or base in ("arm_lower_twist", "leg_upper_twist", "leg_lower_twist")  # PAS le bras : les poids du bras portent une fuite du tronc (spine.03/04 ~7 %), que les quaternions duals gonflent en bosse à l'épaule levée (mesuré, planche)
+
+
+def redistribute_distal(names, idx, w, points, table):
+    """Avant-bras et jambe : à partir de la moitié du segment, la part du poids de l'os de base passe à la torsion 02 (le roulis de la main arrive de l'extrémité distale : un retour du poids sur l'os de base au poignet,
+    qui ne tourne pas, pince la peau). Retourne de nouveaux (idx, w)."""
+    index = {n: i for i, n in enumerate(names)}
+    idx, w = idx.copy(), w.copy()
+    lookup = {entry["name"]: entry for entry in table}
+    for limb in ("arm_lower", "leg_lower"):
+        for side in ("L", "R"):
+            base, tw2 = index.get(f"{limb}.{side}"), index.get(f"{limb}_twist.02.{side}")
+            if base is None or tw2 is None:
+                continue
+            head, tail = np.array(lookup[f"{limb}.{side}"]["head"]), np.array(lookup[f"{limb}.{side}"]["tail"])
+            axis = tail - head
+            t = ((points - head) @ axis) / float(axis @ axis)
+            rows = np.where((t > 0.5) & (t < 1.1) & (idx == base).any(1))[0]
+            for v in rows:
+                slot = int(np.where(idx[v] == base)[0][0])
+                where = np.where(idx[v] == tw2)[0]
+                if len(where):
+                    w[v, where[0]] += w[v, slot]
+                    w[v, slot] = 0.0
+                else:
+                    idx[v, slot] = tw2
+    return idx, w
 
 
 def _apply_weights(body, names, computed=None):
@@ -487,6 +561,13 @@ def _apply_weights(body, names, computed=None):
         raise ValueError("Les poids stockés ne correspondent pas à la table d'os (régénérer avec tools/build_human_rig.py).")
     groups = [None if name in NON_DEFORMING else (body.vertex_groups.get(name) or body.vertex_groups.new(name=name)) for name in stored]
     indices, values = weights["idx"], weights["w"]
+    points = cage_points(body)
+    indices, values = redistribute_distal(stored, indices, values, points, bone_table(real_eye_joints(body, joints(points, load_anchors()))))
+    dqs_slots = np.array([in_dqs_zone(n) for n in stored])
+    member = (np.where(dqs_slots[indices], values, 0.0).sum(1) > max(DQS_MIN, 1e-4))  # sommet déformé par les quaternions duals : au moins une influence distale
+    lbs_group, dqs_group = body.vertex_groups.new(name=GROUP_LBS), body.vertex_groups.new(name=GROUP_DQS)
+    dqs_group.add([int(v) for v in np.where(member)[0]], 1.0, "REPLACE")
+    lbs_group.add([int(v) for v in np.where(~member)[0]], 1.0, "REPLACE")
     for vertex in range(len(indices)):
         for slot in range(indices.shape[1]):
             weight = float(values[vertex, slot])
@@ -763,11 +844,12 @@ def remove(body):
     detach_eyes(body)
     from . import dental
     removed += dental.remove(body)
-    modifier = body.modifiers.get(MODIFIER_NAME)
-    if modifier is not None and modifier.type == "ARMATURE":
-        body.modifiers.remove(modifier)
-        removed += 1
-    names = set(deform_names())
+    for modifier_name in (MODIFIER_NAME, DQS_MODIFIER):
+        modifier = body.modifiers.get(modifier_name)
+        if modifier is not None and modifier.type == "ARMATURE":
+            body.modifiers.remove(modifier)
+            removed += 1
+    names = set(deform_names()) | {GROUP_LBS, GROUP_DQS}
     for group in [g for g in body.vertex_groups if g.name in names]:
         body.vertex_groups.remove(group)
         removed += 1

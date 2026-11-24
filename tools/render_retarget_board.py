@@ -128,7 +128,7 @@ for label, values in (("neutre", {}), ("femme_jeune", {"sex": 1.0, "age": 1.0}),
         bpy.context.view_layer.update()
         saved = [(m, m.show_viewport) for m in body.modifiers]
         for modifier in body.modifiers:
-            modifier.show_viewport = modifier.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME)
+            modifier.show_viewport = modifier.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME, skeleton.DQS_MODIFIER)
         evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
         mesh = evaluated.to_mesh()
         buffer = np.empty(len(mesh.vertices) * 3, np.float32)

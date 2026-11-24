@@ -29,7 +29,7 @@ addon.register()
 def evaluated_points(body):
     saved = [(m, m.show_viewport) for m in body.modifiers]
     for m in body.modifiers:
-        m.show_viewport = m.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME)
+        m.show_viewport = m.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME, skeleton.DQS_MODIFIER)
     human.touch(body)
     bpy.context.view_layer.update()
     mesh = body.evaluated_get(bpy.context.evaluated_depsgraph_get()).to_mesh()

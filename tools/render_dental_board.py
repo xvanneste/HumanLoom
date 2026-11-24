@@ -49,7 +49,7 @@ for label, values in MORPHOLOGIES.items():
     bpy.context.view_layer.update()
     body.display_type = "WIRE"
     for modifier in body.modifiers:  # la cage seulement (le Subsurf alourdit le fil de fer)
-        modifier.show_render = modifier.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME)
+        modifier.show_render = modifier.name in (human.MODIFIER_NAME, skeleton.MODIFIER_NAME, skeleton.DQS_MODIFIER)
     for eye in human.get_eyes(body) if hasattr(human, "get_eyes") else []:
         eye.hide_render = True
     parts = dental.parts_of(body)

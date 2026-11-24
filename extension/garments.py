@@ -140,6 +140,121 @@ def build_mask(state, definition, side_of_vertex):
     return mask
 
 
+def build_masks(state, definition):
+    """(région, cœur, coupes) : `région` = sommets dont l'os dominant relève de la pièce (sans coupe) ; `cœur` = ceux qui respectent aussi les coupes le long des membres et la fenêtre de hauteur ; `coupes` = pour chaque
+    sommet de la région hors du cœur, la liste des coupes à lui appliquer (« z » ou « membre »). Servent à ramener les bords sur le plan de coupe exact (ourlets nets, pas en escalier)."""
+    points, table = state["points"], state["table"]
+    height = points[:, 2].max() - points[:, 2].min()
+    zmin = points[:, 2].min()
+    frac = (points[:, 2] - zmin) / height
+    region = np.zeros(len(points), bool)
+    core = np.zeros(len(points), bool)
+    cuts = {}
+    window = definition.get("z")
+    for v, name in enumerate(state["dominant"]):
+        base = _base_name(name)
+        rule = definition["regles"].get(base, False)
+        if rule is False:
+            continue
+        region[v] = True
+        ok = True
+        info = []
+        if rule is not None:
+            side = name[-2:] if name[-2:] in (".L", ".R") else ""
+            a, b = LIMB_MAIN[base]
+            head = np.array(table[a + side]["head"])
+            axis = np.array(table[b + side]["head"]) - head
+            t = float((points[v] - head) @ axis / float(axis @ axis))
+            if not (rule[0] <= t <= rule[1]):
+                ok = False
+                info.append(["membre", a + side, b + side, float(rule[0]), float(rule[1])])
+        if window is not None and not (window[0] <= frac[v] <= window[1]):
+            ok = False
+            info.append(["z", float(window[0]), float(window[1])])
+        core[v] = ok
+        if info:
+            cuts[v] = info
+    return region, core, cuts
+
+
+def apply_cuts(points, table, used, cuts_by_local):
+    """Positions du corps des sommets `used` avec les coupes appliquées : chaque sommet hors coupe est ramené sur le plan de coupe (verticalement pour « z », le long de l'axe du membre pour « membre »)."""
+    out = points[used].copy()
+    zmin = float(points[:, 2].min())
+    height = float(points[:, 2].max()) - zmin
+    for local, info in cuts_by_local.items():
+        p = out[local]
+        for cut in info:
+            if cut[0] == "z":
+                p[2] = min(max(p[2], zmin + cut[1] * height), zmin + cut[2] * height)
+            else:
+                head = np.array(table[cut[1]]["head"])
+                axis = np.array(table[cut[2]]["head"]) - head
+                length2 = float(axis @ axis)
+                t = float((p - head) @ axis / length2)
+                clamped = min(max(t, cut[3]), cut[4])
+                p = p + axis * (clamped - t)
+        out[local] = p
+    return out
+
+
+def snap_cut_vertices(body, points, cut_points, normals, used, local_cuts, offset):
+    """Positions finales des sommets de la pièce : les sommets intacts sont à `offset` de leur sommet du corps le long de sa normale ; les sommets ramenés sur un plan de coupe sont REPROJETÉS sur la surface du corps (point le
+    plus proche) puis décalés de `offset` le long de la normale de cette face : le bord reste à la bonne distance de la peau, jamais à l'intérieur."""
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    coordinates = points[used] + normals[used] * offset
+    if not local_cuts:
+        return coordinates
+    mesh = body.data
+    mesh.calc_loop_triangles()
+    tree = BVHTree.FromPolygons([Vector(p) for p in points], [t.vertices[:] for t in mesh.loop_triangles])
+    for local in local_cuts:
+        location, normal, _, _ = tree.find_nearest(Vector(cut_points[local]))
+        if location is not None:
+            coordinates[local] = np.array(location[:]) + np.array(normal[:]) * offset
+    return coordinates
+
+
+def boundary_neighbours(polygons, count):
+    """Pour chaque sommet de bord (arête partagée par une seule face), ses deux voisins le long du bord : {sommet: [précédent, suivant]} (bords ouverts : voisin manquant = lui-même)."""
+    edges = {}
+    for poly in polygons:
+        for k in range(len(poly)):
+            a, b = poly[k], poly[(k + 1) % len(poly)]
+            edges.setdefault((min(a, b), max(a, b)), []).append((a, b))
+    adjacency = {}
+    for (a, b), uses in edges.items():
+        if len(uses) == 1:
+            adjacency.setdefault(a, []).append(b)
+            adjacency.setdefault(b, []).append(a)
+    return {v: (n + n)[:2] for v, n in adjacency.items()}
+
+
+def smooth_boundary(coordinates, adjacency, iterations=3, factor=0.35):
+    """Lissage des sommets de bord le long du bord (moyenne de leurs deux voisins) : supprime l'escalier des frontières de région (cou, emmanchures)."""
+    out = coordinates.copy()
+    ids = np.array(list(adjacency))
+    prev = np.array([adjacency[v][0] for v in ids])
+    nxt = np.array([adjacency[v][1] for v in ids])
+    for _ in range(iterations):
+        average = (out[prev] + out[nxt]) / 2.0
+        out[ids] = (1 - factor) * out[ids] + factor * average
+    return out
+
+
+def border_roughness(obj):
+    """Rugosité des bords de la pièce : moyenne (mm) du désaccord de chaque sommet de bord avec ses deux voisins de bord (écart à leur milieu). Plus c'est petit, plus le bord est net. Retourne (mm, nombre de sommets de bord)."""
+    mesh = obj.data
+    polygons = [list(p.vertices) for p in mesh.polygons]
+    adjacency = boundary_neighbours(polygons, len(mesh.vertices))
+    if not adjacency:
+        return 0.0, 0
+    co = np.array([v.co[:] for v in mesh.vertices])
+    gaps = [np.linalg.norm(co[v] - (co[n[0]] + co[n[1]]) / 2.0) for v, n in adjacency.items()]
+    return float(np.mean(gaps)) * 1000.0, len(adjacency)
+
+
 # --- construction -------------------------------------------------------------------------------------------------------------------------------------
 def _material(definition, name):
     material = bpy.data.materials.get("HL " + name) or bpy.data.materials.new("HL " + name)
@@ -164,7 +279,7 @@ def garments_of(body):
     return [c for c in body.children if c.get(MARKER)]
 
 
-def add_garment(body, key, color=None, offset_mm=None):
+def add_garment(body, key, color=None, offset_mm=None, clean_edges=True):
     """Crée la pièce `key` sur `body` (rig installé requis) : retourne l'objet. Une pièce déjà présente est refusée."""
     if key not in GARMENTS:
         raise ValueError("Pièce inconnue : %r" % (key,))
@@ -180,16 +295,24 @@ def add_garment(body, key, color=None, offset_mm=None):
     state = body_state(body)
     if definition.get("robe"):
         return _add_dress(body, key, definition, state)
-    mask = build_mask(state, definition, None)
-    triangles_all = state["triangles"]
+    region, core, cuts = build_masks(state, definition)
     mesh_body = body.data
     polygons = [list(p.vertices) for p in mesh_body.polygons]
-    kept = [p for p in polygons if all(mask[v] for v in p)]
+    if clean_edges:  # faces entièrement dans la région avec au moins un sommet du cœur : leurs sommets hors coupe sont ramenés sur le plan de coupe (ourlet net)
+        kept = [p for p in polygons if all(region[v] for v in p) and any(core[v] for v in p)]
+    else:
+        kept = [p for p in polygons if all(core[v] for v in p)]
     if not kept:
         raise ValueError("La pièce %s ne couvre aucun sommet de ce corps." % key)
     used = sorted({v for p in kept for v in p})
     remap = {v: i for i, v in enumerate(used)}
-    coordinates = state["points"][used] + state["normals"][used] * (definition["decalage_mm"] / 1000.0)
+    local_cuts = {remap[v]: cuts[v] for v in used if v in cuts and not core[v]} if clean_edges else {}
+    cut_points = apply_cuts(state["points"], state["table"], used, local_cuts)
+    coordinates = snap_cut_vertices(body, state["points"], cut_points, state["normals"], used, local_cuts, definition["decalage_mm"] / 1000.0)
+    local_polygons = [[remap[v] for v in p] for p in kept]
+    adjacency = boundary_neighbours(local_polygons, len(used)) if clean_edges else {}
+    if adjacency:
+        coordinates = smooth_boundary(coordinates, adjacency)
     mesh = bpy.data.meshes.new("HL " + key)
     mesh.from_pydata([tuple(c) for c in coordinates], [], [[remap[v] for v in p] for p in kept])
     mesh.update()
@@ -200,7 +323,8 @@ def add_garment(body, key, color=None, offset_mm=None):
         collection.objects.link(obj)
     obj.parent = body
     obj[MARKER] = key
-    obj[PARAMS] = json.dumps({"couleur": list(definition["couleur"]), "decalage_mm": definition["decalage_mm"], "sommets_du_corps": used}, ensure_ascii=False)
+    obj[PARAMS] = json.dumps({"couleur": list(definition["couleur"]), "decalage_mm": definition["decalage_mm"], "sommets_du_corps": used, "coupes": {str(k): v for k, v in local_cuts.items()},
+                              "bord": {str(k): v for k, v in adjacency.items()}}, ensure_ascii=False)
     obj.data.materials.append(_material(definition, key))
     # poids hérités du corps (mêmes os, 4 influences au plus)
     names, idx, w = state["names"], state["idx"], state["w"]
@@ -388,7 +512,13 @@ def update_garment(obj):
     mesh.calc_loop_triangles()
     triangles = np.array([t.vertices[:] for t in mesh.loop_triangles])
     normals = _vertex_normals(points, triangles)
-    coordinates = points[used] + normals[used] * (params["decalage_mm"] / 1000.0)
+    cuts = {int(k): v for k, v in params.get("coupes", {}).items()}
+    table = {b["name"]: b for b in skeleton.bone_table(skeleton.joints(points, skeleton.load_anchors()))} if any(c[0] == "membre" for info in cuts.values() for c in info) else None
+    cut_points = apply_cuts(points, table, used, cuts)
+    coordinates = snap_cut_vertices(body, points, cut_points, normals, used, cuts, params["decalage_mm"] / 1000.0)
+    adjacency = {int(k): v for k, v in params.get("bord", {}).items()}
+    if adjacency:
+        coordinates = smooth_boundary(coordinates, adjacency)
     obj.data.vertices.foreach_set("co", coordinates.astype(np.float32).ravel())
     obj.data.update()
     return len(used)
