@@ -43,7 +43,7 @@ scene.collection.objects.link(camera)
 scene.camera = camera
 camera.rotation_euler = (math.radians(90), 0.0, 0.0)
 # cadrage par catégorie : corps entier pour les hauts/bas, plus serré pour les pieds, les mains et la tête
-FRAMES = {"Hauts": (1.35, 1.12), "Vestes": (1.45, 1.1), "Bas": (1.3, 0.62), "Chaussures": (0.75, 0.2), "Couvre-chefs": (0.55, 1.6), "Accessoires": (0.8, 1.45)}
+FRAMES = {"Hauts": (1.35, 1.12), "Vestes": (1.45, 1.1), "Bas": (1.3, 0.62), "Chaussures": (0.75, 0.2), "Couvre-chefs": (0.55, 1.6), "Accessoires": (0.8, 1.45), "Robes": (1.75, 0.9)}
 index = []
 for key, definition in garments.GARMENTS.items():
     for g in list(garments.garments_of(body)):

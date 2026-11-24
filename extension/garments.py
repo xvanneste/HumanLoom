@@ -6,6 +6,7 @@ POIDS du corps (mêmes os) et un modificateur Armature sur le même squelette ; 
 à `offset_mm` de la peau par construction, quelle que soit la morphologie : `update` ne fait que recalculer les positions (topologie fixe).
 Pièces amples (robe, manteau long) : non couvertes sans simulation de tissu (V4). Aucune coupe n'est un patron de couture : formes schématiques mais propres."""
 import json
+import math
 
 import bmesh
 import bpy
@@ -53,6 +54,18 @@ GARMENTS = {
     "gants": {"label": "Gants", "categorie": "Accessoires", "couche": "mains", "decalage_mm": 4.0, "epaisseur_mm": 1.5, "couleur": (0.10, 0.10, 0.12), "rugosite": 0.6, "matiere": "cuir",
               "regles": {"hand": None, "thumb": None, "index": None, "middle": None, "ring": None, "pinky": None}},
 }
+GARMENTS.update({
+    "robe_courte": {"label": "Robe courte", "categorie": "Robes", "couche": "haut", "decalage_mm": 8.0, "epaisseur_mm": 1.5, "couleur": (0.70, 0.18, 0.28), "rugosite": 0.8, "matiere": "coton",
+                    "robe": {"ourlet": 0.40, "evasement_m": 0.10, "corsage": True}, "regles": {"spine": None, "clavicle": None, "pelvis": None, "leg_upper": None}},
+    "robe_mi_longue": {"label": "Robe mi-longue", "categorie": "Robes", "couche": "haut", "decalage_mm": 8.0, "epaisseur_mm": 1.5, "couleur": (0.20, 0.45, 0.35), "rugosite": 0.8, "matiere": "coton",
+                       "robe": {"ourlet": 0.24, "evasement_m": 0.16, "corsage": True}, "regles": {"spine": None, "clavicle": None, "pelvis": None, "leg_upper": None}},
+    "robe_longue": {"label": "Robe longue", "categorie": "Robes", "couche": "haut", "decalage_mm": 8.0, "epaisseur_mm": 1.5, "couleur": (0.25, 0.20, 0.50), "rugosite": 0.8, "matiere": "coton",
+                    "robe": {"ourlet": 0.08, "evasement_m": 0.22, "corsage": True}, "regles": {"spine": None, "clavicle": None, "pelvis": None, "leg_upper": None}},
+    "jupe": {"label": "Jupe", "categorie": "Robes", "couche": "bas", "decalage_mm": 8.0, "epaisseur_mm": 1.5, "couleur": (0.55, 0.35, 0.20), "rugosite": 0.85, "matiere": "coton",
+             "robe": {"ourlet": 0.30, "evasement_m": 0.12, "corsage": False}, "regles": {}},
+})
+DRESS_RINGS, DRESS_SEGMENTS = 22, 48  # anneaux de la jupe (de la taille à l'ourlet) et sommets par anneau
+BODICE_BONES = ("arm_upper", "arm_lower", "hand", "thumb", "index", "middle", "ring", "pinky")
 LIMB_MAIN = {"arm_upper": ("arm_upper", "arm_lower"), "arm_lower": ("arm_lower", "hand"), "leg_upper": ("leg_upper", "leg_lower"), "leg_lower": ("leg_lower", "foot")}
 
 
@@ -165,6 +178,8 @@ def add_garment(body, key, color=None, offset_mm=None):
     if offset_mm is not None:
         definition["decalage_mm"] = float(offset_mm)
     state = body_state(body)
+    if definition.get("robe"):
+        return _add_dress(body, key, definition, state)
     mask = build_mask(state, definition, None)
     triangles_all = state["triangles"]
     mesh_body = body.data
@@ -221,6 +236,132 @@ def add_garment(body, key, color=None, offset_mm=None):
     return obj
 
 
+def _dress_slice(points, arms, z, half=0.014):
+    """Ellipse qui enveloppe le corps (sans les bras) à la hauteur `z` : centre et demi-axes en x et en y."""
+    mask = (np.abs(points[:, 2] - z) < half) & ~arms
+    if not mask.any():
+        mask = (np.abs(points[:, 2] - z) < 3 * half) & ~arms
+    x, y = points[mask, 0], points[mask, 1]
+    return (x.min() + x.max()) / 2, (y.min() + y.max()) / 2, (x.max() - x.min()) / 2, (y.max() - y.min()) / 2
+
+
+def _add_dress(body, key, definition, state):
+    """Robe ou jupe : CORSAGE = sous-maillage du corps (comme les autres pièces, sans manches), JUPE = anneaux évasés construits autour du corps depuis la taille jusqu'à l'ourlet (ellipse enveloppant les deux
+    jambes à chaque hauteur + aisance qui grandit vers l'ourlet). Poids de peau : ceux du sommet du corps le plus proche (la jupe suit les jambes comme un pantalon si elle n'est pas simulée). Groupe d'épinglage :
+    corsage entier, première rangée de la jupe (poids 1), deuxième et troisième (poids dégressifs) : seul le bas de la jupe est libre pour la simulation de tissu."""
+    params_dress = definition["robe"]
+    points = state["points"]
+    zmin, zmax = float(points[:, 2].min()), float(points[:, 2].max())
+    height = zmax - zmin
+    arms = np.array([_base_name(n) in BODICE_BONES for n in state["dominant"]])
+    # taille : plus petite largeur du tronc entre 58 % et 74 % de la stature
+    candidates = zmin + np.linspace(0.58, 0.74, 17) * height
+    widths = [(_dress_slice(points, arms, z)[2]) for z in candidates]
+    z_waist = float(candidates[int(np.argmin(widths))])
+    z_hem = zmin + params_dress["ourlet"] * height
+    coordinates, faces, weights_from, pin = [], [], [], []
+    used = []
+    offset = definition["decalage_mm"] / 1000.0
+    if params_dress["corsage"]:
+        window = ((z_waist - 0.03 - zmin) / height, 0.85)
+        bodice = dict(definition, regles={"spine": None, "clavicle": None, "pelvis": None, "leg_upper": None}, z=window)
+        mask = build_mask(state, bodice, None)
+        polygons = [list(p.vertices) for p in body.data.polygons]
+        kept = [p for p in polygons if all(mask[v] for v in p)]
+        used = sorted({v for p in kept for v in p})
+        remap = {v: i for i, v in enumerate(used)}
+        coordinates.extend((points[used] + state["normals"][used] * offset).tolist())
+        faces.extend([[remap[v] for v in p] for p in kept])
+        weights_from.extend(used)
+        pin.extend([1.0] * len(used))
+    rings, segments = DRESS_RINGS, DRESS_SEGMENTS
+    stats = []
+    for j in range(rings + 1):
+        stats.append(_dress_slice(points, arms, z_waist + (z_hem - z_waist) * j / rings))
+    stats = np.array(stats)
+    for column in range(4):  # lissage de l'enveloppe le long de la hauteur (3 passes)
+        for _ in range(3):
+            smooth = stats[:, column].copy()
+            smooth[1:-1] = (stats[:-2, column] + 2 * stats[1:-1, column] + stats[2:, column]) / 4
+            stats[:, column] = smooth
+    first = len(coordinates)
+    for j in range(rings + 1):
+        t = j / rings
+        ease = 0.030 + params_dress["evasement_m"] * t ** 0.9  # aisance dès la taille : les cuisses qui avancent doivent trouver de la place (sans elle, la simulation laisse les jambes traverser le tissu)
+        cx, cy, rx, ry = stats[j]
+        z = z_waist + (z_hem - z_waist) * t
+        for k in range(segments):
+            angle = 2 * math.pi * k / segments
+            coordinates.append([cx + (rx + ease) * math.cos(angle), cy + (ry + ease) * math.sin(angle), z])
+            pin.append(1.0 if j == 0 else 0.6 if j == 1 else 0.2 if j == 2 else 0.0)
+    for j in range(rings):
+        for k in range(segments):
+            a, b = first + j * segments + k, first + j * segments + (k + 1) % segments
+            c, d = first + (j + 1) * segments + (k + 1) % segments, first + (j + 1) * segments + k
+            faces.append([a, d, c, b])  # normale vers l'extérieur
+    # garde-fou : aucun sommet de la jupe à moins de 4 mm de la surface du corps au repos (poussée radiale par pas de 2 mm)
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    mesh_body = body.data
+    mesh_body.calc_loop_triangles()
+    tree = BVHTree.FromPolygons([Vector(pt) for pt in points], [t.vertices[:] for t in mesh_body.loop_triangles])
+    for j in range(rings + 1):
+        cx, cy = stats[j][0], stats[j][1]
+        for k in range(segments):
+            index = first + j * segments + k
+            direction = np.array([coordinates[index][0] - cx, coordinates[index][1] - cy, 0.0])
+            direction /= max(np.linalg.norm(direction), 1e-9)
+            for _ in range(30):
+                location, normal, _, distance = tree.find_nearest(Vector(coordinates[index]))
+                inside = location is not None and (Vector(coordinates[index]) - location).dot(normal) < 0
+                if not inside and distance >= 0.004:
+                    break
+                coordinates[index] = (np.array(coordinates[index]) + direction * 0.002).tolist()
+    # poids : sommet du corps le plus proche (hors bras) pour la jupe
+    candidates_body = np.where(~arms)[0]
+    for index in range(first, len(coordinates)):
+        d2 = np.sum((points[candidates_body] - np.array(coordinates[index])) ** 2, axis=1)
+        weights_from.append(int(candidates_body[int(np.argmin(d2))]))
+    mesh = bpy.data.meshes.new("HL " + key)
+    mesh.from_pydata([tuple(c) for c in coordinates], [], faces)
+    mesh.update()
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+    obj = bpy.data.objects.new(definition["label"], mesh)
+    for collection in body.users_collection:
+        collection.objects.link(obj)
+    obj.parent = body
+    obj[MARKER] = key
+    obj[PARAMS] = json.dumps({"couleur": list(definition["couleur"]), "decalage_mm": definition["decalage_mm"], "sommets_du_corps": used, "robe": {"ourlet": params_dress["ourlet"], "evasement_m": params_dress["evasement_m"], "z_taille": z_waist,
+                                                                                                                                               "sommets_jupe": [first, len(coordinates)]}}, ensure_ascii=False)
+    obj.data.materials.append(_material(definition, key))
+    names, idx, w = state["names"], state["idx"], state["w"]
+    group_index = {}
+    for v in set(weights_from):
+        for slot in range(idx.shape[1]):
+            bone = names[int(idx[v, slot])]
+            if w[v, slot] > 0 and bone not in skeleton.NON_DEFORMING and bone not in group_index:
+                group_index[bone] = obj.vertex_groups.new(name=bone).index
+    pin_group = obj.vertex_groups.new(name="Epinglage")
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    deform = bm.verts.layers.deform.verify()
+    bm.verts.ensure_lookup_table()
+    for local, v in enumerate(weights_from):
+        vertex = bm.verts[local]
+        for slot in range(idx.shape[1]):
+            bone = names[int(idx[v, slot])]
+            if w[v, slot] > 0 and bone in group_index:
+                vertex[deform][group_index[bone]] = float(w[v, slot])
+        if pin[local] > 0:
+            vertex[deform][pin_group.index] = float(pin[local])
+    bm.to_mesh(obj.data)
+    bm.free()
+    armature = obj.modifiers.new("Armature", "ARMATURE")
+    armature.object = skeleton.rigs_of(body)[0]
+    return obj
+
+
 def remove_garment(obj):
     mesh = obj.data
     bpy.data.objects.remove(obj, do_unlink=True)
@@ -232,6 +373,15 @@ def update_garment(obj):
     """Recalcule les positions de la pièce d'après la morphologie ACTUELLE (topologie fixe, sommets du corps mémorisés). Retourne le nombre de sommets."""
     body = obj.parent
     params = json.loads(obj[PARAMS])
+    if "robe" in params:  # la jupe n'est pas un sous-maillage du corps : on reconstruit la pièce (même clé, même couleur et même décalage)
+        key, color, offset = obj[MARKER], params["couleur"], params["decalage_mm"]
+        simulated = bool(obj.get("hl_cloth"))
+        remove_garment(obj)
+        rebuilt = add_garment(body, key, color, offset)
+        if simulated:
+            from . import cloth_sim
+            cloth_sim.enable(rebuilt)
+        return len(rebuilt.data.vertices)
     used = np.array(params["sommets_du_corps"])
     points = skeleton.cage_points(body)
     mesh = body.data

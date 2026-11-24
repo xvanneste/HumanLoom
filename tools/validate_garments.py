@@ -69,6 +69,11 @@ for label, values in MORPHOLOGIES.items():
         coordinates = np.array([v.co[:] for v in g.data.vertices])
         finite = bool(np.isfinite(coordinates).all())
         offset = json.loads(g[garments.PARAMS])["decalage_mm"] / 1000.0
+        if garments.GARMENTS[key].get("robe"):  # robes et jupe : jupe construite autour du corps, mesurée par validate_cloth_sim (S1)
+            rows_build.setdefault(key, {})[label] = len(g.data.vertices)
+            if not finite or len(g.data.vertices) < 100:
+                bad.append((label, key, "vide ou non fini"))
+            continue
         used = np.array(json.loads(g[garments.PARAMS])["sommets_du_corps"])
         own = np.linalg.norm(coordinates - points[used], axis=1)  # distance à SA PEAU (sommet du corps correspondant) : le décalage, par construction
         gaps = np.array([tree.find_nearest(Vector(c))[3] for c in coordinates])  # distance à la surface la plus proche (peut être plus courte dans un pli : l'autre bras, le torse)
@@ -78,7 +83,7 @@ for label, values in MORPHOLOGIES.items():
             bad.append((label, key, "vide ou non fini"))
     for g in list(garments.garments_of(body)):
         garments.remove_garment(g)
-check("G1_quinze_pieces_sur_cinq_morphologies", not bad and len(rows_build) == 15 and all(len(v) == 5 for v in rows_build.values()), {"pieces": len(rows_build), "echecs": bad[:4], "sommets_par_piece_defaut": {k: v["defaut"] for k, v in rows_build.items()}})
+check("G1_toutes_les_pieces_sur_cinq_morphologies", not bad and len(rows_build) == len(garments.GARMENTS) and all(len(v) == 5 for v in rows_build.values()), {"pieces": len(rows_build), "echecs": bad[:4], "sommets_par_piece_defaut": {k: v["defaut"] for k, v in rows_build.items()}})
 own_error = max(r[0] for r in rows_distance.values())
 body_pieces = [r for r in rows_distance.values() if r[3] in ("Hauts", "Vestes", "Bas", "Couvre-chefs")]
 close_share = max(r[1] for r in body_pieces)

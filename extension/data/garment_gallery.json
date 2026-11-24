@@ -103,5 +103,33 @@
   "categorie": "Accessoires",
   "couche": "mains",
   "vignette": "gants.png"
+ },
+ {
+  "id": "robe_courte",
+  "label": "Robe courte",
+  "categorie": "Robes",
+  "couche": "haut",
+  "vignette": "robe_courte.png"
+ },
+ {
+  "id": "robe_mi_longue",
+  "label": "Robe mi-longue",
+  "categorie": "Robes",
+  "couche": "haut",
+  "vignette": "robe_mi_longue.png"
+ },
+ {
+  "id": "robe_longue",
+  "label": "Robe longue",
+  "categorie": "Robes",
+  "couche": "haut",
+  "vignette": "robe_longue.png"
+ },
+ {
+  "id": "jupe",
+  "label": "Jupe",
+  "categorie": "Robes",
+  "couche": "bas",
+  "vignette": "jupe.png"
  }
 ]
