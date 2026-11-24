@@ -70,29 +70,41 @@ MERGED_IN_SCHEMA_10 = {"lip_thickness": "lips", "jaw_angle": "jaw"}
 # Commandes de visage ajoutées au groupe de nœuds APRÈS sa génération (tools/build_face_layers.py) : entrées du groupe qui ne viennent pas des clés de forme de l'ancien moteur.
 # `mouth_open` : correctif d'ouverture de bouche, PILOTÉ par la rotation de l'os `jaw` (skeleton.attach_mouth_driver), 0 = fermée, 1 = ouverte à 30°.
 FACE_COMMANDS = ("mouth_open", "brow_up", "brow_down", "brow_inner_up", "smile_L", "smile_R", "cheek_puff", "lip_pucker", "nose_wrinkle", "mouth_down", "blink_L", "blink_R",
-                 "eye_wide", "eye_squint", "brow_together", "upper_lip_raise", "lip_stretch", "lips_press", "chin_raise")
+                 "eye_wide", "eye_squint", "brow_together", "upper_lip_raise", "lip_stretch", "lips_press", "chin_raise", "lower_lip_depress",
+                 "cheek_raise", "nasolabial_deepen", "crows_feet", "smile_pull", "smile_duchenne",
+                 "forehead_wrinkles", "glabella_wrinkles", "nose_bridge_wrinkles", "nostril_flare", "dimpler_L", "dimpler_R")
 # Commandes pilotes (lot visage) : libellés de l'interface (`mouth_open` n'est pas affichée : elle est pilotée par la mâchoire). Amplitudes : voir `extension/data/face_reference.json` et `mesh["hl_face_layers"]`.
 FACE_COMMAND_LABELS = {"brow_up": "Sourcils levés", "brow_down": "Sourcils froncés", "brow_inner_up": "Sourcils : intérieur levé", "smile_L": "Sourire gauche", "smile_R": "Sourire droit",
                        "cheek_puff": "Joues gonflées", "lip_pucker": "Lèvres en avant", "nose_wrinkle": "Nez plissé", "mouth_down": "Commissures abaissées", "blink_L": "Clignement gauche", "blink_R": "Clignement droit",
                        "eye_wide": "Yeux grands ouverts", "eye_squint": "Yeux plissés", "brow_together": "Sourcils rapprochés", "upper_lip_raise": "Lèvre supérieure relevée",
-                       "lip_stretch": "Lèvres étirées", "lips_press": "Lèvres serrées", "chin_raise": "Menton relevé"}
+                       "lip_stretch": "Lèvres étirées", "lips_press": "Lèvres serrées", "chin_raise": "Menton relevé", "lower_lip_depress": "Lèvre inférieure abaissée",
+                       "cheek_raise": "Joues remontées (pommettes)", "nasolabial_deepen": "Sillon naso-génien creusé", "crows_feet": "Pattes d'oie", "smile_pull": "Commissures tirées vers l'oreille", "smile_duchenne": "Sourire (intensité unique)",
+                       "forehead_wrinkles": "Rides du front", "glabella_wrinkles": "Rides entre les sourcils", "nose_bridge_wrinkles": "Plis du nez", "nostril_flare": "Narines dilatées",
+                       "dimpler_L": "Fossette gauche (AU14)", "dimpler_R": "Fossette droite (AU14)"}
 # Expressions prédéfinies : ÉCRITES PAR NOUS (D-34), combinaisons de commandes, non calibrées.
 FACE_PRESETS = {
     "neutre": {},
     # Combinaisons d'AU : Table 3 de Clark et al. 2020 (Front Psychol 11:920, doi:10.3389/fpsyg.2020.00920, règles de correspondance du guide des investigateurs FACS) et Table 1 de Lazzeri et al. 2015 (Front Bioeng
     # Biotechnol 3:64, doi:10.3389/fbioe.2015.00064), LUES via Europe PMC. Les intensités ci-dessous sont NOS choix (artistiques), jamais des intensités FACS.
     # JOIE = 12 ; 6+12
-    "joie": {"smile_L": 1.0, "smile_R": 1.0, "eye_squint": 0.8, "cheek_puff": 0.25},
+    # Sourire de Duchenne : UNE commande maîtresse (courbe progressive commune) = commissures diagonales + joues/pommettes + paupières inférieures relevées + sillon + pattes d'oie (voir tools/build_face_smile.py)
+    "joie": {"smile_duchenne": 1.0},
+    # RIRE = 6+12+25/26 : sourire large, joues remontées, lèvre supérieure relevée, mâchoire entrouverte (dents du bas visibles : la mâchoire les descend avec elle)
+    # SOURIRE LARGE = 12 + 10 + 16 + 25 : sourire franc, lèvre supérieure relevée et lèvre inférieure abaissée, mâchoire à peine entrouverte (dents du haut et du bas visibles)
+    "sourire_large": {"smile_duchenne": 1.0, "upper_lip_raise": 0.4, "lower_lip_depress": 1.0, "_jaw": 7.0},
+    "rire": {"smile_duchenne": 1.0, "eye_squint": 0.4, "upper_lip_raise": 0.6, "lower_lip_depress": 1.0, "_jaw": 12.0},
     # SURPRISE = 1+2+5+26/27
-    "surprise": {"brow_up": 1.0, "brow_inner_up": 0.4, "eye_wide": 1.0, "_jaw": 16.0},
-    # TRISTESSE = 1+4 ; 1+4+11/15 ; 1+4+15+17
-    "tristesse": {"brow_inner_up": 1.0, "brow_down": 0.6, "brow_together": 0.6, "mouth_down": 1.0, "chin_raise": 0.7},
-    # COLÈRE = 4+5+7+23/24 (variantes : +10, +22, +25/26)
-    "colere": {"brow_down": 1.0, "brow_together": 0.8, "eye_wide": 0.7, "eye_squint": 0.5, "lips_press": 1.0},
-    # PEUR = 1+2+4+5+20+25/26/27
-    "peur": {"brow_up": 0.8, "brow_inner_up": 0.8, "brow_down": 0.3, "brow_together": 0.6, "eye_wide": 1.0, "lip_stretch": 1.0, "_jaw": 8.0},
-    # DÉGOÛT = 9/10 ; 9/10+17 ; 9/10+16+25/26 (le AU4 des sourcils vient de la colonne « FACE » de Lazzeri 2015, pas de la règle FACS)
-    "degout": {"nose_wrinkle": 1.0, "upper_lip_raise": 1.0, "chin_raise": 0.6, "brow_down": 0.3},
+    "surprise": {"brow_up": 1.0, "brow_inner_up": 0.4, "eye_wide": 1.0, "forehead_wrinkles": 1.0, "_jaw": 16.0},
+    # TRISTESSE = 1+4+15 (page FACS : « Sadness 1+4+15 ») ; + AU17 (menton), paupières supérieures affaissées et regard légèrement baissé (DESCRIPTIONS_EXPRESSIONS.md)
+    "tristesse": {"brow_inner_up": 1.0, "brow_down": 0.6, "brow_together": 0.6, "forehead_wrinkles": 0.4, "glabella_wrinkles": 0.6, "blink_L": 0.25, "blink_R": 0.25, "mouth_down": 1.0, "chin_raise": 0.7, "_gaze": [0.0, -8.0]},
+    # COLÈRE = 4+5+7+23 ; commissures légèrement abaissées, narines dilatées, rides verticales de la glabelle (la mâchoire qui avance : non couverte)
+    "colere": {"brow_down": 1.0, "brow_together": 0.8, "glabella_wrinkles": 1.0, "eye_wide": 0.7, "eye_squint": 0.5, "lips_press": 1.0, "mouth_down": 0.3, "nostril_flare": 0.6},
+    # PEUR = 1+2+4+5+7+20+26 (page FACS) ; rides du front et de la glabelle, narines
+    "peur": {"brow_up": 0.8, "brow_inner_up": 0.8, "brow_down": 0.3, "brow_together": 0.6, "forehead_wrinkles": 0.8, "glabella_wrinkles": 0.6, "eye_wide": 1.0, "eye_squint": 0.3, "lip_stretch": 1.0, "nostril_flare": 0.4, "_jaw": 8.0},
+    # DÉGOÛT = 9+15+17 (page FACS) / 9 ou 10 : nez plissé (plis sur la racine), lèvre supérieure relevée, joue poussée vers le haut, sillon naso-génien profond, menton relevé ; commissures NON tirées vers l'extérieur
+    "degout": {"nose_wrinkle": 1.0, "nose_bridge_wrinkles": 1.0, "upper_lip_raise": 1.0, "cheek_raise": 0.5, "nasolabial_deepen": 1.0, "chin_raise": 0.6, "brow_down": 0.3},
+    # MÉPRIS = R12A + R14A (page FACS) : demi-sourire d'un seul côté + durcissement/fossette du coin, pas d'AU6
+    "mepris": {"smile_L": 0.5, "dimpler_L": 1.0},
     "clignement": {"blink_L": 1.0, "blink_R": 1.0},
 }
 # Clé « _jaw » : angle d'ouverture de la mâchoire en degrés, appliqué à l'os `jaw` si le squelette est installé (le correctif `mouth_open` suit alors tout seul).

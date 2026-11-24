@@ -17,7 +17,7 @@ from pathlib import Path
 
 import bpy
 import numpy as np
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 try:
     from .. import human
@@ -33,7 +33,8 @@ JAW_FILE = DATA / "human_jaw_weights.npz"
 JAW_SLIT = (7986, 8004)  # sommets (lèvre basse, lèvre haute) de la fente labiale sur la ligne médiane : la topologie est fixe, donc les indices valent pour toute morphologie
 JAW_CHIN = 7977  # pointe du menton (gnathion) sur la ligne médiane
 JAW_HINGE = (0.55, 0.30)  # PROVISOIRE (non vérifié, pas de donnée publiée lue) : profondeur de l'axe de la mâchoire (fraction de la profondeur de la tête) et hauteur au-dessus de la fente (fraction de la distance fente-sommet du crâne)
-NON_DEFORMING = ("root",)  # os de contrôle sans poids : `root` (origine au sol, porte le déplacement global ; gestionnaire de root motion, lot A3)
+EYE_BONES = ("eye.L", "eye.R")  # os du regard (enfants de `head`) : portent les yeux (objets), sans poids de peau
+NON_DEFORMING = ("root",) + EYE_BONES  # os de contrôle sans poids : `root` (origine au sol, porte le déplacement global ; gestionnaire de root motion, lot A3)
 MODIFIER_NAME = "HL Rig"
 ARMATURE_NAME = "HL Rig"
 MARKER = "hl_rig"
@@ -88,6 +89,9 @@ def joints(points, data):
     j["root_head"] = np.array([0.0, j["P0"][1], zmin])  # au sol, sous le bassin
     j["root_tail"] = j["root_head"] + np.array([0.0, -0.06 * stature, 0.0])
     j["head_base"], j["head_top"] = a["head_base"], a["head_top"]
+    for sign, side in ((1.0, "L"), (-1.0, "R")):  # centres des yeux : estimation anthropométrique de la cage (remplacée par les vrais yeux à l'installation, voir `real_eye_joints`)
+        centre = np.array([sign * 0.0198 * stature, -0.073 * stature, a["head_base"][2] + 0.437 * (a["head_top"][2] - a["head_base"][2])])
+        j["eye_head." + side], j["eye_tail." + side] = centre, centre + np.array([0.0, -0.012, 0.0])
     if len(points) > max(JAW_SLIT + (JAW_CHIN,)):  # (la table fictive de `bone_names` n'a pas de géométrie)
         slit_z = float((points[JAW_SLIT[0], 2] + points[JAW_SLIT[1], 2]) / 2)
         head_zone = points[:, 2] > zmax - 0.15 * stature
@@ -157,6 +161,8 @@ def bone_table(j):
     bone("neck.02", "neck.01", "neck_mid", "head_base")
     bone("head", "neck.02", "head_base", "head_top")
     bone(JAW, "head", "jaw_hinge", "jaw_tip")
+    for side in ("L", "R"):
+        bone("eye." + side, "head", "eye_head." + side, "eye_tail." + side, UP)
     for side in ("L", "R"):
         s = f".{side}"
         bone("clavicle" + s, "spine.05", "clav_head" + s, "shoulder" + s)
@@ -319,18 +325,41 @@ def eyes_of(body):
     return [eye for eye in (body.humanloom.eye_left, body.humanloom.eye_right) if eye is not None]
 
 
-def attach_eyes(body, armature):
-    """Rattache les yeux à l'os `head` (parent = os) en conservant leur position monde : au repos, monde = corps @ base de l'œil. À rappeler après toute repose des os."""
-    bone = armature.data.bones.get("head")
-    if bone is None:
-        return 0
-    rest_world = armature.matrix_world @ bone.matrix_local @ Matrix.Translation((0.0, bone.length, 0.0))  # un parent « os » a son origine à la QUEUE de l'os
+def _eye_centre(body, eye):
+    """Centre d'un œil dans le repère du corps (moyenne de ses sommets : l'origine de l'objet est à 0)."""
+    inverse = body.matrix_world.inverted()
+    return np.mean([np.array((inverse @ (eye.matrix_world @ v.co))[:]) for v in eye.data.vertices], axis=0)
+
+
+def eye_side(body, eye):
+    """"L" si l'œil est du côté +x (comme les os `.L`), "R" sinon."""
+    return "L" if _eye_centre(body, eye)[0] > 0 else "R"
+
+
+def real_eye_joints(body, j):
+    """Remplace les centres d'yeux estimés de `j` par ceux des vrais yeux du corps (si présents) : les os `eye.L/.R` sont posés AU CENTRE de chaque globe."""
     for eye in eyes_of(body):
+        side = eye_side(body, eye)
+        centre = _eye_centre(body, eye)
+        j["eye_head." + side], j["eye_tail." + side] = centre, centre + np.array([0.0, -0.012, 0.0])
+    return j
+
+
+def attach_eyes(body, armature):
+    """Rattache chaque œil à son os de regard `eye.L` / `eye.R` (à défaut, à `head`), parent = os, en conservant sa position monde : au repos, monde = corps @ base de l'œil. À rappeler après toute repose des os."""
+    count = 0
+    for eye in eyes_of(body):
+        name = "eye." + eye_side(body, eye)
+        bone = armature.data.bones.get(name) or armature.data.bones.get("head")
+        if bone is None:
+            continue
+        rest_world = armature.matrix_world @ bone.matrix_local @ Matrix.Translation((0.0, bone.length, 0.0))  # un parent « os » a son origine à la QUEUE de l'os
         eye.parent = armature
         eye.parent_type = "BONE"
-        eye.parent_bone = "head"
+        eye.parent_bone = bone.name
         eye.matrix_parent_inverse = rest_world.inverted() @ body.matrix_world
-    return len(eyes_of(body))
+        count += 1
+    return count
 
 
 def detach_eyes(body):
@@ -352,7 +381,7 @@ def recompute_weights(body, table):
     """Poids par la liaison automatique de Blender (chaleur) sur la cage ACTUELLE et les os de `table` (torsions exclues puis réparties par une rampe en chapeau), 4 influences au plus.
     Retourne (noms, idx (N, 4), w (N, 4))."""
     points = cage_points(body)
-    table = [entry for entry in table if entry["name"] != JAW]  # la mâchoire n'entre pas dans la liaison automatique : ses poids viennent de `human_jaw_weights.npz`
+    table = [entry for entry in table if entry["name"] not in (JAW,) + EYE_BONES]  # la mâchoire n'entre pas dans la liaison automatique : ses poids viennent de `human_jaw_weights.npz`
     names = [entry["name"] for entry in table]
     index = {n: i for i, n in enumerate(names)}
     mesh = body.data
@@ -420,7 +449,7 @@ def install(body, method=STORED):
         raise ValueError("Un rig est déjà installé sur ce corps (mettez-le à jour ou retirez-le).")
     data = load_anchors()
     points = cage_points(body)
-    table = bone_table(joints(points, data))
+    table = bone_table(real_eye_joints(body, joints(points, data)))
     computed = recompute_weights(body, table) if method == RECOMPUTED else None  # avant tout effet de bord : un échec ne laisse rien derrière lui
     with _Context():
         armature_data = bpy.data.armatures.new(ARMATURE_NAME)
@@ -453,7 +482,7 @@ def install(body, method=STORED):
 def _apply_weights(body, names, computed=None):
     weights = {"names": computed[0], "idx": computed[1], "w": computed[2]} if computed else np.load(WEIGHTS_FILE, allow_pickle=False)
     stored = [str(n) for n in weights["names"]]
-    if stored != [n for n in names if n != JAW]:
+    if stored != [n for n in names if n != JAW and n not in EYE_BONES]:
         raise ValueError("Les poids stockés ne correspondent pas à la table d'os (régénérer avec tools/build_human_rig.py).")
     groups = [None if name in NON_DEFORMING else (body.vertex_groups.get(name) or body.vertex_groups.new(name=name)) for name in stored]
     indices, values = weights["idx"], weights["w"]
@@ -467,6 +496,14 @@ def _apply_weights(body, names, computed=None):
 
 
 MOUTH_OPEN_DEGREES = 30.0  # ouverture pour laquelle le correctif `mouth_open` vaut 1 (voir tools/build_face_layers.py)
+
+
+def _driven(body, command):
+    """Vrai si la commande de visage `command` est pilotée par un driver (mâchoire, suivi des paupières)."""
+    if not human.is_native(body) or command not in human.sockets() or body.animation_data is None:
+        return False
+    path = f'modifiers["{human.MODIFIER_NAME}"].properties.inputs.{human.sockets()[command][0]}.value'
+    return any(f.data_path == path for f in body.animation_data.drivers)
 
 
 def mouth_driver_path(body):
@@ -520,6 +557,150 @@ def open_jaw(body, degrees):
     return True
 
 
+# --- regard ----------------------------------------------------------------------------------------------------------------------------------------
+GAZE_CONSTRAINT = "HL Regard"
+GAZE_LIMITS = {"horizontal_deg": 45.0, "vertical_deg": 35.0}  # PROVISOIRE, non vérifié : amplitudes maximales de rotation de chaque œil (aucune donnée publiée lue)
+
+
+def gaze_direction(armature, side):
+    """Direction monde (vecteur unitaire, numpy) dans laquelle regarde l'œil `side` ("L" ou "R") : l'axe Y de son os."""
+    pose = armature.pose.bones["eye." + side]
+    return np.array(((armature.matrix_world @ pose.matrix).to_3x3() @ Vector((0.0, 1.0, 0.0))).normalized()[:])
+
+
+def _gaze_axes(armature):
+    """(signe de yaw, signe de pitch) tels que yaw > 0 regarde vers +x (côté .L) et pitch > 0 vers le haut ; mesuré une fois par essai de rotation."""
+    pose = armature.pose.bones["eye.L"]
+    pose.rotation_mode = "XYZ"
+    saved = tuple(pose.rotation_euler)
+    result = []
+    for axis, key in ((2, 0), (0, 2)):
+        pose.rotation_euler = (0.0, 0.0, 0.0)
+        bpy.context.view_layer.update()
+        before = gaze_direction(armature, "L")
+        trial = [0.0, 0.0, 0.0]
+        trial[axis] = math.radians(10)
+        pose.rotation_euler = tuple(trial)
+        bpy.context.view_layer.update()
+        move = gaze_direction(armature, "L") - before
+        result.append(1.0 if move[key] > 0 else -1.0)
+    pose.rotation_euler = saved
+    bpy.context.view_layer.update()
+    return tuple(result)
+
+
+def set_gaze(body, yaw_degrees=0.0, pitch_degrees=0.0, convergence_degrees=0.0):
+    """Oriente les yeux par la pose des os `eye.L/.R` : `yaw` > 0 vers +x (gauche du personnage), `pitch` > 0 vers le haut, `convergence` = angle total entre les deux axes (chaque œil
+    tourne de moitié vers l'intérieur). Retourne False sans squelette."""
+    rigs = rigs_of(body)
+    if not rigs or "eye.L" not in rigs[0].pose.bones:
+        return False
+    armature = rigs[0]
+    sign_yaw, sign_pitch = _gaze_axes(armature)
+    for side, inward in (("L", -1.0), ("R", 1.0)):  # à +x l'œil gauche tourne vers -x pour converger
+        pose = armature.pose.bones["eye." + side]
+        pose.rotation_mode = "XYZ"
+        angles = [0.0, 0.0, 0.0]
+        angles[2] = sign_yaw * math.radians(yaw_degrees + inward * convergence_degrees / 2.0)
+        angles[0] = sign_pitch * math.radians(pitch_degrees)
+        pose.rotation_euler = tuple(angles)
+    bpy.context.view_layer.update()
+    return True
+
+
+def track_gaze(body, target):
+    """Les deux yeux suivent l'objet `target` (contrainte « Damped Track » sur l'axe Y de chaque os, bornée par une contrainte de rotation limitée) : la convergence vient de la distance de
+    la cible. Retourne False sans squelette."""
+    rigs = rigs_of(body)
+    if not rigs or "eye.L" not in rigs[0].pose.bones:
+        return False
+    for side in ("L", "R"):
+        pose = rigs[0].pose.bones["eye." + side]
+        clear_constraints(pose)
+        track = pose.constraints.new("DAMPED_TRACK")
+        track.name = GAZE_CONSTRAINT
+        track.target = target
+        track.track_axis = "TRACK_Y"
+        limit = pose.constraints.new("LIMIT_ROTATION")
+        limit.name = GAZE_CONSTRAINT + " limite"
+        limit.owner_space = "LOCAL"
+        limit.use_limit_x = limit.use_limit_z = True
+        limit.min_x, limit.max_x = -math.radians(GAZE_LIMITS["vertical_deg"]), math.radians(GAZE_LIMITS["vertical_deg"])
+        limit.min_z, limit.max_z = -math.radians(GAZE_LIMITS["horizontal_deg"]), math.radians(GAZE_LIMITS["horizontal_deg"])
+    bpy.context.view_layer.update()
+    return True
+
+
+LID_FOLLOW = {"down_closure": 0.30, "up_opening": 0.30}  # PROVISOIRE, non vérifié : fermeture de la paupière supérieure à regard maximal vers le bas / ouverture à regard maximal vers le haut (fraction des commandes blink et eye_wide)
+
+
+def _lid_paths(body):
+    if not human.is_native(body):
+        return {}
+    return {name: f'modifiers["{human.MODIFIER_NAME}"].properties.inputs.{human.sockets()[name][0]}.value' for name in ("blink_L", "blink_R", "eye_wide") if name in human.sockets()}
+
+
+def lid_follow_enabled(body):
+    paths = _lid_paths(body)
+    return bool(paths) and body.animation_data is not None and all(any(f.data_path == p for f in body.animation_data.drivers) for p in paths.values())
+
+
+def attach_lid_follow(body):
+    """Les paupières suivent le regard : `blink_L`, `blink_R` (regard vers le bas : la paupière supérieure descend) et `eye_wide` (regard vers le haut : elle monte) sont PILOTÉS par la rotation
+    verticale de l'os `eye.L` ; tant que le suivi est actif, ces trois commandes ne sont plus réglables à la main (retirer avec `detach_lid_follow`). Retourne False sans squelette."""
+    rigs = rigs_of(body)
+    paths = _lid_paths(body)
+    if not rigs or "eye.L" not in rigs[0].pose.bones or len(paths) < 3:
+        return False
+    sign_pitch = _gaze_axes(rigs[0])[1]
+    limit = math.radians(GAZE_LIMITS["vertical_deg"])
+    for name, path in paths.items():
+        body.driver_remove(path)
+        driver = body.driver_add(path).driver
+        driver.type = "SCRIPTED"
+        variable = driver.variables.new()
+        variable.name = "rx"
+        variable.type = "TRANSFORMS"
+        target = variable.targets[0]
+        target.id = rigs[0]
+        target.bone_target = "eye.L"
+        target.transform_type = "ROT_X"
+        target.transform_space = "LOCAL_SPACE"
+        up = f"({sign_pitch:+.0f} * rx)"
+        if name == "eye_wide":
+            driver.expression = f"min(1.0, max(0.0, {up}) / {limit:.6f} * {LID_FOLLOW['up_opening']})"
+        else:
+            driver.expression = f"min(1.0, max(0.0, -{up}) / {limit:.6f} * {LID_FOLLOW['down_closure']})"
+    return True
+
+
+def detach_lid_follow(body):
+    for name, path in _lid_paths(body).items():
+        if body.animation_data is not None and any(f.data_path == path for f in body.animation_data.drivers):
+            body.driver_remove(path)
+            human.set_value(body, name, 0.0)
+
+
+def clear_constraints(pose):
+    for constraint in [c for c in pose.constraints if c.name.startswith(GAZE_CONSTRAINT)]:
+        pose.constraints.remove(constraint)
+
+
+def clear_gaze(body):
+    """Retire le suivi de cible et remet les yeux droit devant."""
+    rigs = rigs_of(body)
+    if not rigs:
+        return False
+    for side in ("L", "R"):
+        pose = rigs[0].pose.bones.get("eye." + side)
+        if pose is not None:
+            clear_constraints(pose)
+            pose.rotation_mode = "XYZ"
+            pose.rotation_euler = (0.0, 0.0, 0.0)
+    bpy.context.view_layer.update()
+    return True
+
+
 def detach_mouth_driver(body):
     path = mouth_driver_path(body)
     if path is not None and body.animation_data is not None and any(f.data_path == path for f in body.animation_data.drivers):
@@ -559,7 +740,7 @@ def update(body, dental=False):
         raise ValueError("Aucun rig (ou plusieurs) : rien à mettre à jour.")
     armature = rigs[0]
     points = cage_points(body)
-    table = bone_table(joints(points, load_anchors()))
+    table = bone_table(real_eye_joints(body, joints(points, load_anchors())))
     with _Context():
         bpy.context.view_layer.objects.active = armature
         armature.select_set(True)

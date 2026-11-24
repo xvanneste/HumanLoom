@@ -194,6 +194,28 @@ originals = dental.parts_of(body)
 check("D9_duplication_independante", len(clone_rig) == 1 and len(clone_parts) == 3 and all(c.parent == clone_rig[0] for c in clone_parts) and len(originals) == 3
       and all(c.data is not o.data for c in clone_parts for o in originals), {"copies": [c.name for c in clone_parts], "armature_de_la_copie": clone_rig[0].name if clone_rig else None})
 
+# D10 langue articulée : une forme par articulation (valeurs 0-1), déplacement non nul et borné par l'amplitude déclarée, la langue reste dans la boîte englobante de la tête
+tongue = next(o for o in dental.parts_of(body) if o.name == "HL Langue")
+keys = tongue.data.shape_keys.key_blocks
+base_t = np.array([v.co[:] for v in tongue.data.vertices])
+cage = skeleton.cage_points(body)
+rows9, ok9 = {}, True
+for name, (label, amplitude) in dental.TONGUE_SHAPES.items():
+    key = keys.get(name)
+    if key is None:
+        ok9 = False
+        continue
+    moved = np.array([c[:] for c in (d.co for d in key.data)]) - base_t
+    peak = float(np.linalg.norm(moved, axis=1).max()) * 1000 if name != "langue_etroite" else float(np.abs(moved[:, 0]).max()) * 1000
+    inside = bool(((base_t + moved) >= cage.min(0)).all() and ((base_t + moved) <= cage.max(0)).all())
+    rows9[name] = {"deplacement_max_mm": round(peak, 2), "amplitude_mm": amplitude, "dans_la_tete": inside, "slider": [key.slider_min, key.slider_max]}
+    if name != "langue_etroite":
+        ok9 &= 0.3 * amplitude < peak <= amplitude * 1.6 and inside
+    else:
+        ok9 &= 0.5 < peak < 8.0 and inside
+ok9 &= all(k.value == 0.0 for k in keys if k.name != "Basis")  # au repos à l'installation
+check("D10_langue_articulee", ok9 and len(rows9) == len(dental.TONGUE_SHAPES) and bool(tongue.get("hl_tongue_shapes")) and "provisoire" in tongue["hl_tongue_shapes"], rows9)
+
 # D8 retrait sans résidu
 bpy.data.orphans_purge(do_recursive=True)  # les corps des essais précédents ont laissé des maillages orphelins : on ne mesure que le retrait de CE test
 removed = skeleton.remove(clone)

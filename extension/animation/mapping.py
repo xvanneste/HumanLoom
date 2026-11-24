@@ -28,7 +28,7 @@ GEOMETRY_LIMIT = 0.2  # coût maximal (fraction de la stature) pour un apparieme
 PREFIX_TOKENS = {"def", "org", "bip", "bip01", "cc", "rig", "skel", "armature", "jnt", "mixamorig", "bone", "sk"}
 SIDE_LEFT, SIDE_RIGHT = {"l", "left", "lt", "lft"}, {"r", "right", "rt", "rgt"}
 END_TOKENS = {"end", "tip", "nub", "null", "leaf"}
-AUX_TOKENS = {"jaw", "ik", "pole", "ctrl", "control", "controller", "helper", "offset", "attach", "weapon", "prop", "props", "socket", "poi", "aim", "target", "tgt", "mch", "gun", "com", "fk",
+AUX_TOKENS = {"jaw", "eye", "eyes", "ik", "pole", "ctrl", "control", "controller", "helper", "offset", "attach", "weapon", "prop", "props", "socket", "poi", "aim", "target", "tgt", "mch", "gun", "com", "fk",
               # os d'aide à la déformation (correctifs de pose, muscles) : jamais un os de squelette principal
               "corrective", "correctiveroot", "slide", "adj", "adjust", "fwd", "bck", "in", "out", "inner", "outer", "scap", "pec", "latissimus", "bend",
               # accessoires et vêtements animés par os (jupes, capes, cheveux, plaques d'armure) : hors du squelette principal
@@ -44,7 +44,7 @@ PART_RULES = (  # appliquées dans l'ordre sur la clé canonique (mots collés) 
 AMBIGUOUS = {"shoulder": "shoulder?", "arm": "arm?", "leg": "leg?", "hip": "hip?"}
 
 
-FACE_ONLY = "jaw"  # os de la mâchoire de HumanLoom : jamais apparié par la structure ou la géométrie (les squelettes de corps n'en ont pas) ; reste appariable à la main
+FACE_ONLY = ("jaw", "eye.L", "eye.R")  # os de la mâchoire de HumanLoom : jamais apparié par la structure ou la géométrie (les squelettes de corps n'en ont pas) ; reste appariable à la main
 
 # --- squelette -----------------------------------------------------------------------------------------------------------------------------------
 
@@ -336,7 +336,7 @@ def auto_map(target, source):
         progress = False
         for t in list(pairs):
             s = [i for i, n in enumerate(source.names) if n == pairs[t].source][0]
-            t_free = [c for c in target.children(t) if c not in pairs and t_info[c]["part"] not in ("root",) and not t_info[c]["twist"] and target.names[c] != FACE_ONLY]
+            t_free = [c for c in target.children(t) if c not in pairs and t_info[c]["part"] not in ("root",) and not t_info[c]["twist"] and target.names[c] not in FACE_ONLY]
             s_free = [c for c in source.children(s) if c not in taken and not s_info[c]["aux"] and not s_info[c]["end"] and not s_info[c]["twist"]]
             if not t_free or not s_free:
                 continue
@@ -354,7 +354,7 @@ def auto_map(target, source):
     # niveau 3 : géométrie normalisée (têtes + queues + longueur), un-à-un glouton, côté par x
     t_head, t_tail = normalized(target, t_info)
     s_head, s_tail = normalized(source, s_info)
-    free_t = [t for t in range(len(target)) if t not in pairs and t_info[t]["part"] not in ("root",) and not t_info[t]["twist"] and target.names[t] != FACE_ONLY]
+    free_t = [t for t in range(len(target)) if t not in pairs and t_info[t]["part"] not in ("root",) and not t_info[t]["twist"] and target.names[t] not in FACE_ONLY]
     free_s = [s for s in range(len(source)) if s not in taken and not s_info[s]["aux"] and not s_info[s]["end"]]
     options = []
     for t in free_t:

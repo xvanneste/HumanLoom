@@ -161,11 +161,8 @@ class HUMANMODELING_OT_face_preset(bpy.types.Operator):
         if values is None:
             self.report({"ERROR"}, "Expression inconnue : " + self.preset)
             return {"CANCELLED"}
-        for name in FACE_COMMANDS:
-            if name != "mouth_open" and human.has_control(body, name):
-                human.set_value(body, name, float(values.get(name, 0.0)))
-        from .animation import skeleton as _skeleton  # mâchoire : clé « _jaw » des expressions (degrés), si le squelette est installé
-        _skeleton.open_jaw(body, float(values.get("_jaw", 0.0)))
+        from .animation import face as _face  # commandes, mâchoire (« _jaw »), regard (« _gaze ») et langue, si le squelette est installé
+        _face.apply_pose(body, values)
         return {"FINISHED"}
 
 

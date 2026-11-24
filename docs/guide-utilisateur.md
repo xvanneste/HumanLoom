@@ -34,9 +34,18 @@ Sélectionnez une animation dans la grille, puis réglez :
 Puis : **Aperçu** (non destructif ; **Fin** restaure l'état initial), **Ajouter au NLA** (nouvelle piste) ou **Remplacer** (action active). Les conversions sont mises en cache.
 - **Publier les favoris dans l'Asset Browser** convertit vos animations favorites et les marque comme assets du fichier courant (glisser-déposer natif depuis « Fichier courant »).
 
-## 6. Limites connues (à lire)
+## 6. Visage : regard, langue, poses, visèmes, ARKit, export, animation (panneaux « Squelette du corps » et « Poses du visage »)
+Prérequis : squelette posé (os `jaw`, `eye.L`, `eye.R`). Tout le contenu du visage est écrit par HumanLoom (aucune donnée de visage tierce) ; les valeurs non lues dans une publication sont déclarées « non vérifié ».
+- **Regard** (panneau « Squelette du corps ») : *Orienter* (horizontal, vertical, convergence en degrés), *Suivre l'objet* (sélectionnez un objet : les deux yeux le suivent, bornés à 45° / 35° — limites provisoires), *Droit*. **Paupières qui suivent le regard** pilote Clignement et Yeux grands ouverts par la rotation verticale des yeux : tant que le suivi est actif, ces deux commandes ne se règlent plus à la main.
+- **Galerie** : vignettes, étoile = favori (enregistré dans la scène), **Enregistrer la pose actuelle**. Catégories : expressions (dont *sourire large* et *rire*, où les dents du bas sont visibles), visèmes (15, « non vérifié »), vos poses.
+- **Mélangeur** : deux poses A et B, curseur de mélange, *Appliquer le mélange*. **Créer un clip facial** fabrique un clip A → B dans une piste NLA « Visage » séparée de l'animation du corps (on peut les couper indépendamment) ; *Retirer les clips faciaux* remet le visage au neutre.
+- **Langue** : sept curseurs (pointe haut/bas, dos relevé, sortie, gauche/droite, étroite), amplitudes provisoires.
+- **Export** : *Cuire les formes* crée une copie de la cage avec une forme par commande et par coefficient ARKit couvert ; *Couverture ARKit* affiche la table dans la console : sur 52 coefficients, 7 directs, 9 portés par un os, 1 par la langue, 23 approchés, 12 non couverts (liste dans le rapport). Les noms ARKit viennent de mémoire de la documentation d'Apple (non relue) et le sens gauche/droite n'est pas vérifié.
+- Les amplitudes des commandes du visage sont réduites chez l'enfant (facteur 0,895 à l'âge 0, 1,0 à l'âge 2) d'après la profondeur de tête de **notre** modèle, pas d'une publication.
+
+## 7. Limites connues (à lire)
 - La fidélité de position (mains, pieds, coudes, genoux) mesurée sur 30 animations réelles est de **2,6 % de la stature en médiane** (7,5 % au 95e centile) avec le mode par défaut absolu + IK (absolu seul : 3,9 % / 7,7 % ; delta : 4,6 % / 10,0 %). Le seuil visé (95e centile ≤ 6 %) n'est **pas atteint**.
-- Les animations **additives** ne sont pas prises en charge. Aucune animation faciale : le visage n'est pas encore animable.
+- Les animations **additives** ne sont pas prises en charge. Animation faciale : voir §6 (poses, mélange, clips NLA) ; les amplitudes du visage et la langue sont provisoires, les parois de la bouche restent presque droites.
 - Un nouveau défaut est connu (I-49) : à partir de l'âge 2,5 la surface du corps peut se recouper près des yeux.
 - Les vignettes sont des figures en bâtons du squelette source, pas un rendu du personnage.
 - Aucune garantie de licence sur vos animations : vous êtes responsable de vos droits.

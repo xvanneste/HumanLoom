@@ -92,7 +92,7 @@ try:
     refused = False
 except ValueError:
     refused = True
-check("R1_statuts_installation", state0 == skeleton.NOT_INSTALLED and state1 == skeleton.INSTALLED and refused and len(armature.data.bones) == len(names) == 81
+check("R1_statuts_installation", state0 == skeleton.NOT_INSTALLED and state1 == skeleton.INSTALLED and refused and len(armature.data.bones) == len(names) == 83
       and armature.parent == body and len(skeleton.rigs_of(body)) == 1,
       {"avant": state0, "après": state1, "problèmes": problems1, "double_installation_refusée": refused, "os": len(armature.data.bones)})
 modifier_index = [m.name for m in body.modifiers]
@@ -102,7 +102,7 @@ check("R2_pile_de_modificateurs", modifier_index[:2] == [human.MODIFIER_NAME, sk
 bone_names = {b.name for b in armature.data.bones}
 pairs_ok = all((n[:-2] + ".R") in bone_names for n in bone_names if n.endswith(".L")) and all((n[:-2] + ".L") in bone_names for n in bone_names if n.endswith(".R"))
 roots = [b.name for b in armature.data.bones if b.parent is None]
-check("R3_nommage_et_hierarchie", pairs_ok and roots == ["root"] and sum(n.endswith(".L") for n in bone_names) == sum(n.endswith(".R") for n in bone_names) == 35,
+check("R3_nommage_et_hierarchie", pairs_ok and roots == ["root"] and sum(n.endswith(".L") for n in bone_names) == sum(n.endswith(".R") for n in bone_names) == 36,
       {"racines": roots, "gauche": sum(n.endswith('.L') for n in bone_names), "droite": sum(n.endswith('.R') for n in bone_names)})
 
 # --- M5 : poids -----------------------------------------------------------------------------------------------------------------------------------
@@ -270,7 +270,7 @@ print("REOUVERTURE", ok, len(bodies), len(armatures), [len(a.data.bones) for a i
 ''', encoding="utf-8")
     run = subprocess.run([bpy.app.binary_path, "--background", "--factory-startup", "--offline-mode", str(path), "--python", str(probe)], capture_output=True, text=True, timeout=300)
     line = next((l for l in run.stdout.splitlines() if l.startswith("REOUVERTURE")), "")
-    check("R10_reouverture_sans_l_extension", "True 2 2 [81, 81]" in line and "extension_active False" in line, line)
+    check("R10_reouverture_sans_l_extension", "True 2 2 [83, 83]" in line and "extension_active False" in line, line)
 finally:
     shutil.rmtree(work, ignore_errors=True)
 clone_armature_data, clone_armature_object = clone_rigs[0].data.name, clone_rigs[0].name
@@ -304,7 +304,7 @@ eyes = skeleton.eyes_of(body)
 world_before = [e.matrix_world.copy() for e in eyes]
 armature = skeleton.install(body)
 bpy.context.view_layer.update()
-attached = all(e.parent == armature and e.parent_type == "BONE" and e.parent_bone == "head" for e in eyes)
+attached = all(e.parent == armature and e.parent_type == "BONE" and e.parent_bone in skeleton.EYE_BONES for e in eyes)
 drift_install = max(float(np.abs(np.array(e.matrix_world) - np.array(w)).max()) for e, w in zip(eyes, world_before))
 bpy.context.view_layer.update()
 armature.pose.bones["head"].rotation_mode = "XYZ"
@@ -320,7 +320,7 @@ near_head = drift_update < 1e-4
 copy = human.duplicate_human(bpy.context, body)
 copy_eyes = skeleton.eyes_of(copy)
 copy_rig = skeleton.rigs_of(copy)[0]
-duplicated = len(copy_eyes) == 2 and all(e.parent == copy_rig and e.parent_bone == "head" and e not in eyes for e in copy_eyes) and human.body_of(copy_eyes[0]) == copy
+duplicated = len(copy_eyes) == 2 and all(e.parent == copy_rig and e.parent_bone in skeleton.EYE_BONES and e not in eyes for e in copy_eyes) and human.body_of(copy_eyes[0]) == copy
 skeleton.remove(copy)
 removed_ok = all(e.parent == copy and e.parent_type == "OBJECT" for e in copy_eyes)
 check("R13_yeux_rattaches_a_head", attached and drift_install < 1e-4 and follows and near_head and duplicated and removed_ok and human.body_of(eyes[0]) == body,

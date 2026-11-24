@@ -336,6 +336,52 @@ def tongue_mesh(points, body, tree, z_slit, y_slit, stature, prov, opening=None)
     return vertices, polygons
 
 
+# Formes de la langue (articulation) : amplitudes en mm à valeur 1, adulte ; PROVISOIRES, choix de modélisation (aucune donnée d'amplitude linguale lue ni vérifiée). Axe : y croît vers l'arrière (pointe en t = 0).
+TONGUE_SHAPES = {
+    "langue_pointe_haut": ("Pointe vers le haut", 9.0),
+    "langue_pointe_bas": ("Pointe vers le bas", 7.0),
+    "langue_dos_haut": ("Dos relevé", 7.0),
+    "langue_sortie": ("Langue sortie", 22.0),
+    "langue_gauche": ("Vers la gauche", 8.0),
+    "langue_droite": ("Vers la droite", 8.0),
+    "langue_etroite": ("Langue étroite", 0.15),
+}
+
+
+def tongue_shape_offsets(vertices, scale=1.0):
+    """Décalage (mètres) de chaque sommet pour chaque forme de `TONGUE_SHAPES` à valeur 1."""
+    y = vertices[:, 1]
+    t = np.clip((y - y.min()) / max(float(y.max() - y.min()), 1e-9), 0.0, 1.0)  # 0 : pointe, 1 : base
+    tip, mid = (1.0 - t) ** 2, np.sin(np.pi * np.clip(t * 1.1, 0.0, 1.0)) ** 2
+    amp = {k: v[1] for k, v in TONGUE_SHAPES.items()}
+    zeros = np.zeros(len(vertices))
+    offsets = {
+        "langue_pointe_haut": np.stack([zeros, zeros, tip * amp["langue_pointe_haut"] * MM * scale], axis=1),
+        "langue_pointe_bas": np.stack([zeros, zeros, -tip * amp["langue_pointe_bas"] * MM * scale], axis=1),
+        "langue_dos_haut": np.stack([zeros, zeros, mid * amp["langue_dos_haut"] * MM * scale], axis=1),
+        "langue_sortie": np.stack([zeros, -((1.0 - t) ** 1.2) * amp["langue_sortie"] * MM * scale, zeros], axis=1),
+        "langue_gauche": np.stack([tip * amp["langue_gauche"] * MM * scale, zeros, zeros], axis=1),
+        "langue_droite": np.stack([-tip * amp["langue_droite"] * MM * scale, zeros, zeros], axis=1),
+    }
+    centre = vertices[:, 0].mean()
+    offsets["langue_etroite"] = np.stack([-(vertices[:, 0] - centre) * amp["langue_etroite"], zeros, zeros], axis=1)
+    return offsets
+
+
+def add_tongue_shapes(obj, scale=1.0):
+    """Ajoute à l'objet langue une forme de base et une forme par articulation (valeurs 0-1, additives) ; exportables et « cuisables » avec le reste du visage."""
+    if obj.data.shape_keys is None:
+        obj.shape_key_add(name="Basis", from_mix=False)
+    base = np.array([v.co[:] for v in obj.data.vertices])
+    for name, offset in tongue_shape_offsets(base, scale).items():
+        key = obj.shape_key_add(name=name, from_mix=False)
+        key.relative_key = obj.data.shape_keys.key_blocks["Basis"]
+        key.data.foreach_set("co", (base + offset).ravel())
+        key.slider_min, key.slider_max = 0.0, 1.0
+        key.value = 0.0  # `shape_key_add` crée les formes à 1 : la langue doit rester au repos à l'installation
+    obj["hl_tongue_shapes"] = json.dumps({k: {"nom": v[0], "amplitude": v[1], "source": "provisoire, non vérifié"} for k, v in TONGUE_SHAPES.items()}, ensure_ascii=False)
+
+
 def _make_object(name, vertices, polygons, material_ids, materials, parent_bone, body, armature):
     mesh = bpy.data.meshes.new(name)
     mesh.from_pydata([tuple(map(float, v)) for v in vertices], [], [tuple(int(i) for i in p) for p in polygons])
@@ -447,6 +493,7 @@ def install(body, armature, points=None, hint=None):
         made.append(obj)
     vertices, polygons = tongue_mesh(points, body, tree, z_slit, y_slit, stature, prov, opening=(open_tree, rotate))
     obj = _make_object(KINDS["tongue"][0], vertices, polygons, None, [tongue_material], KINDS["tongue"][1], body, armature)
+    add_tongue_shapes(obj, stature / prov["arcade"]["stature_de_reference_m"])
     obj[FINGERPRINT] = fingerprint(body)
     made.append(obj)
     return made

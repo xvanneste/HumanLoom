@@ -63,6 +63,8 @@ class Options:
     pose_mode: str = ABSOLUTE_IK
     root_motion: str = KEEP
     translation_scale: float = None   # None : rapport des hauteurs de bassin (automatique)
+    ik_limbs: tuple = ("arm", "leg")  # membres corrigés par l'IK en mode absolu+IK (« arm » : bras, « leg » : jambes)
+    limb_blend: float = 0.0           # mode absolu+IK : 0 = la main/le pied vise la position de la source mise à l'échelle du BASSIN ; 1 = à l'échelle de la LONGUEUR DU MEMBRE (rapport des longueurs de segments), depuis l'épaule/la hanche
 
 
 @dataclass
@@ -290,7 +292,7 @@ def retarget(source, target, mapping, motion, options=None, main_child=None):
             r = target.index[root]
             positions[:, r] = target.rest[r, :3, 3] + root_loc
     if options.pose_mode == ABSOLUTE_IK and pelvis in mapping:
-        report["membres_ik"] = limb_ik(source, target, mapping, s_world, rotations, positions, report["echelle_translation"], local_rest)
+        report["membres_ik"] = limb_ik(source, target, mapping, s_world, rotations, positions, report["echelle_translation"], local_rest, options.limb_blend, options.ik_limbs)
     loc, quat, _ = world_to_basis(target, rotations, positions)
     if root in target.index and options.root_motion != EXTRACT:
         loc[:, target.index[root]] = 0
@@ -319,7 +321,7 @@ def trim_and_speed(result, start=0, end=None, speed=1.0):
     return Result(quat, loc, report)
 
 
-def limb_ik(source, target, mapping, s_world, rotations, positions, scale, local_rest):
+def limb_ik(source, target, mapping, s_world, rotations, positions, scale, local_rest, limb_blend=0.0, ik_limbs=("arm", "leg")):
     """Compensation de la longueur des membres (mode `absolu_ik`) : la main ou le pied cible vise la position de celle de la source, relative au bassin et mise à l'échelle
     (`scale`), dans la limite de la portée de NOS segments ; le coude ou le genou garde la direction de pôle de la source. IK analytique à 2 os, vectorisée sur les images ;
     modifie `rotations` (orientations monde du haut et du bas du membre) sur place. Retourne la liste des membres corrigés."""
@@ -339,7 +341,9 @@ def limb_ik(source, target, mapping, s_world, rotations, positions, scale, local
         return pos
 
     corrected = []
-    for limb in (("arm_upper", "arm_lower", "hand"), ("leg_upper", "leg_lower", "foot")):
+    for kind, limb in (("arm", ("arm_upper", "arm_lower", "hand")), ("leg", ("leg_upper", "leg_lower", "foot"))):
+        if kind not in ik_limbs:
+            continue
         for side in (".L", ".R"):
             names = [n + side for n in limb]
             if not all(n in mapping and n in target.index for n in names):
@@ -351,8 +355,12 @@ def limb_ik(source, target, mapping, s_world, rotations, positions, scale, local
             pos = forward()
             shoulder = pos[:, upper]
             wanted = pelvis_pos + (s_world[:, s_end, :3, 3] - s_pelvis) * scale
+            if limb_blend:  # échelle propre au membre : rapport des longueurs de segments, appliquée depuis l'épaule (ou la hanche) de la cible
+                source_length = float(np.linalg.norm(source.rest[s_lo, :3, 3] - source.rest[s_up, :3, 3]) + np.linalg.norm(source.rest[s_end, :3, 3] - source.rest[s_lo, :3, 3]))
+                limb_scale = (length_1 + length_2) / max(source_length, 1e-9)
+                wanted = (1.0 - limb_blend) * wanted + limb_blend * (shoulder + (s_world[:, s_end, :3, 3] - s_world[:, s_up, :3, 3]) * limb_scale)
             direction = wanted - shoulder
-            distance = np.clip(np.linalg.norm(direction, axis=-1), abs(length_1 - length_2) + 1e-4, length_1 + length_2 - 1e-4)
+            distance = np.clip(np.linalg.norm(direction, axis=-1), abs(length_1 - length_2) + 1e-7, length_1 + length_2 - 1e-7)
             unit = direction / (np.linalg.norm(direction, axis=-1, keepdims=True) + 1e-18)
             pole = (s_world[:, s_lo, :3, 3] - s_world[:, s_up, :3, 3]) * scale
             pole = pole - unit * (pole * unit).sum(-1, keepdims=True)
@@ -399,5 +407,5 @@ def foot_slide(foot_positions, foot_height, stature, fps, height_limit=0.03, spe
 
 def signature(source, mapping, options, action_key):
     """Clé de cache : action, mapping et options."""
-    text = json.dumps({"action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale], "source": list(source.names)}, sort_keys=True)
+    text = json.dumps({"action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs)], "source": list(source.names)}, sort_keys=True)
     return hashlib.sha1(text.encode()).hexdigest()[:20]

@@ -1,0 +1,184 @@
+[
+ {
+  "id": "expression:neutre",
+  "label": "Neutre",
+  "categorie": "expression",
+  "vignette": "expression_neutre.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:joie",
+  "label": "Joie",
+  "categorie": "expression",
+  "vignette": "expression_joie.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:sourire_large",
+  "label": "Sourire_large",
+  "categorie": "expression",
+  "vignette": "expression_sourire_large.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:rire",
+  "label": "Rire",
+  "categorie": "expression",
+  "vignette": "expression_rire.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:surprise",
+  "label": "Surprise",
+  "categorie": "expression",
+  "vignette": "expression_surprise.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:tristesse",
+  "label": "Tristesse",
+  "categorie": "expression",
+  "vignette": "expression_tristesse.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:colere",
+  "label": "Colere",
+  "categorie": "expression",
+  "vignette": "expression_colere.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:peur",
+  "label": "Peur",
+  "categorie": "expression",
+  "vignette": "expression_peur.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:degout",
+  "label": "Degout",
+  "categorie": "expression",
+  "vignette": "expression_degout.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:mepris",
+  "label": "Mepris",
+  "categorie": "expression",
+  "vignette": "expression_mepris.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "expression:clignement",
+  "label": "Clignement",
+  "categorie": "expression",
+  "vignette": "expression_clignement.png",
+  "source": "combinaison d'unités d'action écrite par HumanLoom, intensités artistiques"
+ },
+ {
+  "id": "visème:sil",
+  "label": "Silence",
+  "categorie": "visème",
+  "vignette": "viseme_sil.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:pbm",
+  "label": "p, b, m",
+  "categorie": "visème",
+  "vignette": "viseme_pbm.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:fv",
+  "label": "f, v",
+  "categorie": "visème",
+  "vignette": "viseme_fv.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:th",
+  "label": "th",
+  "categorie": "visème",
+  "vignette": "viseme_th.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:td",
+  "label": "t, d",
+  "categorie": "visème",
+  "vignette": "viseme_td.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:kg",
+  "label": "k, g",
+  "categorie": "visème",
+  "vignette": "viseme_kg.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:chj",
+  "label": "ch, j, sh",
+  "categorie": "visème",
+  "vignette": "viseme_chj.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:sz",
+  "label": "s, z",
+  "categorie": "visème",
+  "vignette": "viseme_sz.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:nl",
+  "label": "n, l",
+  "categorie": "visème",
+  "vignette": "viseme_nl.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:r",
+  "label": "r",
+  "categorie": "visème",
+  "vignette": "viseme_r.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:aa",
+  "label": "a",
+  "categorie": "visème",
+  "vignette": "viseme_aa.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:e",
+  "label": "e",
+  "categorie": "visème",
+  "vignette": "viseme_e.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:ih",
+  "label": "i",
+  "categorie": "visème",
+  "vignette": "viseme_ih.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:oh",
+  "label": "o",
+  "categorie": "visème",
+  "vignette": "viseme_oh.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ },
+ {
+  "id": "visème:ou",
+  "label": "ou",
+  "categorie": "visème",
+  "vignette": "viseme_ou.png",
+  "source": "non vérifié : choix de modélisation de HumanLoom, aucune publication lue pour ces valeurs"
+ }
+]

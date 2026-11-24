@@ -13,7 +13,7 @@ from bpy_extras.io_utils import ImportHelper
 
 from . import importer, thumbnails
 from . import index as index_module
-from . import mapping_ui, retarget_ui, rig_ui
+from . import face_ui, mapping_ui, retarget_ui, rig_ui
 
 ADDON_ID = __package__.rpartition(".")[0]
 RESULT_LIMIT = 200
@@ -352,6 +352,7 @@ def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     rig_ui.register()
+    face_ui.register()
     mapping_ui.register()
     retarget_ui.register()
     wm = bpy.types.WindowManager
@@ -367,6 +368,7 @@ def register():
 def unregister():
     retarget_ui.unregister()
     mapping_ui.unregister()
+    face_ui.unregister()
     rig_ui.unregister()
     wm = bpy.types.WindowManager
     for name in ("hl_anim_page", "hl_anim_active", "hl_anim_results", "hl_anim_favorites", "hl_anim_category", "hl_anim_query"):

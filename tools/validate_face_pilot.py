@@ -32,7 +32,8 @@ def check(name, ok, detail=None):
 
 
 addon.register()
-PILOTS = [c for c in FACE_COMMANDS if c != "mouth_open"]
+ALL_PILOTS = [c for c in FACE_COMMANDS if c != "mouth_open"]
+PILOTS = ALL_PILOTS  # recalculé plus bas : sans les commandes composites (maîtresses)
 MORPHOLOGIES = {"neutre": {}, "femme_jeune": {"sex": 1.0, "age": 1.0}, "homme_age": {"sex": 0.0, "age": 3.0}}
 
 
@@ -54,6 +55,8 @@ def zero_commands(body):
 body = new_body()
 mesh = body.data
 layers = json.loads(mesh["hl_face_layers"])
+COMPOSITE = [c for c in ALL_PILOTS if "composite" in layers[c]]
+PILOTS = [c for c in ALL_PILOTS if c not in COMPOSITE]
 mesh.calc_loop_triangles()
 triangles = np.array([t.vertices[:] for t in mesh.loop_triangles])
 zero_commands(body)
@@ -97,7 +100,7 @@ for label, values in MORPHOLOGIES.items():
         return n / np.maximum(a[:, None], 1e-18), a
 
     n0, a0 = normals(rest)
-    for name in PILOTS:
+    for name in ALL_PILOTS:
         zero_commands(b)
         human.set_value(b, name, 1.0)
         n1, a1 = normals(skeleton.cage_points(b))
@@ -114,10 +117,10 @@ b = new_body()
 bpy.context.view_layer.objects.active = b
 zero_commands(b)
 ok_operator = bpy.ops.humanloom.face_preset(preset="joie") == {"FINISHED"}
-smiling = human.get_value(b, "smile_L") == 1.0 and human.get_value(b, "smile_R") == 1.0
+smiling = human.get_value(b, "smile_duchenne") == 1.0
 bpy.ops.humanloom.face_preset(preset="neutre")
-reset = all(human.get_value(b, n) == 0.0 for n in PILOTS)
-labels_ok = all(n in FACE_COMMAND_LABELS for n in PILOTS) and set(FACE_PRESETS["joie"]) <= set(PILOTS)
+reset = all(human.get_value(b, n) == 0.0 for n in ALL_PILOTS)
+labels_ok = all(n in FACE_COMMAND_LABELS for n in ALL_PILOTS) and set(FACE_PRESETS["joie"]) <= set(ALL_PILOTS)
 panels = [c.__name__ for c in addon.FACE_GROUP_CLASSES] + [addon.FACE_EXPRESSIONS_CLASS.__name__]
 check("F4_operateur_et_panneau", ok_operator and smiling and reset and labels_ok and "HUMANMODELING_PT_face_expressions" in panels, {"preset_joie": smiling, "neutre": reset, "panneaux": panels[-2:]})
 
@@ -150,7 +153,7 @@ def chin_metrics(points):
             "rapporte_levre_basse_vers_menton_mm": round(abs(float((points[lip_bottom, 2] - points[pogonion, 2]) - (rest6[lip_bottom, 2] - rest6[pogonion, 2]))) * 1000, 2)}
 
 
-for name in PILOTS:
+for name in ALL_PILOTS:
     zero_commands(b6)
     human.set_value(b6, name, 1.0)
     chin_rows["commande:" + name] = chin_metrics(skeleton.cage_points(b6))
@@ -161,9 +164,60 @@ for key, commands in FACE_PRESETS.items():
             human.set_value(b6, name, float(value))
     chin_rows["preset:" + key] = chin_metrics(skeleton.cage_points(b6))
 zero_commands(b6)
+# La commande « lower_lip_depress » (et les expressions qui l'emploient) a POUR BUT de descendre la lèvre inférieure par rapport au menton (7 mm visés) : seule cette mesure a un seuil propre (8 mm) ; le menton, la zone du menton et l'étage inférieur gardent leurs seuils
+LIP_MOVERS = {"commande:lower_lip_depress"} | {"preset:" + key for key, commands in FACE_PRESETS.items() if commands.get("lower_lip_depress")}
+LIP_THRESH = 8.0
 bad6 = {k: v for k, v in chin_rows.items() if v["pogonion_mm"] > (THRESH_CHIN if k == "commande:chin_raise" else THRESH) or v["zone_menton_max_mm"] > (THRESH_CHIN if k == "commande:chin_raise" else THRESH)
-        or v["etage_inferieur_variation_mm"] > (THRESH_CHIN if k == "commande:chin_raise" else THRESH) or v["rapporte_levre_basse_vers_menton_mm"] > 3.0}
-check("F6_menton_et_etage_inferieur_stables", not bad6, {"seuils_mm": {"menton": THRESH, "chin_raise": THRESH_CHIN, "etage_inferieur": THRESH, "levre_basse_vers_menton": 3.0}, "hors_seuil": bad6, "mesures": chin_rows})
+        or v["etage_inferieur_variation_mm"] > (THRESH_CHIN if k == "commande:chin_raise" else THRESH) or v["rapporte_levre_basse_vers_menton_mm"] > (LIP_THRESH if k in LIP_MOVERS else 3.0)}
+check("F6_menton_et_etage_inferieur_stables", not bad6, {"seuils_mm": {"menton": THRESH, "chin_raise": THRESH_CHIN, "etage_inferieur": THRESH, "levre_basse_vers_menton": 3.0, "levre_basse_vers_menton_si_lower_lip_depress": LIP_THRESH}, "hors_seuil": bad6, "mesures": chin_rows})
+# F7 : facteur d'échelle selon l'âge (tools/build_face_scale.py) : déplacement d'une commande à l'âge a = facteur(a) x déplacement à l'âge 2 (interpolation linéaire par stades)
+FACTORS = {0.0: 0.895, 0.5: 0.925, 1.0: 0.955, 1.5: 0.9775, 2.0: 1.0, 3.0: 1.0}
+b7 = new_body()
+peaks = {}
+for age in FACTORS:
+    human.set_value(b7, "age", age)
+    zero_commands(b7)
+    rest7 = skeleton.cage_points(b7)
+    row = {}
+    for name in ("smile_L", "brow_up", "mouth_down"):
+        zero_commands(b7)
+        human.set_value(b7, name, 1.0)
+        row[name] = float(np.linalg.norm(skeleton.cage_points(b7) - rest7, axis=1).max())
+    peaks[age] = row
+ratios = {a: {n: round(peaks[a][n] / peaks[2.0][n], 4) for n in peaks[a]} for a in FACTORS}
+gap7 = max(abs(ratios[a][n] - FACTORS[a]) for a in FACTORS for n in ratios[a])
+zero_commands(b7)
+check("F7_facteur_echelle_age", gap7 < 0.01 and ratios[2.0]["smile_L"] == 1.0, {"ecart_max_au_facteur": round(gap7, 4), "rapports_a_age_2": ratios, "facteurs_attendus": FACTORS})
+# F8 : sourire de Duchenne = UNE commande maîtresse (courbe progressive commune) qui combine commissures diagonales, joues/pommettes, paupières inférieures relevées, sillon naso-génien, pattes d'oie
+from extension.animation import face as face_module  # noqa: E402
+master_info = layers["smile_duchenne"]
+weights = master_info["composite"]
+b8 = new_body()
+zero_commands(b8)
+base8 = skeleton.cage_points(b8)
+human.set_value(b8, "smile_duchenne", 1.0)
+master_cage = skeleton.cage_points(b8)
+zero_commands(b8)
+for component, weight in weights.items():
+    human.set_value(b8, component, min(1.0, weight))
+components_cage = skeleton.cage_points(b8)
+zero_commands(b8)
+equivalence = float(np.abs(master_cage - components_cage).max())
+rows8, ok8 = {}, True
+for label, values in MORPHOLOGIES.items():
+    bm = new_body(**values)
+    metrics = face_module.smile_metrics(bm)
+    rows8[label] = {str(k): {"angle": v["commissure_angle_deg"], "ouverture_mm": v["ouverture_palpebrale_mm"], "net_sur_brut": v["joue_net_sur_brut"], "retournees": v["faces_retournees"]} for k, v in metrics.items()}
+    full = metrics[1.0]
+    smooth_ratio = {k: metrics[k]["commissure_mm"] / full["commissure_mm"] for k in (0.25, 0.5, 0.75)}
+    expected = {k: k * k * (3 - 2 * k) for k in smooth_ratio}
+    ok8 &= 30.0 <= full["commissure_angle_deg"] <= 60.0 and all(v["faces_retournees"] <= 3 for v in metrics.values())
+    ok8 &= full["ouverture_palpebrale_mm"] <= -2.0 and metrics[0.75]["ouverture_palpebrale_mm"] > full["ouverture_palpebrale_mm"] > -12.0 and metrics[0.25]["ouverture_palpebrale_mm"] > metrics[0.5]["ouverture_palpebrale_mm"]
+    ok8 &= full["joue_net_sur_brut"] <= 0.25 and all(abs(smooth_ratio[k] - expected[k]) < 0.02 for k in smooth_ratio)
+    rows8[label]["rapport_progressif"] = {str(k): round(v, 3) for k, v in smooth_ratio.items()}
+check("F8_sourire_duchenne_commande_unique", equivalence < 1e-6 and ok8 and set(weights) == {"smile_pull", "smile_L", "smile_R", "eye_squint", "cheek_raise", "nasolabial_deepen", "crows_feet"},
+      {"equivalence_composantes_m": equivalence, "seuils": "angle 30-60 deg, ouverture <= -2 mm, net/brut <= 0.25, retournees <= 3, progressif = smoothstep +-0.02", "mesures": rows8})
+
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
 print("RESULT", "FAIL " + ", ".join(failures) if failures else "PASS")

@@ -388,5 +388,77 @@
   0.0,
   0.0,
   1.0
+ ],
+ "lower_lip_depress": [
+  "Socket_67",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "cheek_raise": [
+  "Socket_69",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "nasolabial_deepen": [
+  "Socket_70",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "crows_feet": [
+  "Socket_71",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "smile_duchenne": [
+  "Socket_72",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "smile_pull": [
+  "Socket_68",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "forehead_wrinkles": [
+  "Socket_73",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "glabella_wrinkles": [
+  "Socket_74",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "nose_bridge_wrinkles": [
+  "Socket_75",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "nostril_flare": [
+  "Socket_76",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "dimpler_L": [
+  "Socket_77",
+  0.0,
+  0.0,
+  1.0
+ ],
+ "dimpler_R": [
+  "Socket_78",
+  0.0,
+  0.0,
+  1.0
  ]
 }

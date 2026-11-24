@@ -74,6 +74,88 @@ class HUMANLOOM_OT_rig_remove(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class HUMANLOOM_OT_gaze_set(bpy.types.Operator):
+    bl_idname = "humanloom.gaze_set"
+    bl_label = "Orienter le regard"
+    bl_description = "Oriente les yeux par la pose des os de regard (horizontal, vertical, convergence en degrés)"
+    bl_options = {"REGISTER", "UNDO"}
+    yaw: bpy.props.FloatProperty(name="Horizontal", default=0.0, min=-45.0, max=45.0, description="Positif : vers la gauche du personnage (+x)")
+    pitch: bpy.props.FloatProperty(name="Vertical", default=0.0, min=-35.0, max=35.0, description="Positif : vers le haut")
+    convergence: bpy.props.FloatProperty(name="Convergence", default=0.0, min=0.0, max=30.0, description="Angle total entre les axes des deux yeux")
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return body is not None and bool(skeleton.rigs_of(body))
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        body = _body(context)
+        if not skeleton.set_gaze(body, self.yaw, self.pitch, self.convergence):
+            self.report({"ERROR"}, "Ce squelette n'a pas d'os de regard : mettez-le à jour.")
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_gaze_track(bpy.types.Operator):
+    bl_idname = "humanloom.gaze_track"
+    bl_label = "Suivre un objet du regard"
+    bl_description = "Les yeux suivent l'objet sélectionné (autre que le corps) ; la convergence vient de sa distance"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return body is not None and bool(skeleton.rigs_of(body)) and len([o for o in context.selected_objects if o != body and o.type != "ARMATURE"]) >= 1
+
+    def execute(self, context):
+        body = _body(context)
+        targets = [o for o in context.selected_objects if o != body and o.type != "ARMATURE"]
+        if not skeleton.track_gaze(body, targets[0]):
+            self.report({"ERROR"}, "Ce squelette n'a pas d'os de regard : mettez-le à jour.")
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_gaze_clear(bpy.types.Operator):
+    bl_idname = "humanloom.gaze_clear"
+    bl_label = "Regard droit devant"
+    bl_description = "Arrête le suivi de cible et remet les yeux droit devant"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return body is not None and bool(skeleton.rigs_of(body))
+
+    def execute(self, context):
+        skeleton.clear_gaze(_body(context))
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_lid_follow(bpy.types.Operator):
+    bl_idname = "humanloom.lid_follow"
+    bl_label = "Paupières qui suivent le regard"
+    bl_description = "Active ou désactive le suivi : les commandes Clignement et Yeux grands ouverts sont alors pilotées par la rotation verticale des yeux (non réglables à la main)"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return body is not None and bool(skeleton.rigs_of(body))
+
+    def execute(self, context):
+        body = _body(context)
+        if skeleton.lid_follow_enabled(body):
+            skeleton.detach_lid_follow(body)
+        elif not skeleton.attach_lid_follow(body):
+            self.report({"ERROR"}, "Ce squelette n'a pas d'os de regard : mettez-le à jour.")
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
 class HUMANLOOM_PT_rig(bpy.types.Panel):
     bl_label = "Squelette du corps"
     bl_space_type = "VIEW_3D"
@@ -96,9 +178,17 @@ class HUMANLOOM_PT_rig(bpy.types.Panel):
         row.operator("humanloom.rig_install", icon="ARMATURE_DATA")
         row.operator("humanloom.rig_update", icon="FILE_REFRESH")
         layout.operator("humanloom.rig_remove", icon="TRASH")
+        if state != skeleton.NOT_INSTALLED:
+            box = layout.box()
+            box.label(text="Regard", icon="HIDE_OFF")
+            row = box.row(align=True)
+            row.operator("humanloom.gaze_set", text="Orienter")
+            row.operator("humanloom.gaze_track", text="Suivre l'objet")
+            row.operator("humanloom.gaze_clear", text="Droit")
+            box.operator("humanloom.lid_follow", depress=skeleton.lid_follow_enabled(_body(context)))
 
 
-CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_rig_remove, HUMANLOOM_PT_rig)
+CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_rig_remove, HUMANLOOM_OT_gaze_set, HUMANLOOM_OT_gaze_track, HUMANLOOM_OT_gaze_clear, HUMANLOOM_OT_lid_follow, HUMANLOOM_PT_rig)
 
 
 def register():

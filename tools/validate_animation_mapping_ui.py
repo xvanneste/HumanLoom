@@ -68,7 +68,7 @@ check("U1_enregistrement", hasattr(bpy.types.WindowManager, "hl_map_rows") and h
 result = bpy.ops.humanloom.mapping_auto()
 rows = {r.target: r for r in wm.hl_map_rows}
 good = sum(1 for t, s in truth.items() if rows[t].source == s)
-check("U2_appariement_automatique", result == {"FINISHED"} and len(rows) == len(rig.data.bones) == 81 and good == len(truth) == 16, {"lignes": len(rows), "corrects": f"{good}/{len(truth)}", "erreurs": [(t, rows[t].source, s) for t, s in truth.items() if rows[t].source != s], "sans_source": sum(1 for r in rows.values() if not r.source)})
+check("U2_appariement_automatique", result == {"FINISHED"} and len(rows) == len(rig.data.bones) == 83 and good == len(truth) == 16, {"lignes": len(rows), "corrects": f"{good}/{len(truth)}", "erreurs": [(t, rows[t].source, s) for t, s in truth.items() if rows[t].source != s], "sans_source": sum(1 for r in rows.values() if not r.source)})
 rows["arm_lower.L"].source = rows["arm_upper.L"].source  # édition manuelle qui crée un conflit
 conflict = mapping.duplicates({r.target: r.source for r in wm.hl_map_rows if r.source})
 cache = Path(tempfile.mkdtemp(prefix="hl_map_ui_"))
