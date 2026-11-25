@@ -357,6 +357,8 @@ def add_garment(body, key, color=None, offset_mm=None, clean_edges=True):
     wrap.wrap_mode = "OUTSIDE_SURFACE"
     wrap.offset = definition["decalage_mm"] / 1000.0 * 0.6
     wrap.show_viewport = False  # passe de dégagement (sous pose : repousse les sommets qui pénètrent le corps) : ~15 ms par pièce et par image (reconstruction de l'arbre du corps), donc coupée par défaut ; `set_clearance(obj, True)` l'active
+    from .animation import correctives
+    correctives.attach_garment(obj, body)  # correctifs de flexion du corps (clés de forme sur les mêmes sommets) ; sans effet si le corps n'en a pas
     return obj
 
 
@@ -519,8 +521,11 @@ def update_garment(obj):
     adjacency = {int(k): v for k, v in params.get("bord", {}).items()}
     if adjacency:
         coordinates = smooth_boundary(coordinates, adjacency)
+    from .animation import correctives  # les correctifs de flexion du corps suivent la pièce (clés de forme sur les mêmes sommets)
+    held = correctives.garment_deltas(obj)
     obj.data.vertices.foreach_set("co", coordinates.astype(np.float32).ravel())
     obj.data.update()
+    correctives.garment_restore(obj, held)
     return len(used)
 
 

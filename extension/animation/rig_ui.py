@@ -2,7 +2,7 @@
 import bpy
 
 from .. import human
-from . import skeleton
+from . import correctives, skeleton
 
 
 def _body(context):
@@ -72,6 +72,55 @@ class HUMANLOOM_OT_rig_remove(bpy.types.Operator):
         count = skeleton.remove(_body(context))
         self.report({"INFO"}, f"Squelette retiré ({count} éléments).")
         return {"FINISHED"}
+
+
+class HUMANLOOM_OT_correctives_rebuild(bpy.types.Operator):
+    bl_idname = "humanloom.correctives_rebuild"
+    bl_label = "Recalculer les correctifs de flexion"
+    bl_description = ("Recalcule les formes correctives du coude et du genou sur la morphologie ACTUELLE (quelques minutes ; la barre de progression avance angle par angle ; Échap annule et remet les correctifs génériques). "
+                      "Les correctifs génériques livrés sont calculés pour le corps par défaut ; recalculés pour une morphologie, ils réduisent les plis du creux de 80 à 90 % (mesuré)")
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return body is not None and bool(skeleton.rigs_of(body))
+
+    def invoke(self, context, event):
+        body = _body(context)
+        self._body, self._rig = body, skeleton.rigs_of(body)[0]
+        self._steps = correctives.rebuild_steps(self._body, self._rig)
+        wm = context.window_manager
+        wm.progress_begin(0, 100)
+        self._timer = wm.event_timer_add(0.05, window=context.window)
+        wm.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+    def _end(self, context):
+        wm = context.window_manager
+        wm.event_timer_remove(self._timer)
+        wm.progress_end()
+
+    def modal(self, context, event):
+        if event.type == "ESC":
+            self._steps.close()  # le « finally » du générateur remet la pose et retire la clé temporaire
+            if not correctives.installed(self._body):
+                correctives.install(self._body, self._rig)
+            self._end(context)
+            self.report({"WARNING"}, "Recalcul annulé : correctifs génériques remis.")
+            return {"CANCELLED"}
+        if event.type != "TIMER":
+            return {"RUNNING_MODAL"}
+        try:
+            label, done, total = next(self._steps)
+            context.window_manager.progress_update(100.0 * done / max(total, 1))
+            context.workspace.status_text_set(f"Correctifs de flexion : {done}/{total} ({label})")
+            return {"RUNNING_MODAL"}
+        except StopIteration:
+            context.workspace.status_text_set(None)
+            self._end(context)
+            self.report({"INFO"}, "Correctifs de flexion recalculés pour cette morphologie.")
+            return {"FINISHED"}
 
 
 class HUMANLOOM_OT_gaze_set(bpy.types.Operator):
@@ -179,6 +228,12 @@ class HUMANLOOM_PT_rig(bpy.types.Panel):
         row.operator("humanloom.rig_update", icon="FILE_REFRESH")
         layout.operator("humanloom.rig_remove", icon="TRASH")
         if state != skeleton.NOT_INSTALLED:
+            status = correctives.status(body)
+            text = {"absent": "Correctifs de flexion : absents", "generique": "Correctifs de flexion : génériques (corps par défaut)",
+                    "a_jour": "Correctifs de flexion : recalculés pour ce corps", "obsolete": "Correctifs de flexion : à recalculer (morphologie changée)"}[status]
+            layout.label(text=text, icon="CHECKMARK" if status == "a_jour" else "INFO")
+            layout.operator("humanloom.correctives_rebuild", icon="FILE_REFRESH")
+        if state != skeleton.NOT_INSTALLED:
             box = layout.box()
             box.label(text="Regard", icon="HIDE_OFF")
             row = box.row(align=True)
@@ -188,7 +243,7 @@ class HUMANLOOM_PT_rig(bpy.types.Panel):
             box.operator("humanloom.lid_follow", depress=skeleton.lid_follow_enabled(_body(context)))
 
 
-CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_rig_remove, HUMANLOOM_OT_gaze_set, HUMANLOOM_OT_gaze_track, HUMANLOOM_OT_gaze_clear, HUMANLOOM_OT_lid_follow, HUMANLOOM_PT_rig)
+CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_rig_remove, HUMANLOOM_OT_correctives_rebuild, HUMANLOOM_OT_gaze_set, HUMANLOOM_OT_gaze_track, HUMANLOOM_OT_gaze_clear, HUMANLOOM_OT_lid_follow, HUMANLOOM_PT_rig)
 
 
 def register():

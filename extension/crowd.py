@@ -332,7 +332,7 @@ def _make_body(context, spec, member, collection):
     body[OBJECT_KEY] = member["id"]
     body.name = f"Foule {member['id']:03d}"
     if spec["rig"]:
-        armature = skeleton.install(body, weights=not _SHARED.get("rigged", False))
+        armature = skeleton.install(body, weights=not _SHARED.get("rigged", False), correctives=False)  # maillage de base PARTAGÉ : pas de clés de forme de correctifs dans la foule
         _SHARED["rigged"] = True
         for other in list(armature.users_collection):
             if other != collection:

@@ -274,12 +274,15 @@ print("REOUVERTURE", ok, len(bodies), len(armatures), [len(a.data.bones) for a i
 finally:
     shutil.rmtree(work, ignore_errors=True)
 clone_armature_data, clone_armature_object = clone_rigs[0].data.name, clone_rigs[0].name
+from extension.animation import correctives  # noqa: E402
+_data = np.load(correctives.DATA, allow_pickle=False)
+correctives_extra = sum(len(_data[k]) for k in _data.files if k.endswith("_angles")) + len(correctives.labels()) + 1  # clés de forme + propriétés d'angle + propriété de source (retirées avec le rig)
 removed = skeleton.remove(clone)
 residue = {"armatures_du_corps": len(skeleton.rigs_of(clone)), "modificateur": clone.modifiers.get(skeleton.MODIFIER_NAME) is not None,
            "groupes": sum(1 for g in clone.vertex_groups if g.name in set(skeleton.bone_names())), "donnees_d_armature_restantes": int(clone_armature_data in bpy.data.armatures.keys()),
            "objets_armature_restants": int(clone_armature_object in bpy.data.objects.keys())}
 other_groups = [g.name for g in clone.vertex_groups]
-check("R11_retrait_sans_residu", removed == 1 + 80 + 2 + 2 + 3 and not any(residue.values()) and skeleton.status(clone)[0] == skeleton.NOT_INSTALLED and skeleton.status(body)[0] == skeleton.INSTALLED and len(skeleton.rigs_of(body)) == 1,
+check("R11_retrait_sans_residu", removed == 1 + 80 + 2 + 2 + 3 + correctives_extra and not any(residue.values()) and skeleton.status(clone)[0] == skeleton.NOT_INSTALLED and skeleton.status(body)[0] == skeleton.INSTALLED and len(skeleton.rigs_of(body)) == 1,
       {"retirés": removed, "résidu": residue, "groupes_restants": other_groups[:5], "l_original_intact": skeleton.status(body)[0]})
 
 # --- interface : panneau et opérateurs ------------------------------------------------------------------------------------------------------------------

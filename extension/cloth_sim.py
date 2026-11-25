@@ -55,6 +55,15 @@ def is_enabled(garment):
     return garment.modifiers.get(CLOTH_MODIFIER) is not None
 
 
+def _mute_correctives(body, muted):
+    """Coupe (ou remet) les clés de forme de correctifs de flexion du corps et de ses pièces tant qu'une pièce est SIMULÉE : mesuré, avec les correctifs actifs la jupe pénètre le corps de 138 à 197 mm à la marche (seuil 15 mm), sans eux 9,5 mm ;
+    cause non élucidée (le collider voit une surface qui change à chaque image par les pilotes de clés de forme). Le corps garde donc la peau sans correctifs en simulation de tissu (limite documentée)."""
+    from .animation import correctives
+    for obj in [body] + [c for c in body.children if c.type == "MESH"]:
+        for key in correctives.keys_of(obj.data):
+            key.mute = muted
+
+
 def enable(garment, settings=None):
     """Active la simulation sur la pièce (robe ou jupe) : modificateur Collider sur le corps (après son Armature), collection d'effecteurs, modificateur « Tissu ». Retourne le modificateur. Refuse une pièce sans
     groupe d'épinglage ou sans squelette."""
@@ -65,6 +74,7 @@ def enable(garment, settings=None):
         raise ValueError("Cette pièce n'a pas de groupe d'épinglage : seules les robes et les jupes se simulent.")
     if is_enabled(garment):
         return garment.modifiers[CLOTH_MODIFIER]
+    _mute_correctives(garment.parent, True)
     cloth_group, collider_group = _groups()
     scene = bpy.context.scene
     if body.modifiers.get(COLLIDER_MODIFIER) is None:
@@ -100,6 +110,7 @@ def disable(garment):
         collider = body.modifiers.get(COLLIDER_MODIFIER)
         if collider is not None:
             body.modifiers.remove(collider)
+        _mute_correctives(body, False)
 
 
 def bake(garment, frame_start=None, frame_end=None):

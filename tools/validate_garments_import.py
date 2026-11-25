@@ -44,6 +44,8 @@ work = Path(tempfile.mkdtemp(prefix="hl_import_"))
 def export_variant(name, scale=1.0, shift=(0.0, 0.0, 0.0)):
     """Chemise procédurale -> OBJ, avec échelle autour de l'axe du corps et décalage (la pièce « de l'utilisateur »)."""
     source = garments.add_garment(body, "chemise")
+    from extension.animation import correctives
+    correctives.detach_garment(source)  # pièce « étrangère » exportée : on édite ses sommets directement (avec des clés de forme, la clé de base prévaudrait)
     for v in source.data.vertices:
         v.co = (v.co.x * scale + shift[0], v.co.y * scale + shift[1], v.co.z + shift[2])
     for modifier in list(source.modifiers):

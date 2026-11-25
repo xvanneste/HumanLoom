@@ -443,8 +443,8 @@ def recompute_weights(body, table):
     return names, order.astype(np.int16), chosen.astype(np.float32)
 
 
-def install(body, method=STORED, weights=True):
-    """Crée l'armature enfant du corps, les groupes de poids et le modificateur. Lève ValueError si le corps n'est pas natif ou si un rig existe déjà. `method` : poids stockés (défaut) ou recalculés."""
+def install(body, method=STORED, weights=True, correctives=True):
+    """Crée l'armature enfant du corps, les groupes de poids et le modificateur. Lève ValueError si le corps n'est pas natif ou si un rig existe déjà. `method` : poids stockés (défaut) ou recalculés. `correctives=False` : sans formes correctives de flexion (foule : le maillage de base est partagé)."""
     state, problems = status(body)
     if state == NEEDS_CONFIGURATION and not rigs_of(body):
         raise ValueError(problems[0])
@@ -487,6 +487,9 @@ def install(body, method=STORED, weights=True):
         body_index = list(body.modifiers).index(body.modifiers[human.MODIFIER_NAME])
         body.modifiers.move(len(body.modifiers) - 2, body_index + 1)
         body.modifiers.move(len(body.modifiers) - 1, body_index + 2)
+        if correctives:
+            from . import correctives as hinge_correctives  # formes correctives des creux articulaires (coude, genou) : clés de forme pilotées par l'angle
+            hinge_correctives.install(body, armature)
     return armature
 
 
@@ -840,6 +843,8 @@ def update(body, dental=False):
 def remove(body):
     """Retire armature, groupes de poids de nos os et modificateur ; ne touche à aucun autre groupe ni modificateur. Retourne le nombre d'éléments retirés."""
     removed = 0
+    from . import correctives as hinge_correctives
+    removed += hinge_correctives.remove(body, rigs_of(body)[0] if rigs_of(body) else None)
     detach_mouth_driver(body)
     detach_eyes(body)
     from . import dental
