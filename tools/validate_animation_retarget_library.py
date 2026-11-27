@@ -116,8 +116,9 @@ for name in candidates:
     naive_loc[:, pelvis_t] = scale * motion.loc[:, source.index[links["pelvis"]]]
     outputs["naïf"] = retarget.Result(naive_quat, naive_loc, {})
     # Q9 : rythme scapulo-huméral (option) sur l'action réelle : mêmes orientations monde pour tous les os hors clavicules, dérive des mains bornée, angle de clavicule borné
-    reference = retarget.forward_kinematics(target, outputs["jambes"].loc, outputs["jambes"].quat)
-    rhythmic = retarget.retarget(source, target, links, motion, retarget.Options(pose_mode=retarget.ABSOLUTE_IK, root_motion=retarget.KEEP, ik_limbs=("leg",), clavicle_mode="rythme"))
+    reference_result = retarget.retarget(source, target, links, motion, retarget.Options(pose_mode=retarget.ABSOLUTE_IK, root_motion=retarget.KEEP, ik_limbs=("leg",), clavicle_mode="source"))
+    reference = retarget.forward_kinematics(target, reference_result.loc, reference_result.quat)
+    rhythmic = retarget.retarget(source, target, links, motion, retarget.Options(pose_mode=retarget.ABSOLUTE_IK, root_motion=retarget.KEEP, ik_limbs=("leg",), clavicle_mode="rythme"))  # = le défaut
     candidate = retarget.forward_kinematics(target, rhythmic.loc, rhythmic.quat)
     clavicles = [target.index[n] for n in ("clavicle.L", "clavicle.R") if n in links]
     others_ = [i for i in range(len(target.names)) if i not in clavicles]

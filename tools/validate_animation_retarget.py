@@ -83,7 +83,7 @@ check("Q0_repos_source_different", float(np.median([np.degrees(np.arccos(np.clip
       "repères source tournés de plus de 10° en médiane")
 
 for mode in (retarget.ABSOLUTE, retarget.DELTA, retarget.ABSOLUTE_IK):
-    result = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=mode, root_motion=retarget.KEEP))
+    result = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=mode, root_motion=retarget.KEEP, clavicle_mode="source"))  # circuit fermé : fidélité à la source, clavicule comprise (le défaut « rythme » remplace la clavicule : testé en Q1c)
     error = angle_between(result.quat, quat_a)
     positions_back = retarget.joint_positions(target, result.loc, result.quat)
     position_error = np.linalg.norm(positions_back - world_a[:, :, :3, 3], axis=-1)
@@ -91,8 +91,8 @@ for mode in (retarget.ABSOLUTE, retarget.DELTA, retarget.ABSOLUTE_IK):
           {"orientation_mediane_deg": round(float(np.median(error)), 6), "orientation_max_deg": round(float(error.max()), 6), "position_max_mm": round(float(position_error.max()) * 1000, 6)})
 
 # Q1b : clavicule limitée — seule la clavicule change (orientation monde de tous les autres os conservée) ; son angle par rapport au repos est réduit du facteur demandé
-full = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP))
-half = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_scale=0.5))
+full = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_mode="source"))
+half = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_scale=0.5, clavicle_mode="source"))
 world_full, world_half = retarget.forward_kinematics(target, full.loc, full.quat), retarget.forward_kinematics(target, half.loc, half.quat)
 ci = {target.index["clavicle.L"], target.index["clavicle.R"]}
 others = [i for i in range(count) if i not in ci]
@@ -105,11 +105,11 @@ def angle_to_rest(world, i):
 
 
 ratio = np.median([np.median(angle_to_rest(world_half, i) / np.maximum(angle_to_rest(world_full, i), 1e-6)) for i in ci])
-check("Q1b_clavicule_limitee", rot_diff < 1e-5 and abs(float(ratio) - 0.5) < 0.02 and retarget.Options().clavicle_scale == 1.0,
+check("Q1b_clavicule_limitee", rot_diff < 1e-5 and abs(float(ratio) - 0.5) < 0.02 and retarget.Options().clavicle_scale == 1.0 and retarget.Options().clavicle_mode == "rythme",
       {"ecart_orientation_monde_autres_os": float(rot_diff), "rapport_angle_clavicule": round(float(ratio), 4), "defaut": retarget.Options().clavicle_scale})
 
-# Q1c : rythme scapulo-huméral (option, défaut « source ») — la clavicule est calculée, l'orientation monde de TOUS les autres os est conservée, la loi vaut l'identité au repos et reste bornée
-rhythm = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_mode="rythme", clavicle_scale=0.3))
+# Q1c : rythme scapulo-huméral (DÉFAUT depuis le 27 nov. 2026 ; « source » reste disponible) — la clavicule est calculée, l'orientation monde de TOUS les autres os est conservée, la loi vaut l'identité au repos et reste bornée
+rhythm = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_scale=0.3))  # défaut : rythme
 world_rhythm = retarget.forward_kinematics(target, rhythm.loc, rhythm.quat)
 rhythm_diff = np.abs(world_full[:, others, :3, :3] - world_rhythm[:, others, :3, :3]).max()
 clavicle_dir = target.rest[target.index["clavicle.L"]][:3, :3][:, 1]
@@ -117,7 +117,7 @@ theta_grid = np.array([0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0])
 laws = {side: retarget.clavicle_rhythm(theta_grid, target.rest[target.index["clavicle" + side]][:3, :3][:, 1], side) for side in (".L", ".R")}
 law_angles = {side: np.degrees(np.arccos(np.clip((np.trace(R, axis1=-2, axis2=-1) - 1) / 2, -1, 1))) for side, R in laws.items()}
 orthonormal = all(np.abs(R @ np.swapaxes(R, -1, -2) - np.eye(3)).max() < 1e-9 for R in laws.values())
-check("Q1c_rythme_scapulo_humeral", rhythm_diff < 1e-5 and orthonormal and retarget.Options().clavicle_mode == "source" and all(a[0] < 1e-6 and 10.0 < a[5] < 45.0 and a[3] < a[5] for a in law_angles.values())
+check("Q1c_rythme_scapulo_humeral", rhythm_diff < 1e-5 and orthonormal and retarget.Options().clavicle_mode == "rythme" and all(a[0] < 1e-6 and 10.0 < a[5] < 45.0 and a[3] < a[5] for a in law_angles.values())
       and abs(law_angles[".L"] - law_angles[".R"]).max() < 1e-6,
       {"ecart_orientation_monde_autres_os": float(rhythm_diff), "angle_clavicule_selon_elevation_deg": [round(float(a), 1) for a in law_angles[".L"]], "defaut": retarget.Options().clavicle_mode})
 

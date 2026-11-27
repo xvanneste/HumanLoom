@@ -66,7 +66,7 @@ class Options:
     translation_scale: float = None   # None : rapport des hauteurs de bassin (automatique)
     ik_limbs: tuple = ("leg",)  # membres corrigés par l'IK en mode absolu+IK : défaut « jambes seules » (validé à l'œil le 2026-11-24) ; ajouter « arm » pour les contacts mains-objets
     clavicle_scale: float = 1.0       # facteur sur la rotation (monde) des CLAVICULES par rapport au repos : 1 = fidèle à la source ; < 1 réduit le haussement d'épaule (moins de plis du cou et du trapèze) ; l'orientation du bras et de tous les autres os est CONSERVÉE (positions relatives à la racine du membre inchangées, mesuré 0,00 mm sur 30 actions)
-    clavicle_mode: str = "source"     # "source" : clavicule de la source (× clavicle_scale) ; "rythme" : la clavicule est CALCULÉE d'après l'élévation du bras (rythme scapulo-huméral, voir clavicle_rhythm) : la rotation de la source et clavicle_scale sont alors IGNORÉES (pas de double comptage) ; l'orientation du bras est conservée
+    clavicle_mode: str = "rythme"     # DÉFAUT (décision de l'utilisateur, 27 nov. 2026) : "rythme" : la clavicule est CALCULÉE d'après l'élévation du bras (rythme scapulo-huméral) ; "source" : clavicule de la source (× clavicle_scale) ; "rythme" : la clavicule est CALCULÉE d'après l'élévation du bras (rythme scapulo-huméral, voir clavicle_rhythm) : la rotation de la source et clavicle_scale sont alors IGNORÉES (pas de double comptage) ; l'orientation du bras est conservée
     limb_blend: float = 0.0           # mode absolu+IK : 0 = la main/le pied vise la position de la source mise à l'échelle du BASSIN ; 1 = à l'échelle de la LONGUEUR DU MEMBRE (rapport des longueurs de segments), depuis l'épaule/la hanche
 
 
