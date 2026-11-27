@@ -24,7 +24,7 @@ try:
 except ImportError:  # importé à plat par certains scripts de test
     import human
 
-VERSION = 1
+VERSION = 2  # 2 : poids symétrisés (gauche reporté à droite, tools/mirror_rig_weights.py ; plis du cou −32 % sur 30 actions réelles). L'adoucissement des poids de clavicule au cou a été ESSAYÉ puis ABANDONNÉ (plis du cou ×5,5). Retour arrière : restore_weights_backup (poids du corps) ou git (fichier de poids)
 DATA = Path(__file__).resolve().parent.parent / "data"
 ANCHORS_FILE = DATA / "human_rig_anchors.json"
 WEIGHTS_FILE = DATA / "human_rig_weights.npz"
@@ -279,7 +279,7 @@ def status(body):
     elif list(body.modifiers).index(modifier) != list(body.modifiers).index(body.modifiers[human.MODIFIER_NAME]) + 1:
         problems.append("Le modificateur « HL Rig » n'est pas juste après « HL Human ».")
     if rig.get(MARKER) != VERSION:
-        problems.append("Version du rig différente de celle de l'extension.")
+        problems.append("Version du rig différente de celle de l'extension : « Mettre à jour le squelette » migre les poids vers les poids symétrisés (sauvegardés avant ; les poids peints à la main seraient remplacés).")
     if problems:
         return NEEDS_CONFIGURATION, problems
     if rig.get(FINGERPRINT) != fingerprint(body):
@@ -565,7 +565,11 @@ def _apply_weights(body, names, computed=None):
     groups = [None if name in NON_DEFORMING else (body.vertex_groups.get(name) or body.vertex_groups.new(name=name)) for name in stored]
     indices, values = weights["idx"], weights["w"]
     points = cage_points(body)
-    indices, values = redistribute_distal(stored, indices, values, points, bone_table(real_eye_joints(body, joints(points, load_anchors()))))
+    table = bone_table(real_eye_joints(body, joints(points, load_anchors())))
+    mirror = weights["mirror"] if "mirror" in weights else None
+    # le maillage de repos n'est pas parfaitement symétrique (≤ 4 mm) : le seuil géométrique du calcul des poids (moitié de l'avant-bras) est évalué sur des points SYMÉTRISÉS, sinon un sommet proche d'un seuil bascule d'un côté seulement
+    sym = points if mirror is None else 0.5 * (points + points[mirror] * np.array([-1.0, 1.0, 1.0]))
+    indices, values = redistribute_distal(stored, indices, values, sym, table)
     dqs_slots = np.array([in_dqs_zone(n) for n in stored])
     member = (np.where(dqs_slots[indices], values, 0.0).sum(1) > max(DQS_MIN, 1e-4))  # sommet déformé par les quaternions duals : au moins une influence distale
     lbs_group, dqs_group = body.vertex_groups.new(name=GROUP_LBS), body.vertex_groups.new(name=GROUP_DQS)
@@ -817,6 +821,70 @@ def _apply_jaw_weights(body):
         group.add([vertex], moved, "REPLACE")
 
 
+BACKUP_PROP = "hl_weights_backup"          # poids de peau AVANT une migration (npz compressé, base64) : retour arrière possible (restore_weights_backup)
+BACKUP_VERSION_PROP = "hl_weights_backup_version"
+
+
+def _weight_group_names(body):
+    return [g.name for g in body.vertex_groups if g.name in set(deform_names()) | {GROUP_LBS, GROUP_DQS, JAW}]
+
+
+def backup_weights(body):
+    """Sauvegarde les poids de peau du rig (groupes d'os, masques LBS/DQS, mâchoire) dans une propriété du corps, avant une migration."""
+    import base64
+    import io
+    groups = [g for g in body.vertex_groups if g.name in set(_weight_group_names(body))]
+    names, counts, vertices, weights = [], [], [], []
+    for group in groups:
+        rows = [(v.index, float(g.weight)) for v in body.data.vertices for g in v.groups if g.group == group.index]
+        names.append(group.name)
+        counts.append(len(rows))
+        vertices += [r[0] for r in rows]
+        weights += [r[1] for r in rows]
+    buffer = io.BytesIO()
+    np.savez_compressed(buffer, names=np.array(names), counts=np.array(counts, np.int64), vertices=np.array(vertices, np.int64), weights=np.array(weights, np.float32))
+    body[BACKUP_PROP] = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return len(names)
+
+
+def restore_weights_backup(body):
+    """Retour arrière : restitue les poids sauvegardés par `backup_weights` et la version du rig correspondante. Retourne False s'il n'y a pas de sauvegarde."""
+    import base64
+    import io
+    if BACKUP_PROP not in body:
+        return False
+    data = np.load(io.BytesIO(base64.b64decode(body[BACKUP_PROP])), allow_pickle=False)
+    for name in _weight_group_names(body):
+        body.vertex_groups.remove(body.vertex_groups[name])
+    cursor = 0
+    for name, count in zip(data["names"], data["counts"]):
+        group = body.vertex_groups.new(name=str(name))
+        rows, weights = data["vertices"][cursor:cursor + int(count)], data["weights"][cursor:cursor + int(count)]
+        for weight in sorted(set(float(w) for w in weights)):  # un appel par poids distinct (rapide pour les masques binaires)
+            group.add([int(v) for v, w in zip(rows, weights) if float(w) == weight], weight, "REPLACE")
+        cursor += int(count)
+    for rig in rigs_of(body):
+        rig[MARKER] = int(body.get(BACKUP_VERSION_PROP, VERSION - 1))
+    return True
+
+
+def migrate_weights(body):
+    """Migration d'un rig de version antérieure : les poids stockés actuels (symétrisés) remplacent ceux du corps ; les poids PEINTS à la main sont remplacés (sauvegardés avant dans BACKUP_PROP : `restore_weights_backup` les rend).
+    Conserve l'armature, ses poses et ses actions. Retourne True si une migration a eu lieu."""
+    rigs = rigs_of(body)
+    if len(rigs) != 1 or rigs[0].get(MARKER, VERSION) == VERSION:
+        return False
+    backup_weights(body)
+    body[BACKUP_VERSION_PROP] = int(rigs[0].get(MARKER, 0))
+    points = cage_points(body)
+    table = bone_table(real_eye_joints(body, joints(points, load_anchors())))
+    for name in _weight_group_names(body):
+        body.vertex_groups.remove(body.vertex_groups[name])
+    _apply_weights(body, [entry["name"] for entry in table])
+    rigs[0][MARKER] = VERSION
+    return True
+
+
 def update(body, dental=False):
     """Repose les os d'après la morphologie actuelle : poids et actions conservés (les repères sont définis par règle). `dental=True` régénère aussi dents, gencives et langue (l'ajustement
     dans la cavité coûte de 0,2 à 3 s : l'interface le demande, le chemin rapide de la seule repose des os ne le fait pas ; sans régénération les dents gardent leur ancienne place)."""
@@ -824,6 +892,7 @@ def update(body, dental=False):
     if len(rigs) != 1:
         raise ValueError("Aucun rig (ou plusieurs) : rien à mettre à jour.")
     armature = rigs[0]
+    migrate_weights(body)
     points = cage_points(body)
     table = bone_table(real_eye_joints(body, joints(points, load_anchors())))
     with _Context():
