@@ -243,6 +243,10 @@ def retarget(source, target, mapping, motion, options=None, main_child=None):
         for i, p in enumerate(target.parents):
             if p >= 0 and target.names[p] in mapping and target.names[i] in mapping:
                 main_child.setdefault(target.names[p], target.names[i])
+        for side in (".L", ".R"):  # la direction de la main est celle du MAJEUR (articulation du majeur) : le premier enfant apparié est l'index.00, dont la tête est quasi au poignet (vecteur court et latéral) :
+            knuckle = "middle.01" + side  # sa direction, sensible à quelques degrés, pliait le poignet de ~66° sur la pose de REPOS de la source (mesuré, tools/probe_wrist_bias.py) ; avec le majeur : 9° (repos : 14°)
+            if "hand" + side in mapping and knuckle in mapping:
+                main_child["hand" + side] = knuckle
     s_heads = {t: source.head(s) for t, s in mapping.items()}
     t_heads = {t: target.head(t) for t in target.names}
     correction = {}
@@ -429,5 +433,5 @@ def foot_slide(foot_positions, foot_height, stature, fps, height_limit=0.03, spe
 
 def signature(source, mapping, options, action_key):
     """Clé de cache : action, mapping et options."""
-    text = json.dumps({"action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs), options.clavicle_scale], "source": list(source.names)}, sort_keys=True)
+    text = json.dumps({"algorithme": 2, "action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs), options.clavicle_scale], "source": list(source.names)}, sort_keys=True)
     return hashlib.sha1(text.encode()).hexdigest()[:20]
