@@ -78,7 +78,8 @@ rows_mid = {k: [] for k in ("absolu", "delta", "absolu+ik", "jambes")}  # coudes
 rows_end = {k: [] for k in ("absolu", "delta", "absolu+ik", "jambes")}  # mains et pieds relatifs à l'épaule/hanche
 slides, loops, durations = [], [], []
 tested = 0
-refused = []  # actions refusées par le lecteur STRICT (ANI-002 : échelle non unitaire…) : exclues de la mesure, jamais corrigées en silence
+refused = []
+rhythm_orientation, rhythm_hand, rhythm_clavicle = [], [], []  # actions refusées par le lecteur STRICT (ANI-002 : échelle non unitaire…) : exclues de la mesure, jamais corrigées en silence
 for name in candidates:
     if tested >= COUNT:
         break
@@ -114,6 +115,24 @@ for name in candidates:
         naive_quat[:, target.index[t_name]] = motion.quat[:, source.index[s_name]]
     naive_loc[:, pelvis_t] = scale * motion.loc[:, source.index[links["pelvis"]]]
     outputs["naïf"] = retarget.Result(naive_quat, naive_loc, {})
+    # Q9 : rythme scapulo-huméral (option) sur l'action réelle : mêmes orientations monde pour tous les os hors clavicules, dérive des mains bornée, angle de clavicule borné
+    reference = retarget.forward_kinematics(target, outputs["jambes"].loc, outputs["jambes"].quat)
+    rhythmic = retarget.retarget(source, target, links, motion, retarget.Options(pose_mode=retarget.ABSOLUTE_IK, root_motion=retarget.KEEP, ik_limbs=("leg",), clavicle_mode="rythme"))
+    candidate = retarget.forward_kinematics(target, rhythmic.loc, rhythmic.quat)
+    clavicles = [target.index[n] for n in ("clavicle.L", "clavicle.R") if n in links]
+    others_ = [i for i in range(len(target.names)) if i not in clavicles]
+    rhythm_orientation.append(float(np.abs(reference[:, others_, :3, :3] - candidate[:, others_, :3, :3]).max()))
+    # mesures dans le repère du THORAX (spine.05) : l'inclinaison du tronc de l'action ne compte pas dans l'angle de clavicule ni dans le déplacement de l'épaule
+    thorax = target.index["spine.05"]
+    thorax_delta = np.einsum("fij,jk->fik", candidate[:, thorax, :3, :3], target.rest[thorax][:3, :3].T)
+    for side in (".L", ".R"):
+        if "clavicle" + side not in links:
+            continue
+        ci, ai = target.index["clavicle" + side], target.index["arm_upper" + side]
+        local = np.einsum("fji,fjk,kl->fil", thorax_delta, candidate[:, ci, :3, :3], target.rest[ci][:3, :3].T) if False else np.einsum("fji,fjk->fik", thorax_delta, np.einsum("fij,jk->fik", candidate[:, ci, :3, :3], target.rest[ci][:3, :3].T))
+        rhythm_clavicle.append(float(np.degrees(np.arccos(np.clip((np.trace(local, axis1=-2, axis2=-1) - 1) / 2, -1, 1))).max()))
+        offset = np.einsum("fji,fj->fi", thorax_delta, candidate[:, ai, :3, 3] - candidate[:, thorax, :3, 3]) - (target.rest[ai][:3, 3] - target.rest[thorax][:3, 3])
+        rhythm_hand.append(float(np.linalg.norm(offset, axis=-1).max()))
     for label, result in outputs.items():
         t_pos = retarget.joint_positions(target, result.loc, result.quat)
         errors = []
@@ -165,6 +184,9 @@ bad = [(s, t) for s, t in slides if t > max(1.5 * s, 0.02)]
 check("Q3_glissement_des_pieds", len(slides) > 0 and len(bad) <= 0.1 * len(slides),
       {"mesures": len(slides), "au_dela_du_seuil": len(bad), "derive_cible_max_cm": round(max((t for _s, t in slides), default=0) * 100, 1), "derive_source_max_cm": round(max((s for s, _t in slides), default=0) * 100, 1)})
 check("Q4_continuite_des_boucles", all(t <= s + 0.005 for s, t in loops), {"boucles_candidates": len(loops), "pire_ecart_supplementaire_pourcent": round(max((t - s for s, t in loops), default=0) * 100, 2)})
+check("Q9_rythme_scapulo_humeral", tested >= 10 and max(rhythm_orientation) < 1e-5 and max(rhythm_hand) <= 0.08 and max(rhythm_clavicle) <= 45.0,
+      {"actions": len(rhythm_orientation), "ecart_orientation_autres_os_max": max(rhythm_orientation), "deplacement_epaule_max_cm": round(max(rhythm_hand) * 100, 1), "angle_clavicule_max_deg": round(max(rhythm_clavicle), 1),
+       "critere": "orientations conservées < 1e-5, déplacement de l'épaule dans le repère du thorax <= 8 cm (mesuré 4-5 cm à 135-180° sur la grille), clavicule <= 45°"})
 check("Q5_duree_par_action", bool(durations) and max(durations) <= 0.25, {"mediane_s": round(float(np.median(durations)), 3), "max_s": round(max(durations), 3)})
 
 if OUT:

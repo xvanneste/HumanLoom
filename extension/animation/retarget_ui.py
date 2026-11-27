@@ -61,7 +61,8 @@ def convert(context, entry, action_name):
     if mapping.duplicates(links):
         raise ValueError("Conflit dans le mapping : une même source sert plusieurs os.")
     options = retarget.Options(pose_mode=wm.hl_ret_pose, root_motion=wm.hl_ret_root, translation_scale=wm.hl_ret_scale if wm.hl_ret_scale > 0 else None,
-                               ik_limbs=("arm", "leg") if wm.hl_ret_ik_arms else ("leg",), clavicle_scale=wm.hl_ret_clavicle)
+                               ik_limbs=("arm", "leg") if wm.hl_ret_ik_arms else ("leg",), clavicle_scale=wm.hl_ret_clavicle,
+                               clavicle_mode="rythme" if wm.hl_ret_rhythm else "source")
     with bpy.data.libraries.load(str(blend), link=False) as (_available, wanted):  # une seule action par chargement
         wanted.actions = [action_name]
     loaded = wanted.actions[0]
@@ -302,7 +303,10 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
         column.prop(wm, "hl_ret_euler_order", text="Ordre Euler source")
         column.prop(wm, "hl_ret_root", text="Root motion")
         column.prop(wm, "hl_ret_ik_arms", text="IK des bras (contacts mains-objets)")
-        column.prop(wm, "hl_ret_clavicle", slider=True)
+        column.prop(wm, "hl_ret_rhythm")
+        sub = column.column(align=True)
+        sub.active = not wm.hl_ret_rhythm
+        sub.prop(wm, "hl_ret_clavicle", slider=True)
         column.prop(wm, "hl_ret_speed", text="Vitesse")
         row = column.row(align=True)
         row.prop(wm, "hl_ret_trim_start", text="Début")
@@ -323,7 +327,7 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
 
 
 CLASSES = (HUMANLOOM_OT_animation_apply, HUMANLOOM_OT_animation_publish_favorites, HUMANLOOM_OT_animation_thumbnails, HUMANLOOM_PT_animation_apply)
-WINDOW_PROPERTIES = ("hl_ret_euler_order", "hl_ret_pose", "hl_ret_ik_arms", "hl_ret_clavicle", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
+WINDOW_PROPERTIES = ("hl_ret_euler_order", "hl_ret_pose", "hl_ret_ik_arms", "hl_ret_clavicle", "hl_ret_rhythm", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
 
 
 def register():
@@ -345,6 +349,7 @@ def register():
     wm.hl_ret_trim_start = IntProperty(name="Début", default=0, min=0, description="Première image conservée (0 = début)")
     wm.hl_ret_trim_end = IntProperty(name="Fin", default=0, min=0, description="Dernière image conservée (0 = fin)")
     wm.hl_ret_clavicle = FloatProperty(name="Rotation des clavicules", default=1.0, min=0.0, max=1.0, description="Part de la rotation des clavicules de la source conservée (1 = fidèle). Réduire (0,5) limite le haussement d'épaule et ses plis du cou et du trapèze (mesuré sur 30 actions : plis en zone large −27 % à 0,5) ; l'orientation du bras et des autres os est conservée (positions relatives à la racine du membre inchangées)")
+    wm.hl_ret_rhythm = BoolProperty(name="Rythme scapulo-huméral", default=False, description="La clavicule est calculée d'après l'élévation du bras (la clavicule monte et pivote quand le bras dépasse 60° ; l'orientation du bras est conservée ; la main monte d'environ 4 cm à 135°). Remplace la rotation des clavicules de la source et le réglage ci-dessous. Réduit les plis de l'aisselle au-delà de 120° ; en flexion vers l'avant le gain est faible")
     wm.hl_ret_ik_arms = BoolProperty(name="IK des bras", default=False, description="Contacts mains-objets (parapluie, téléphone) : les mains sont replacées par IK à la position de celles de la source (mesuré : fidélité de pose moins bonne, mains à 2,4 % / 6,9 % contre 0,8 % / 1,8 %) ; décoché (défaut), les bras copient les directions de la source")
     wm.hl_ret_scale = FloatProperty(name="Échelle", default=0.0, min=0.0, description="Échelle des translations du bassin (0 = rapport automatique des hauteurs de bassin)")
 

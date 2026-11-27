@@ -14,6 +14,7 @@ Algorithme (voir CONCEPTION_A3.md §2) :
 from dataclasses import dataclass, field
 import hashlib
 import json
+import math
 
 import numpy as np
 
@@ -65,6 +66,7 @@ class Options:
     translation_scale: float = None   # None : rapport des hauteurs de bassin (automatique)
     ik_limbs: tuple = ("leg",)  # membres corrigés par l'IK en mode absolu+IK : défaut « jambes seules » (validé à l'œil le 2026-11-24) ; ajouter « arm » pour les contacts mains-objets
     clavicle_scale: float = 1.0       # facteur sur la rotation (monde) des CLAVICULES par rapport au repos : 1 = fidèle à la source ; < 1 réduit le haussement d'épaule (moins de plis du cou et du trapèze) ; l'orientation du bras et de tous les autres os est CONSERVÉE (positions relatives à la racine du membre inchangées, mesuré 0,00 mm sur 30 actions)
+    clavicle_mode: str = "source"     # "source" : clavicule de la source (× clavicle_scale) ; "rythme" : la clavicule est CALCULÉE d'après l'élévation du bras (rythme scapulo-huméral, voir clavicle_rhythm) : la rotation de la source et clavicle_scale sont alors IGNORÉES (pas de double comptage) ; l'orientation du bras est conservée
     limb_blend: float = 0.0           # mode absolu+IK : 0 = la main/le pied vise la position de la source mise à l'échelle du BASSIN ; 1 = à l'échelle de la LONGUEUR DU MEMBRE (rapport des longueurs de segments), depuis l'épaule/la hanche
 
 
@@ -227,6 +229,36 @@ def scale_rotation(R, s):
     return np.eye(3) + np.sin(a) * K + (1.0 - np.cos(a)) * (K @ K)
 
 
+# --- rythme scapulo-huméral ---------------------------------------------------------------------------------------------------------------------------
+# Loi par morceaux (degrés) de la clavicule en fonction de l'élévation HUMÉROTHORACIQUE θ (angle entre l'os du bras et la verticale descendante du thorax). Calibrée sur le rig par mesure (tools/proto_epaule_A_*.py) : élévation de la clavicule 20° à 150°,
+# rotation axiale postérieure 30° à 180°, PAS de rétraction (elle aggrave les plis et l'aire de section sur ce rig). Valeurs de rig, pas des mesures anatomiques (docs/anatomie_articulations.md : ordres de grandeur seulement).
+RHYTHM_NODES = (0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0)
+RHYTHM_ELEVATION = (0.0, 0.0, 0.0, 20.0 / 3.0, 40.0 / 3.0, 20.0, 20.0)
+RHYTHM_AXIAL = (0.0, 0.0, 3.0, 9.0, 18.0, 27.0, 30.0)
+
+
+def _axis_rotations(axes, degrees):
+    """Rotations (F, 3, 3) d'axes unitaires `axes` (F, 3) et d'angles `degrees` (F,) : formule de Rodrigues."""
+    t = np.radians(degrees)[:, None, None]
+    K = np.zeros((len(axes), 3, 3))
+    K[:, 0, 1], K[:, 0, 2], K[:, 1, 0], K[:, 1, 2], K[:, 2, 0], K[:, 2, 1] = -axes[:, 2], axes[:, 1], axes[:, 2], -axes[:, 0], -axes[:, 1], axes[:, 0]
+    return np.eye(3) + np.sin(t) * K + (1.0 - np.cos(t)) * (K @ K)
+
+
+def clavicle_rhythm(theta, rest_direction, side):
+    """Rotations (F, 3, 3), dans le repère du thorax au repos (latéral ±X, arrière +Y, haut +Z), de la clavicule pour les élévations `theta` (F, degrés). `rest_direction` : direction de repos tête → queue de la clavicule."""
+    up, back = np.array([0.0, 0.0, 1.0]), np.array([0.0, 1.0, 0.0])
+    lat = np.array([1.0 if side == ".L" else -1.0, 0.0, 0.0])
+    c = np.asarray(rest_direction, float) / np.linalg.norm(rest_direction)
+    altitude = math.asin(float(np.clip(c @ up, -1.0, 1.0))) + np.radians(np.interp(theta, RHYTHM_NODES, RHYTHM_ELEVATION))
+    horizontal = c - (c @ up) * up
+    azimuth = math.atan2(float(horizontal @ back), float(horizontal @ lat))
+    c2 = np.cos(altitude)[:, None] * (math.cos(azimuth) * lat + math.sin(azimuth) * back) + np.sin(altitude)[:, None] * up
+    arc = _axis_rotations(np.cross(c, c2) / np.maximum(np.linalg.norm(np.cross(c, c2), axis=-1, keepdims=True), 1e-12), np.degrees(np.arccos(np.clip(c2 @ c, -1.0, 1.0))))
+    sign = np.where(np.cross(c2, up) @ back > 0, 1.0, -1.0)
+    return _axis_rotations(c2, sign * np.interp(theta, RHYTHM_NODES, RHYTHM_AXIAL)) @ arc
+
+
 def retarget(source, target, mapping, motion, options=None, main_child=None):
     """Retourne un `Result`. `mapping` : {os cible: os source}. `main_child` : {os cible: enfant cible principal} (pour la direction de chaîne) ; déduit si absent."""
     options = options or Options()
@@ -285,6 +317,18 @@ def retarget(source, target, mapping, motion, options=None, main_child=None):
                 i = target.index[name]
                 delta_world = np.einsum("fij,jk->fik", rotations[:, i], t_rest_rot[i].T)
                 rotations[:, i] = np.einsum("fij,jk->fik", scale_rotation(delta_world, options.clavicle_scale), t_rest_rot[i])
+    if options.clavicle_mode == "rythme" and "spine.05" in target.index:  # clavicule calculée d'après l'élévation humérothoracique ; l'orientation monde du bras est conservée (il compense dans world_to_basis)
+        thorax = target.index["spine.05"]
+        thorax_delta = np.einsum("fij,jk->fik", rotations[:, thorax], t_rest_rot[thorax].T)
+        for side in (".L", ".R"):
+            clavicle, arm = "clavicle" + side, "arm_upper" + side
+            if clavicle in mapping and arm in mapping:
+                ci, ai = target.index[clavicle], target.index[arm]
+                direction = np.einsum("fji,fj->fi", thorax_delta, rotations[:, ai, :, 1])  # axe de l'os du bras dans le repère du thorax
+                direction = direction / np.linalg.norm(direction, axis=-1, keepdims=True)
+                theta = np.degrees(np.arccos(np.clip(-direction[:, 2], -1.0, 1.0)))
+                C = clavicle_rhythm(theta, t_rest_rot[ci][:, 1], side)
+                rotations[:, ci] = np.einsum("fij,fjk,kl->fil", thorax_delta, C, t_rest_rot[ci])
     # os sans source : orientation du parent + repos local (base identité)
     for i, name in enumerate(target.names):
         if name not in mapping:
@@ -433,5 +477,5 @@ def foot_slide(foot_positions, foot_height, stature, fps, height_limit=0.03, spe
 
 def signature(source, mapping, options, action_key):
     """Clé de cache : action, mapping et options."""
-    text = json.dumps({"algorithme": 2, "action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs), options.clavicle_scale], "source": list(source.names)}, sort_keys=True)
+    text = json.dumps({"algorithme": 2, "action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs), options.clavicle_scale, options.clavicle_mode], "source": list(source.names)}, sort_keys=True)
     return hashlib.sha1(text.encode()).hexdigest()[:20]

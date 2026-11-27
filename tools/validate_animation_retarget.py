@@ -108,6 +108,19 @@ ratio = np.median([np.median(angle_to_rest(world_half, i) / np.maximum(angle_to_
 check("Q1b_clavicule_limitee", rot_diff < 1e-5 and abs(float(ratio) - 0.5) < 0.02 and retarget.Options().clavicle_scale == 1.0,
       {"ecart_orientation_monde_autres_os": float(rot_diff), "rapport_angle_clavicule": round(float(ratio), 4), "defaut": retarget.Options().clavicle_scale})
 
+# Q1c : rythme scapulo-huméral (option, défaut « source ») — la clavicule est calculée, l'orientation monde de TOUS les autres os est conservée, la loi vaut l'identité au repos et reste bornée
+rhythm = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_mode="rythme", clavicle_scale=0.3))
+world_rhythm = retarget.forward_kinematics(target, rhythm.loc, rhythm.quat)
+rhythm_diff = np.abs(world_full[:, others, :3, :3] - world_rhythm[:, others, :3, :3]).max()
+clavicle_dir = target.rest[target.index["clavicle.L"]][:3, :3][:, 1]
+theta_grid = np.array([0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0])
+laws = {side: retarget.clavicle_rhythm(theta_grid, target.rest[target.index["clavicle" + side]][:3, :3][:, 1], side) for side in (".L", ".R")}
+law_angles = {side: np.degrees(np.arccos(np.clip((np.trace(R, axis1=-2, axis2=-1) - 1) / 2, -1, 1))) for side, R in laws.items()}
+orthonormal = all(np.abs(R @ np.swapaxes(R, -1, -2) - np.eye(3)).max() < 1e-9 for R in laws.values())
+check("Q1c_rythme_scapulo_humeral", rhythm_diff < 1e-5 and orthonormal and retarget.Options().clavicle_mode == "source" and all(a[0] < 1e-6 and 10.0 < a[5] < 45.0 and a[3] < a[5] for a in law_angles.values())
+      and abs(law_angles[".L"] - law_angles[".R"]).max() < 1e-6,
+      {"ecart_orientation_monde_autres_os": float(rhythm_diff), "angle_clavicule_selon_elevation_deg": [round(float(a), 1) for a in law_angles[".L"]], "defaut": retarget.Options().clavicle_mode})
+
 # Q7 : gestionnaire de root motion
 by_mode = {}
 for mode in (retarget.IN_PLACE, retarget.KEEP, retarget.EXTRACT):
