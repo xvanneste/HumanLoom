@@ -188,7 +188,14 @@ try:
     for path in list((ROOT / "extension").rglob("*.py")) + list((ROOT / "extension").rglob("*.json")) + list((ROOT / "extension").rglob("*.toml")):
         text = path.read_text(encoding="utf-8", errors="ignore")
         leaked += [(path.name, s) for s in sample if s in text]
-    cache_outside = ROOT not in cache.resolve().parents and ROOT not in Path(index_module.cache_path(cache)).resolve().parents
+    # tools/run_tests.py (INT-004) isole TMP dans <clone>/.temp : ce dossier temporaire jetable n'est pas du contenu du dépôt (exclu du clone suivi).
+    scratch = (ROOT / ".temp").resolve()
+
+    def inside_repository(path):
+        parents = Path(path).resolve().parents
+        return ROOT.resolve() in parents and scratch not in parents
+
+    cache_outside = not inside_repository(cache) and not inside_repository(index_module.cache_path(cache))
     check("C7_aucune_donnee_dans_le_depot", not leaked and cache_outside, {"fuites": leaked[:3], "cache_hors_dépôt": cache_outside, "ids_testés": len(sample)})
 finally:
     shutil.rmtree(workdir, ignore_errors=True)

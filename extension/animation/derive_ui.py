@@ -37,7 +37,11 @@ class HUMANLOOM_OT_derive(bpy.types.Operator):
             self.report({"ERROR"}, "Choisissez deux actions différentes.")
             return {"CANCELLED"}
         rig = skeleton.rigs_of(_body(context))[0]
-        action = derive.derive_action(rig, base, over, [wm.hl_derive_group], wm.hl_derive_mode, wm.hl_derive_hold, wm.hl_derive_loop, wm.hl_derive_blend)
+        try:
+            action = derive.derive_action(rig, base, over, [wm.hl_derive_group], wm.hl_derive_mode, wm.hl_derive_hold, wm.hl_derive_loop, wm.hl_derive_blend)
+        except ValueError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
         retarget_bpy.add_to_nla(rig, action)
         self.report({"INFO"}, f"« {action.name} » ajoutée au NLA.")
         return {"FINISHED"}

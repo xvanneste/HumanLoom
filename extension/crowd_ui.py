@@ -23,7 +23,14 @@ class HUMANLOOM_OT_crowd_generate(bpy.types.Operator):
     def execute(self, context):
         spec = crowd.default_spec(self.count, self.seed)
         spec["frames"] = self.frames
-        summary = crowd.generate(context, spec)
+        try:
+            summary = crowd.generate(context, spec)
+        except crowd.CleanupError as error:
+            self.report({"WARNING"}, str(error))
+            return {"FINISHED"}
+        except Exception as error:
+            self.report({"ERROR"}, f"Génération de la foule interrompue : {error}")
+            return {"CANCELLED"}
         self.report({"INFO"}, f"{summary['personnages']} personnages ; distance minimale de diversité {summary['diversite'].get('distance_min', 0):.2f}.")
         return {"FINISHED"}
 
@@ -40,7 +47,14 @@ class HUMANLOOM_OT_crowd_regenerate_member(bpy.types.Operator):
         return body is not None and body.get(crowd.OBJECT_KEY) is not None and bool(context.scene.get(crowd.KEY))
 
     def execute(self, context):
-        crowd.regenerate_member(context, int(human.body_of(context.active_object)[crowd.OBJECT_KEY]))
+        try:
+            crowd.regenerate_member(context, int(human.body_of(context.active_object)[crowd.OBJECT_KEY]))
+        except crowd.CleanupError as error:
+            self.report({"WARNING"}, str(error))
+            return {"FINISHED"}
+        except Exception as error:
+            self.report({"ERROR"}, f"Régénération du personnage interrompue : {error}")
+            return {"CANCELLED"}
         return {"FINISHED"}
 
 
@@ -58,7 +72,14 @@ class HUMANLOOM_OT_crowd_regenerate_all(bpy.types.Operator):
         return context.window_manager.invoke_confirm(self, event)
 
     def execute(self, context):
-        crowd.regenerate_all(context)
+        try:
+            crowd.regenerate_all(context)
+        except crowd.CleanupError as error:
+            self.report({"WARNING"}, str(error))
+            return {"FINISHED"}
+        except Exception as error:
+            self.report({"ERROR"}, f"Régénération de la foule interrompue : {error}")
+            return {"CANCELLED"}
         return {"FINISHED"}
 
 
@@ -73,7 +94,12 @@ class HUMANLOOM_OT_crowd_lod(bpy.types.Operator):
         return bool(context.scene.get(crowd.KEY)) and context.scene.camera is not None
 
     def execute(self, context):
-        levels = crowd.auto_lod(context.scene)
+        try:
+            levels = crowd.auto_lod(context.scene)
+        except ValueError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+
         self.report({"INFO"}, "Niveaux : " + ", ".join(f"{k}→{v}" for k, v in sorted(levels.items())[:12]))
         return {"FINISHED"}
 
@@ -92,7 +118,13 @@ class HUMANLOOM_OT_crowd_clear(bpy.types.Operator):
         return context.window_manager.invoke_confirm(self, event)
 
     def execute(self, context):
-        crowd.clear(context.scene)
+        try:
+            crowd.clear(context.scene)
+        except crowd.CleanupError as error:
+            self.report({"WARNING"}, str(error))
+        except Exception as error:
+            self.report({"ERROR"}, f"Effacement de la foule interrompu : {error}")
+            return {"CANCELLED"}
         return {"FINISHED"}
 
 

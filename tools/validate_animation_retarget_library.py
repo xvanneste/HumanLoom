@@ -78,6 +78,7 @@ rows_mid = {k: [] for k in ("absolu", "delta", "absolu+ik", "jambes")}  # coudes
 rows_end = {k: [] for k in ("absolu", "delta", "absolu+ik", "jambes")}  # mains et pieds relatifs à l'épaule/hanche
 slides, loops, durations = [], [], []
 tested = 0
+refused = []  # actions refusées par le lecteur STRICT (ANI-002 : échelle non unitaire…) : exclues de la mesure, jamais corrigées en silence
 for name in candidates:
     if tested >= COUNT:
         break
@@ -85,7 +86,12 @@ for name in candidates:
         wanted.actions = [name]
     action = wanted.actions[0]
     try:
-        motion, _first = retarget_bpy.read_action(action, source)
+        try:
+            motion, _first = retarget_bpy.read_action(action, source)
+        except ValueError as error:
+            refused.append({"action": name, "raison": str(error)[:90]})
+            print("ACTION REFUSEE (lecteur strict) :", name, str(error)[:70], flush=True)
+            continue
         animated = len({m.group(1) for layer in action.layers for strip in layer.strips for bag in strip.channelbags for c in bag.fcurves for m in [re.match(r'pose\.bones\["(.+?)"\]', c.data_path)] if m})
     finally:
         bpy.data.actions.remove(action)
@@ -152,7 +158,7 @@ def stats(table):
 mid_summary, end_summary = stats(rows_mid), stats(rows_end)
 good = mid_summary["jambes"]["mediane_pourcent"] <= 3 and mid_summary["jambes"]["p95_pourcent"] <= 6 and end_summary["jambes"]["mediane_pourcent"] <= 3 and end_summary["jambes"]["p95_pourcent"] <= 6
 check("Q2_fidelite_de_position_relative_a_la_racine_du_membre", tested >= 10 and good,
-      {"actions_testées": tested, "coudes_et_genoux": mid_summary, "mains_et_pieds": end_summary, "critere": "mode jambes seules : mediane <= 3 %, p95 <= 6 %", "mode_par_defaut_propose": "absolu + IK des jambes"})
+      {"actions_testées": tested, "coudes_et_genoux": mid_summary, "mains_et_pieds": end_summary, "actions_refusees_par_le_lecteur_strict": len(refused), "critere": "mode jambes seules : mediane <= 3 %, p95 <= 6 %", "mode_par_defaut_propose": "absolu + IK des jambes"})
 results["Q2_origine_relative_au_bassin_INFO"] = {"ok": True, "detail": {"statut": "NON atteint (7,15 % p95) : plancher dû à l'épaule de notre rig ~10 cm plus haute que le mannequin source", "mesures": summary, "critere_d_origine": "mediane <= 3 %, p95 <= 6 %"}}
 print("INFO Q2 d'origine (relatif au bassin) : NON atteint", json.dumps(summary, ensure_ascii=False))
 bad = [(s, t) for s, t in slides if t > max(1.5 * s, 0.02)]

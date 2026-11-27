@@ -215,6 +215,49 @@ except ValueError:
     refused = True
 check("S5_operateurs_panneau_et_pieces_non_simulables_refusees", ok_ops and refused and hasattr(bpy.types, "HUMANLOOM_PT_cloth"), {"operateurs": ok_ops, "t_shirt_refuse": refused})
 
+# S6 cycle de vie (GRM-005) : l'état initial des correctifs de flexion et des ressources est restitué à la désactivation, au retrait de la dernière pièce simulée et après un échec d'activation
+from extension.animation import correctives  # noqa: E402
+body, rig = fresh()
+dress = garments.add_garment(body, "robe_mi_longue")
+keys = correctives.keys_of(body.data)
+keys[0].mute = True  # mute volontaire de l'utilisateur : doit survivre au cycle
+initial = {k.name: k.mute for k in keys}
+
+
+def mutes():
+    return {k.name: k.mute for k in correctives.keys_of(body.data)}
+
+
+def owned():
+    return (body.modifiers.get(cloth_sim.COLLIDER_MODIFIER) is not None, cloth_sim.SESSION_KEY in body, any(c.name.startswith(cloth_sim.COLLECTION) for c in bpy.data.collections))
+
+
+cloth_sim.enable(dress)
+active_ok = all(mutes().values()) and owned()[0]
+cloth_sim.disable(dress)
+disable_ok = mutes() == initial and owned() == (False, False, False)
+cloth_sim.enable(dress)
+try:
+    garments.remove_garment(dress)  # l'API publique REFUSE de retirer une pièce simulée (protection skin_mask) : rien ne doit changer
+    refused_public = False
+except ValueError:
+    refused_public = True
+state_kept = refused_public and all(mutes().values()) and owned()[0]
+garments._remove_garment(dress)  # retrait interne (remplacement/reconstruction) : doit passer par le cycle de vie et restituer l'état initial
+remove_ok = state_kept and mutes() == initial and owned() == (False, False, False)
+dress = garments.add_garment(body, "robe_mi_longue")
+original_groups = cloth_sim._groups
+cloth_sim._groups = lambda: (_ for _ in ()).throw(ValueError("échec simulé"))
+try:
+    cloth_sim.enable(dress)
+    failed = False
+except ValueError:
+    failed = True
+finally:
+    cloth_sim._groups = original_groups
+rollback_ok = failed and mutes() == initial and owned() == (False, False, False) and not cloth_sim.is_enabled(dress)
+check("S6_cycle_de_vie_etat_initial_restitue", active_ok and disable_ok and remove_ok and rollback_ok, {"actif": active_ok, "desactivation": disable_ok, "retrait": remove_ok, "echec_puis_retour": rollback_ok})
+
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
 print("RESULT", "FAIL " + ", ".join(failures) if failures else "PASS")

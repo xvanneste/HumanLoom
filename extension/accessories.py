@@ -184,85 +184,134 @@ class Soup:
 
 
 # --- points d'attache -------------------------------------------------------------------------------------------------------------------------------------
-def _hand_frame(armature, side):
-    """Repère de la paume (monde) : origine au centre de la paume, y le long de la main (vers les doigts), z = normale sortante de la paume (le côté vers lequel les doigts se referment), x = travers de la main.
-    La normale vient de l'ANATOMIE (pouce du côté radial) et non d'un essai de rotation : normale = ± (y × direction du pouce), signe selon la main (gauche +, droite −), repère monde Z haut."""
-    hand = armature.pose.bones["hand." + side]
-    head, tail = np.array((armature.matrix_world @ hand.head)[:]), np.array((armature.matrix_world @ hand.tail)[:])
+def _hand_frame(armature, side, *, world=True):
+    """Repère orthonormé de la paume, en espace monde ou armature."""
+    transform = armature.matrix_world if world else Matrix.Identity(4)
+    bones = armature.pose.bones
+    hand = bones["hand." + side]
+    head, tail = np.array(transform @ hand.head), np.array(transform @ hand.tail)
     y = tail - head
     y /= np.linalg.norm(y)
-    thumb = np.array((armature.matrix_world @ armature.pose.bones["thumb.01." + side].head)[:])
-    middle = np.array((armature.matrix_world @ armature.pose.bones["middle.01." + side].head)[:])
+    thumb = np.array(transform @ bones["thumb.01." + side].head)
+    middle = np.array(transform @ bones["middle.01." + side].head)
+    # La normale sortante vient du côté radial de la main (le pouce).
     radial = thumb - middle
     radial -= y * (radial @ y)
     radial /= np.linalg.norm(radial)
     z = np.cross(y, radial) * (1.0 if side == "L" else -1.0)
     z /= np.linalg.norm(z)
     x = np.cross(y, z)
-    return head + (tail - head) * 0.5, x, y, z
+    return (head + tail) * 0.5, x, y, z
+
+
+def _cage_rig(body, armature):
+    cage = skeleton.cage_points(body)
+    body_to_rig = np.array(armature.matrix_world.inverted() @ body.matrix_world)
+    return cage @ body_to_rig[:3, :3].T + body_to_rig[:3, 3]
+
+
+def _rest_to_pose(bone):
+    return bone.matrix @ bone.bone.matrix_local.inverted()
+
+
+def _face_band(cage, eye_height):
+    return cage[(np.abs(cage[:, 0]) < 0.01) & (np.abs(cage[:, 2] - eye_height) < 0.012)]
+
+
+def _eye_centre_rig(body, armature, cage):
+    """Centre des yeux au repos, recalé sur les globes morphés si le rig sort de la cage."""
+    anchors = [armature.data.bones["eye." + side].head_local[:] for side in ("L", "R")]
+    centre = np.mean(anchors, axis=0)
+    if len(_face_band(cage, centre[2])):
+        return centre
+
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    world_to_rig = armature.matrix_world.inverted()
+    centres = []
+    for eye in skeleton.eyes_of(body):
+        evaluated = eye.evaluated_get(depsgraph)
+        vertices = evaluated.data.vertices
+        eye_centre = Vector(np.mean([v.co[:] for v in vertices], axis=0))
+        point = world_to_rig @ evaluated.matrix_world @ eye_centre
+        if eye.parent == armature and eye.parent_type == 'BONE':
+            bone = armature.pose.bones[eye.parent_bone]
+            point = _rest_to_pose(bone).inverted() @ point
+        centres.append(point[:])
+    return np.mean(centres, axis=0) if centres else centre
+
+
+def _frame_matrix(origin, x, y, z):
+    return Matrix((*np.column_stack((x, y, z, origin)).tolist(), (0, 0, 0, 1)))
+
+
+def _socket_frame_rig(body, armature, name):
+    """Matrice du point d'attache posé dans le repère de l'armature."""
+    bone_name = SOCKETS[name][0]
+    if name.startswith("main."):
+        return _frame_matrix(*_hand_frame(armature, name[-1], world=False))
+
+    # La cage est au repos. Mesurer avec l'os au repos, puis transporter l'attache par sa pose.
+    bone = armature.data.bones[bone_name]
+    cage = _cage_rig(body, armature)
+    up = (0.0, 0.0, 1.0)
+    if name == "dos":
+        z0 = bone.head_local.z
+        band = cage[(np.abs(cage[:, 2] - z0) < 0.04) & (np.abs(cage[:, 0]) < 0.03)]
+        point = band[np.argmax(band[:, 1])]
+        frame = _frame_matrix(point, (1.0, 0.0, 0.0), up, (0.0, 1.0, 0.0))
+    elif name.startswith("epaule."):
+        sign = 1.0 if name.endswith(".L") else -1.0
+        cx, cy, cz = bone.tail_local
+        band = cage[(np.abs(cage[:, 0] - cx) < 0.04) & (np.abs(cage[:, 1] - cy) < 0.06) & (cage[:, 2] > cz - 0.02)]
+        point = band[np.argmax(band[:, 2])]
+        frame = _frame_matrix(point, (sign, 0.0, 0.0), (0.0, 1.0, 0.0), up)
+    elif name == "taille":
+        z0 = bone.head_local.z
+        band = cage[(np.abs(cage[:, 2] - z0) < 0.03) & (np.abs(cage[:, 1]) < 0.04)]
+        point = band[np.argmax(band[:, 0])]
+        frame = _frame_matrix(point, (0.0, -1.0, 0.0), up, (1.0, 0.0, 0.0))
+    elif name == "tete":
+        point = cage[np.argmax(cage[:, 2])]
+        frame = _frame_matrix(point, (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), up)
+    elif name == "visage":
+        eye_height = _eye_centre_rig(body, armature, cage)[2]
+        front = _face_band(cage, eye_height)
+        point = (0.0, float(front[:, 1].min()) - 0.016, eye_height)
+        frame = _frame_matrix(point, (1.0, 0.0, 0.0), up, (0.0, -1.0, 0.0))
+    return _rest_to_pose(armature.pose.bones[bone_name]) @ frame
 
 
 def socket_frame(body, name):
-    """(origine, x, y, z) monde du point d'attache `name` sur le corps actuel."""
+    """Origine et axes du point d'attache en espace monde (échelle incluse)."""
+    if name not in SOCKETS:
+        raise ValueError("Point d'attache inconnu : %r" % (name,))
     armature = skeleton.rigs_of(body)[0]
-    cage = skeleton.cage_points(body)
-    top = cage[:, 2].max()
-    if name.startswith("main."):
-        return _hand_frame(armature, name[-1])
-    up = np.array([0.0, 0.0, 1.0])
-    if name == "dos":
-        bone = armature.pose.bones["spine.03"]
-        z0 = float((armature.matrix_world @ bone.head).z)
-        band = np.where((np.abs(cage[:, 2] - z0) < 0.04) & (np.abs(cage[:, 0]) < 0.03))[0]
-        point = cage[band[np.argmax(cage[band, 1])]]  # point le plus en arrière
-        return point, np.array([1.0, 0.0, 0.0]), up, np.array([0.0, 1.0, 0.0])
-    if name.startswith("epaule."):
-        sign = 1.0 if name.endswith(".L") else -1.0
-        bone = armature.pose.bones["clavicle." + name[-1]]
-        centre = np.array((armature.matrix_world @ bone.tail)[:])
-        band = np.where((np.abs(cage[:, 0] - centre[0]) < 0.04) & (np.abs(cage[:, 1] - centre[1]) < 0.06) & (cage[:, 2] > centre[2] - 0.02))[0]
-        point = cage[band[np.argmax(cage[band, 2])]]
-        return point, np.array([sign, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]), up
-    if name == "taille":
-        bone = armature.pose.bones["pelvis"]
-        z0 = float((armature.matrix_world @ bone.head).z)
-        band = np.where((np.abs(cage[:, 2] - z0) < 0.03) & (np.abs(cage[:, 1]) < 0.04))[0]
-        point = cage[band[np.argmax(cage[band, 0])]]
-        return point, np.array([0.0, -1.0, 0.0]), up, np.array([1.0, 0.0, 0.0])
-    if name == "tete":
-        point = cage[np.argmax(cage[:, 2])]
-        return point, np.array([1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]), up
-    if name == "visage":
-        eyes = [e for e in skeleton.eyes_of(body)]
-        centre = np.mean([skeleton._eye_centre(body, e) for e in eyes], axis=0)
-        front = cage[np.where((np.abs(cage[:, 0]) < 0.01) & (np.abs(cage[:, 2] - centre[2]) < 0.012))[0]]
-        point = np.array([0.0, float(front[:, 1].min()) - 0.016, float(centre[2])])
-        return point, np.array([1.0, 0.0, 0.0]), up, np.array([0.0, -1.0, 0.0])
-    raise ValueError("Point d'attache inconnu : %r" % (name,))
+    frame = armature.matrix_world @ _socket_frame_rig(body, armature, name)
+    return tuple(np.array(frame.col[i][:3]) for i in (3, 0, 1, 2))
 
 
 # --- construction des accessoires ---------------------------------------------------------------------------------------------------------------------
 def _grip(body, side, pose="poignee"):
-    """Position (repère de la paume : x, y, z) et rayon du passage des doigts refermés en préhension `pose` : centre des articulations des 4 doigts, rayon = 60 % de leur distance moyenne à ce centre."""
+    """Centre et rayon de la poignée dans le repère orthonormé de la paume."""
     armature = skeleton.rigs_of(body)[0]
-    origin, x, y, z = _hand_frame(armature, side)
+    origin, x, y, z = _hand_frame(armature, side, world=False)
     apply_grasp(body, side, pose)
-    bpy.context.view_layer.update()
     joints = []
-    for f in FINGERS:  # articulations des phalanges et bout du doigt : elles enveloppent la poignée
-        joints.append(np.array((armature.matrix_world @ armature.pose.bones[f"{f}.02.{side}"].head)[:]))
-        joints.append(np.array((armature.matrix_world @ armature.pose.bones[f"{f}.03.{side}"].head)[:]))
-        joints.append(np.array((armature.matrix_world @ armature.pose.bones[f"{f}.03.{side}"].tail)[:]))
+    for f in FINGERS:  # articulations et bouts des doigts autour de la poignée
+        joints.extend([armature.pose.bones[f"{f}.02.{side}"].head[:],
+                       armature.pose.bones[f"{f}.03.{side}"].head[:],
+                       armature.pose.bones[f"{f}.03.{side}"].tail[:]])
     release_grasp(body, side)
-    centre_world = np.mean(joints, axis=0)
-    centre = np.array([(centre_world - origin) @ x, (centre_world - origin) @ y, (centre_world - origin) @ z])
-    radius = float(np.mean([np.linalg.norm(j - centre_world) for j in joints]))
-    return centre, radius * 0.6  # centre de la poignée (repère paume) et son rayon (60 % de la distance moyenne des articulations)
+    centre_rig = np.mean(joints, axis=0)
+    centre = (centre_rig - origin) @ np.stack((x, y, z), axis=1)
+    radius = float(np.linalg.norm(joints - centre_rig, axis=1).mean())
+    return centre, radius * 0.6
 
 
 def build_mesh(body, key):
     """Maillage (sommets, faces) de l'accessoire `key` dans le repère de son point d'attache (x travers, y longueur, z normale), à l'échelle de la stature du corps."""
-    stature = float(skeleton.cage_points(body)[:, 2].max())
+    armature = skeleton.rigs_of(body)[0]
+    stature = float(_cage_rig(body, armature)[:, 2].max())
     s = stature / 1.70
     soup = Soup()
     definition = ACCESSORIES[key]
@@ -270,10 +319,10 @@ def build_mesh(body, key):
         side = definition["socket"][-1]
         if key.startswith("parapluie"):
             grip_roll(body, side)  # la tige est verticale et traverse le poing : le poignet tourne pour que l'axe de fermeture des doigts devienne vertical
-        origin, hx, hy, hz = socket_frame(body, definition["socket"])
-        frame = np.stack([hx, hy, hz], axis=1)  # colonnes : axes de la paume dans le monde
+        origin, hx, hy, hz = _hand_frame(armature, side, world=False)
+        frame = np.stack([hx, hy, hz], axis=1)
         centre, height = _grip(body, side)
-        grip = origin + frame @ centre  # centre de la poignée (monde)
+        grip = origin + frame @ centre  # centre de la poignée (armature)
         r = max(height, 0.010)  # rayon de la poignée : 60 % de la distance moyenne des articulations des doigts refermés
         down = np.array([0.0, 0.0, -1.0])
         if key.startswith("parapluie"):
@@ -297,7 +346,7 @@ def build_mesh(body, key):
         else:
             soup.cylinder(grip + down * 0.045 * s, grip + up * 0.70 * s, 0.008 * s)
             soup.dome(grip + up * 0.62 * s, up, 0.50 * s, 0.22 * s)
-        soup.vertices = ((np.array(soup.vertices) - origin) @ frame).tolist()  # monde -> repère de la paume
+        soup.vertices = ((np.array(soup.vertices) - origin) @ frame).tolist()  # armature -> repère de la paume
     elif key == "telephone":
         # téléphone : dos (z local 0 = contre la paume), cadre, écran (matériau 1, brillant sombre), bosse d'objectif ; l'écran regarde +z (vers le visage quand le téléphone est à l'oreille)
         width, length, thick = 0.072 * s, 0.150 * s, 0.0085 * s
@@ -338,8 +387,7 @@ def add_accessory(body, key, color=None):
     definition = ACCESSORIES[key]
     armature = rigs[0]
     vertices, faces = build_mesh(body, key)
-    origin, x, y, z = socket_frame(body, definition["socket"])
-    frame = Matrix(((x[0], y[0], z[0], origin[0]), (x[1], y[1], z[1], origin[1]), (x[2], y[2], z[2], origin[2]), (0, 0, 0, 1)))
+    frame_rig = _socket_frame_rig(body, armature, definition["socket"])
     mesh = bpy.data.meshes.new("HL " + key)
     tags = getattr(build_mesh, "tags", None)
     mesh.from_pydata([tuple(v) for v in vertices], [], [list(f) for f in faces])
@@ -367,13 +415,13 @@ def add_accessory(body, key, color=None):
         mesh.materials.append(screen)
         for polygon, tag in zip(mesh.polygons, tags):
             polygon.material_index = int(tag)
-    bone = armature.data.bones[SOCKETS[definition["socket"]][0]]
     obj.parent = armature
     obj.parent_type = "BONE"
-    obj.parent_bone = bone.name
-    obj.matrix_basis = Matrix.Identity(4)
-    parent_world = armature.matrix_world @ armature.pose.bones[bone.name].matrix @ Matrix.Translation((0.0, bone.length, 0.0))  # os en POSE courante (bras plié pour le parapluie, la tige est construite dans cette pose)  # un parent « os » a son origine à la QUEUE de l'os
-    obj.matrix_parent_inverse = parent_world.inverted() @ (body.matrix_world @ frame)
+    obj.parent_bone = SOCKETS[definition["socket"]][0]
+    # Avec les matrices locales à l'identité, Blender évalue ici le vrai parent os.
+    # Cela inclut l'origine de parentage de l'os et l'éventuel parentage relatif.
+    bpy.context.view_layer.update()
+    obj.matrix_parent_inverse = obj.matrix_world.inverted() @ armature.matrix_world @ frame_rig
     obj[MARKER] = key
     obj[PARAMS] = json.dumps({"socket": definition["socket"], "couleur": list(colour), "prehension": definition["grasp"], "parapluie": key.startswith("parapluie")}, ensure_ascii=False)
     if definition["grasp"]:
@@ -403,14 +451,14 @@ def _flexion_sign(armature, side, finger):
     """Signe de rotation locale X qui REFERME le doigt vers la paume : le bout se déplace du côté de la normale de la paume (mesuré)."""
     first = armature.pose.bones[f"{finger}.01.{side}"]
     first.rotation_mode = "XYZ"
-    origin, x, y, z = _hand_frame(armature, side)
+    _, _, _, z = _hand_frame(armature, side, world=False)
     saved = tuple(first.rotation_euler)
     first.rotation_euler = (0.0, 0.0, 0.0)
     bpy.context.view_layer.update()
-    rest = np.array((armature.matrix_world @ armature.pose.bones[f"{finger}.03.{side}"].tail)[:])
+    rest = np.array(armature.pose.bones[f"{finger}.03.{side}"].tail)
     first.rotation_euler = (math.radians(40.0), 0.0, 0.0)
     bpy.context.view_layer.update()
-    bent = np.array((armature.matrix_world @ armature.pose.bones[f"{finger}.03.{side}"].tail)[:])
+    bent = np.array(armature.pose.bones[f"{finger}.03.{side}"].tail)
     first.rotation_euler = saved
     bpy.context.view_layer.update()
     return 1.0 if float((bent - rest) @ z) > 0 else -1.0
@@ -451,7 +499,7 @@ def grip_roll(body, side):
     armature = skeleton.rigs_of(body)[0]
     elbow = armature.pose.bones["arm_lower." + side]
     hand = armature.pose.bones["hand." + side]
-    shoulder = np.array((armature.matrix_world @ armature.pose.bones["arm_upper." + side].head)[:])
+    shoulder = np.array(armature.pose.bones["arm_upper." + side].head)
     for bone in (elbow, hand):
         bone.rotation_mode = "XYZ"
     best = (-1.0, None)
@@ -463,7 +511,7 @@ def grip_roll(body, side):
                 elbow.rotation_euler = tuple(angles)
                 hand.rotation_euler = (0.0, math.radians(roll), 0.0)
                 bpy.context.view_layer.update()
-                origin, x, y, z = _hand_frame(armature, side)
+                origin, x, y, _ = _hand_frame(armature, side, world=False)
                 in_front = shoulder[1] - origin[1]  # le visage regarde vers -y : la main doit être devant le buste
                 score = abs(float(x[2])) - 0.5 * abs(float(y[2])) + (0.0 if in_front > 0.12 else -1.0)
                 if score > best[0]:
@@ -488,24 +536,31 @@ def reset_hand(body, side):
     bpy.context.view_layer.update()
 
 
-def ear_target(body, side):
-    """(point de la paume visé, centre de la tête) : le téléphone à l'oreille de ce côté (côté + x pour « L »)."""
-    cage = skeleton.cage_points(body)
-    eyes = [skeleton._eye_centre(body, e) for e in skeleton.eyes_of(body)]
-    eye_height = float(np.mean([e[2] for e in eyes]))
+def _ear_target_rig(body, armature, side):
+    cage = _cage_rig(body, armature)
+    _, eye_y, eye_height = _eye_centre_rig(body, armature, cage)
     sign = 1.0 if side == "L" else -1.0
-    zone = cage[(np.abs(cage[:, 2] - (eye_height - 0.025)) < 0.02) & (cage[:, 0] * sign > 0.04) & (cage[:, 1] > -0.02)]  # côté de la tête, derrière le visage
+    zone = cage[(np.abs(cage[:, 2] - (eye_height - 0.025)) < 0.02) & (cage[:, 0] * sign > 0.04) & (cage[:, 1] > -0.02)]
     ear_x = float(zone[:, 0].max() if sign > 0 else zone[:, 0].min()) if len(zone) else sign * 0.09
-    head_centre = np.array([0.0, float(np.mean([e[1] for e in eyes])) + 0.07, eye_height])
-    # la paume vise le plan de l'oreille, 3 cm en dehors de la surface (le téléphone occupe cet espace)
-    return np.array([ear_x + sign * 0.036, head_centre[1] - 0.01, eye_height - 0.025]), head_centre
+    head_centre = (0.0, eye_y + 0.07, eye_height)
+    # Le téléphone occupe l'espace entre la paume et l'oreille.
+    target = (ear_x + sign * 0.036, head_centre[1] - 0.01, eye_height - 0.025)
+    head_pose = _rest_to_pose(armature.pose.bones["head"])
+    return tuple(np.array(head_pose @ Vector(p)) for p in (target, head_centre))
+
+
+def ear_target(body, side):
+    """Point visé de la paume et centre de la tête posés dans le repère du corps."""
+    armature = skeleton.rigs_of(body)[0]
+    rig_to_body = body.matrix_world.inverted() @ armature.matrix_world
+    return tuple(np.array(rig_to_body @ Vector(p)) for p in _ear_target_rig(body, armature, side))
 
 
 def pose_phone_ear(body, side="R", iterations=500, seed=3):
     """Pose « téléphone à l'oreille » : trouve les rotations de l'épaule, du coude et du poignet qui amènent le centre de la paume à l'oreille, la normale de la paume (donc l'écran du téléphone) tournée vers la tête.
     Recherche aléatoire avec pas décroissant (aucune donnée publiée : posture de modélisation). Retourne le rapport {écart_mm, angle_normale_deg}."""
     armature = skeleton.rigs_of(body)[0]
-    target, head_centre = ear_target(body, side)
+    target, head_centre = _ear_target_rig(body, armature, side)
     names = [f"arm_upper.{side}", f"arm_lower.{side}", f"hand.{side}"]
     bones = [armature.pose.bones[n] for n in names]
     for bone in bones:
@@ -518,17 +573,14 @@ def pose_phone_ear(body, side="R", iterations=500, seed=3):
         for bone, a in zip(bones, angles.reshape(3, 3)):
             bone.rotation_euler = tuple(a)
         bpy.context.view_layer.update()
-        origin, x, y, z = _hand_frame(armature, side)
+        origin, _, y, z = _hand_frame(armature, side, world=False)
         to_head = head_centre - origin
         to_head /= np.linalg.norm(to_head)
         gap = float(np.linalg.norm(origin - target))
-        angle = float(np.degrees(np.arccos(np.clip(z @ to_head, -1, 1))))
-        elbow = np.array((armature.matrix_world @ elbow_bone.head)[:])
-        wrist_to_elbow = np.array((armature.matrix_world @ elbow_bone.tail)[:])  # poignet
+        elbow = np.array(elbow_bone.head)
         # postures plausibles : coude écarté du buste et plus bas que le poignet, doigts vers le haut, pas de torsion extrême
         penalty = 1.0 * max(0.0, 0.16 - sign * elbow[0]) + 1.0 * max(0.0, elbow[2] - (origin[2] - 0.12)) + 0.2 * max(0.0, 0.3 - float(y[2])) + 0.003 * float(np.sum(angles ** 2))
-        penalty += 1.0 * max(0.0, 0.08 - float(np.linalg.norm(elbow[:2] - np.array([0.0, 0.0]))) + 0.0) * 0.0
-        return gap + 0.05 * (1.0 - float(z @ to_head)) + penalty, gap, angle
+        return gap + 0.05 * (1.0 - float(z @ to_head)) + penalty
 
     best_all = None
     for trial in range(4):
@@ -539,15 +591,22 @@ def pose_phone_ear(body, side="R", iterations=500, seed=3):
         for it in range(iterations):
             candidate = np.clip(best + rng.normal(0.0, step, 9), -2.4, 2.4)
             value = evaluate(candidate)
-            if value[0] < best_value[0]:
+            if value < best_value:
                 best, best_value = candidate, value
             if it % 100 == 99:
                 step *= 0.6
-        if best_all is None or best_value[0] < best_all[1][0]:
+        if best_all is None or best_value < best_all[1]:
             best_all = (best, best_value)
-    best, best_value = best_all
+    best, _ = best_all
     evaluate(best)
-    return {"ecart_mm": round(best_value[1] * 1000, 1), "angle_normale_deg": round(best_value[2], 1), "angles_deg": [round(float(np.degrees(a)), 1) for a in best]}
+    # La recherche est anatomique. Le compte rendu mesure l'écart et l'orientation dans la scène.
+    origin, _, _, normal = _hand_frame(armature, side)
+    target_world, head_world = (np.array(armature.matrix_world @ Vector(p)) for p in (target, head_centre))
+    to_head = head_world - origin
+    to_head /= np.linalg.norm(to_head)
+    gap = float(np.linalg.norm(origin - target_world))
+    angle = float(np.degrees(np.arccos(np.clip(normal @ to_head, -1, 1))))
+    return {"ecart_mm": round(gap * 1000, 1), "angle_normale_deg": round(angle, 1), "angles_deg": [round(float(np.degrees(a)), 1) for a in best]}
 
 
 def fingertip_distances(body, side):

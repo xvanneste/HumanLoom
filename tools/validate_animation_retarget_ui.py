@@ -121,7 +121,10 @@ try:
         thread.join(timeout=180)
     retarget_ui.poll_thumbnails()
     from extension.animation import thumbnails as thumbs_module
-    key = thumbs_module.key_for(entry["id"], wm.hl_map_source.data.name)
+    source_rig = retarget.rig_from_armature(wm.hl_map_source)
+    revision = thumbs_module.library_revision(library / "HumanLoom_Actions.blend")
+    scope = thumbs_module.scope_for(source_rig, revision)
+    key = thumbs_module.key_for(entry["id"], entry["action"], scope)
     thumb_file = thumbs_module.thumb_path(work / "cache", key)
     check("R11_vignettes_hors_processus", result_thumbs == {"FINISHED"} and thumb_file.is_file() and thumb_file.stat().st_size > 200 and "1 générée" in retarget_ui._state["message"],
           {"fichier": thumb_file.name, "octets": thumb_file.stat().st_size if thumb_file.is_file() else 0, "message": retarget_ui._state["message"]})

@@ -126,8 +126,11 @@ def derive_action(rig_object, base_action, overlay_action, groups, mode="etiree"
     """Action dérivée pour le rig `rig_object` (nos os) à partir de deux actions de nos os (déjà re-ciblées). L'action créée est étiquetée (`hl_derived`, `hl_label` = « dérivée »). Retourne l'action."""
     from . import retarget, retarget_bpy
     rig = retarget.rig_from_armature(rig_object)
-    base_motion, first = retarget_bpy.read_action(base_action, rig)
-    overlay_motion, _ = retarget_bpy.read_action(overlay_action, rig)
+    try:
+        base_motion, first = retarget_bpy.read_action(base_action, rig, euler_order=None)
+        overlay_motion, _ = retarget_bpy.read_action(overlay_action, rig, euler_order=None)
+    except retarget_bpy.EulerOrderRequired as error:
+        raise ValueError("Convertissez les actions Euler en quaternion pour HumanLoom avant la dérivation.") from error
     quat, loc = layer({"names": rig.names, "quat": base_motion.quat, "loc": base_motion.loc}, {"quat": overlay_motion.quat}, groups, mode, hold_frame)
     seam_before, jump_before = loop_seam(quat)
     applied = 0

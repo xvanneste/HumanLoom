@@ -22,7 +22,7 @@ COLUMNS = 3
 _previews = {"collection": None}
 ALL = "__all__"
 OVERRIDE = {}  # tests : {"library_dir": ..., "cache_dir": ...} remplace les préférences
-_state = {"index": None, "user": None, "origin": None, "error": None, "thread": None, "import_result": None, "import_message": "", "categories": []}
+_state = {"index": None, "user": None, "origin": None, "error": None, "thread": None, "import_result": None, "import_message": "", "categories": [], "thumbnail_revision_wait": None}
 
 
 class HumanLoomAnimationPreferences(bpy.types.AddonPreferences):
@@ -56,6 +56,49 @@ def settings(context=None):
 
 def cache_directory(cache):
     return Path(cache) if cache else index_module.default_cache_dir()
+
+
+def library_blend(library):
+    return index_module.find_blend(library)
+
+
+def euler_order(wm):
+    order = getattr(wm, "hl_ret_euler_order", "NONE")
+    return None if order == "NONE" else order
+
+
+def thumbnail_sources(source, blend, euler_order=None):
+    """Squelette de référence et révision de bibliothèque lus par la galerie."""
+    from . import retarget
+    rig = retarget.rig_from_armature(source)
+    revision = thumbnails.request_library_revision(blend)
+    return rig, revision, thumbnails.scope_for(rig, revision, euler_order) if revision is not None else None
+
+
+def _poll_thumbnail_revision():
+    blend = _state["thumbnail_revision_wait"]
+    try:
+        if blend is not None and thumbnails.request_library_revision(blend) is None:
+            return 0.2
+    except (OSError, ValueError):
+        pass
+    _state["thumbnail_revision_wait"] = None
+    for window in bpy.context.window_manager.windows:
+        for area in window.screen.areas:
+            area.tag_redraw()
+    return None
+
+
+def _watch_thumbnail_revision(blend):
+    _state["thumbnail_revision_wait"] = blend
+    if not bpy.app.timers.is_registered(_poll_thumbnail_revision):
+        bpy.app.timers.register(_poll_thumbnail_revision, first_interval=0.2)
+
+
+def action_for(entry_id):
+    index = _state["index"]
+    position = index.positions.get(entry_id) if index is not None else None
+    return index.actions[position] if position is not None and index.actions else None
 
 
 def load_state(force=False):
@@ -295,9 +338,13 @@ class HUMANLOOM_PT_animation_library(bpy.types.Panel):
         library, cache = settings(context)
         try:
             directory = cache_directory(cache)
+            source = getattr(wm, "hl_map_source", None)
+            blend = library_blend(library) if source is not None and (directory / "thumbs").is_dir() else None
+            scope = thumbnail_sources(source, blend, euler_order(wm))[2] if blend is not None else None
+            if blend is not None and scope is None:
+                _watch_thumbnail_revision(blend)
         except Exception:  # noqa: BLE001 - pas de dossier de cache : icônes génériques
-            directory = None
-        source = wm.hl_map_source.data.name if getattr(wm, "hl_map_source", None) is not None else ""
+            directory, scope = None, None
         total = len(wm.hl_anim_results)
         pages = max(1, -(-total // PAGE_SIZE))
         page = max(0, min(pages - 1, wm.hl_anim_page))
@@ -305,7 +352,9 @@ class HUMANLOOM_PT_animation_library(bpy.types.Panel):
         for position in range(page * PAGE_SIZE, min(total, (page + 1) * PAGE_SIZE)):
             item = wm.hl_anim_results[position]
             cell = grid.box().column(align=True)
-            icon_id = preview_icon(thumbnails.key_for(item.entry_id, source), directory) if directory is not None and source else 0
+            action_name = action_for(item.entry_id) if scope else None
+            key = thumbnails.key_for(item.entry_id, action_name, scope) if action_name else None
+            icon_id = preview_icon(key, directory) if key is not None else 0
             if icon_id:
                 cell.template_icon(icon_value=icon_id, scale=4.5)
             row = cell.row(align=True)
@@ -363,10 +412,24 @@ def register():
     wm.hl_anim_results = CollectionProperty(type=HL_AnimResult)
     wm.hl_anim_active = IntProperty()
     wm.hl_anim_page = IntProperty(name="Page", default=0, min=0)
+    if _stop_thumbnail_tasks not in bpy.app.handlers.load_pre:
+        bpy.app.handlers.load_pre.append(_stop_thumbnail_tasks)
     # Aucun chargement ici : l'index est lu à la demande.
 
 
+@bpy.app.handlers.persistent
+def _stop_thumbnail_tasks(_unused=None):
+    retarget_ui.cancel_thumbnails()
+    thumbnails.cancel_library_revisions()
+    if bpy.app.timers.is_registered(_poll_thumbnail_revision):
+        bpy.app.timers.unregister(_poll_thumbnail_revision)
+    _state["thumbnail_revision_wait"] = None
+
+
 def unregister():
+    if _stop_thumbnail_tasks in bpy.app.handlers.load_pre:
+        bpy.app.handlers.load_pre.remove(_stop_thumbnail_tasks)
+    _stop_thumbnail_tasks()
     retarget_ui.unregister()
     mapping_ui.unregister()
     derive_ui.unregister()

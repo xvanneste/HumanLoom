@@ -2,6 +2,20 @@
 
 Générateur humain en développement : modélisation du corps et du visage, morphologies et âges, groom natif Blender. Cette branche fournit **HumanLoom 0.15.2**, schéma de formes **9**, avec cheveux et pilosité intégrés à l'interface. Cible exclusive : **Blender 5.2**. L'identifiant d'extension `human_modeling` est conservé pour permettre la mise à jour des installations et des scènes existantes.
 
+## Masque de peau sous les vêtements
+
+Sélectionnez un personnage en mode Objet et ouvrez **Humain → Vêtements → Masque de peau**. Le mode est enregistré avec le personnage dans le fichier Blender. La couverture se recalcule lorsque vous ajoutez, retirez ou remplacez des pièces avec HumanLoom. Retirer le dernier vêtement réaffiche le corps entier et conserve le mode pour la tenue suivante. Confirmer le mode courant dans le panneau permet aussi de retirer les doublons du masque dans la pile, sous réserve de la protection des simulations.
+
+| Mode | Effet |
+| --- | --- |
+| **Désactivé** | Toute la peau du corps reste présente et visible. |
+| **Rendu uniquement** | EEVEE et Cycles rendent transparente la peau couverte. La surface complète reste disponible pour les simulations, les attaches, les grooms et les exports de géométrie. Le mode Solide peut montrer la peau. |
+| **Géométrie** | Le modificateur retire les faces couvertes de la surface évaluée, en mode Solide et au rendu. Les simulations, les attaches et les grooms qui utilisent le corps peuvent être affectés. Choisissez ce mode avant de lier ces dépendances ou d’activer la simulation. |
+
+Le masque garde les faces qui franchissent la limite de couverture. Les identifiants de provenance sont des attributs partagés du Mesh source. Le masque les utilise sans changer ses sommets, ses UV ni son partage entre personnages. Une face privée d’identifiant valide reste visible. Le masque suppose la topologie de cage native. Une retopologie ou un générateur qui recopie la provenance sur de nouvelles faces est hors contrat. Les vêtements importés peuvent être ajustés et attachés au corps, et ne fournissent pas de couverture de peau automatique. Les grooms restent visibles et peuvent traverser un vêtement. Pour changer les matériaux de peau d’un corps, utilisez **Désactivé** pendant l’édition et réactivez le mode voulu ensuite.
+
+Un fichier existant garde son masque historique et l’ordre de ses modificateurs à l’ouverture. Choisissez un mode dans le panneau pour adopter le nouveau comportement. Les copies historiques portant le nom d’origine ou un suffixe numérique Blender sont converties si elles utilisent le groupe de sommets historique en mode inversé. Un masque renommé hors de cette convention reste sous votre contrôle. Tant que le mode **Historique** est affiché, la couverture existante est conservée. Un vêtement avec une simulation de tissu native active est protégé, car Blender 5.2 ne fournit pas à HumanLoom d’indicateur fiable de cuisson pour ce cache. HumanLoom refuse alors de retirer ou reconstruire la pièce, ainsi que de changer le masque géométrique d’un corps dont dépend la simulation. Gérez la simulation explicitement avant ces opérations. Les changements entre Désactivé et Rendu uniquement sur un fichier moderne, et le réglage du dégagement des vêtements, restent disponibles.
+
 ## Organisation
 
 - `extension/` : extension installable, interface, opérateurs, mesures et contrôles de morphologie.

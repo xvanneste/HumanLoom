@@ -308,72 +308,17 @@ def create_human(context, location=None):
     return body
 
 
-def _retarget_drivers(owner_id, old, new):
-    """Les pilotes copiés lisent encore l'original : ils lisent maintenant la copie."""
-    animation = getattr(owner_id, "animation_data", None)
-    if animation is None:
-        return
-    for fcurve in animation.drivers:
-        for variable in fcurve.driver.variables:
-            for target in variable.targets:
-                if target.id == old:
-                    target.id = new
+def duplicate_human(context, body, share_mesh=False, *, select=False):
+    """Copie un personnage. Le partage du Mesh est réservé au template de foule."""
+    from .human_duplicate import duplicate
 
-
-def duplicate_human(context, body, share_mesh=False):
-    """Copie complète et indépendante : corps, yeux, repères, cheveux (données, groupes de nœuds et matériaux propres), nouvel UUID."""
-    clone = body.copy()
-    clone.data = body.data if share_mesh else body.data.copy()  # `share_mesh` (foule) : le maillage de base et ses couches de morphologie sont partagés ; seules les entrées du modificateur diffèrent
-    for collection in body.users_collection:
-        collection.objects.link(clone)
-    _retarget_drivers(clone, body, clone)
-    mapping = {body: clone}
-    queue = [(child, clone) for child in body.children]
-    while queue:  # enfants du corps puis leurs propres enfants (yeux rattachés à l'os head du squelette)
-        child, new_parent = queue.pop(0)
-        copy = child.copy()
-        if child.data is not None:
-            copy.data = child.data.copy()
-        for collection in child.users_collection:
-            collection.objects.link(copy)
-        copy.parent = new_parent
-        copy.parent_type, copy.parent_bone = child.parent_type, child.parent_bone
-        copy.matrix_parent_inverse = child.matrix_parent_inverse.copy()
-        queue.extend((grandchild, copy) for grandchild in child.children)
-        mapping[child] = copy
-        if child.type == "MESH" and copy.data.shape_keys is not None:
-            _retarget_drivers(copy.data.shape_keys, body, clone)
-        if child.type == "CURVES":
-            copy.data.surface = clone
-            _unshare_groom(copy)
-    for modifier in clone.modifiers:  # le squelette (enfant du corps) est copié avec lui : le modificateur de la copie vise le squelette de la copie
-        if modifier.type == "ARMATURE" and modifier.object in mapping:
-            modifier.object = mapping[modifier.object]
-    for old_object, new_object in mapping.items():  # pilotes du corps qui lisent un enfant (ex. `mouth_open` lit l'os `jaw` du squelette) : ils lisent la copie
-        if old_object is not body:
-            _retarget_drivers(clone, old_object, new_object)
-    properties = clone.humanloom
-    properties.uuid = _new_uuid()
-    for attribute in ("eye_left", "eye_right"):
-        original_eye = getattr(body.humanloom, attribute)
-        setattr(properties, attribute, mapping.get(original_eye))
-    return clone
-
-
-def _unshare_groom(hair):
-    """Groupes de nœuds et matériaux créés par HumanLoom : propres à la copie (T-A8 : le matériau était partagé)."""
-    materials = {}
-    for index, material in enumerate(hair.data.materials):
-        if material is not None and material.get("hl_owned"):
-            materials[material] = material.copy()
-            hair.data.materials[index] = materials[material]
-    for modifier in hair.modifiers:
-        if modifier.type == "NODES" and modifier.node_group is not None and modifier.node_group.get("hl_owned"):
-            group = modifier.node_group.copy()
-            for node in group.nodes:
-                if node.bl_idname == "GeometryNodeSetMaterial" and node.inputs["Material"].default_value in materials:
-                    node.inputs["Material"].default_value = materials[node.inputs["Material"].default_value]
-            modifier.node_group = group
+    global _duplicating
+    _duplicating += 1
+    try:
+        return duplicate(context, body, share_mesh, select)
+    finally:
+        _count[0] = len(bpy.data.objects)
+        _duplicating -= 1
 
 
 class HUMANLOOM_OT_create(bpy.types.Operator):
@@ -430,11 +375,11 @@ class HUMANLOOM_OT_duplicate(bpy.types.Operator):
         return is_native(body_of(context.object))
 
     def execute(self, context):
-        clone = duplicate_human(context, body_of(context.object))
-        for obj in tuple(context.selected_objects):
-            obj.select_set(False)
-        clone.select_set(True)
-        context.view_layer.objects.active = clone
+        try:
+            duplicate_human(context, body_of(context.object), select=True)
+        except (AttributeError, ReferenceError, RuntimeError, TypeError, ValueError) as error:
+            self.report({'WARNING'}, f'Duplication annulée : {error}')
+            return {'CANCELLED'}
         return {"FINISHED"}
 
 
@@ -451,12 +396,13 @@ def ensure_unique_uuid(scene=None, depsgraph=None):
 
 
 _count = [0]
+_duplicating = 0
 
 
 @bpy.app.handlers.persistent
 def _on_depsgraph(scene, depsgraph=None):
     """Détecte une duplication (le nombre d'objets change) et rend les UUID uniques."""
-    if len(bpy.data.objects) != _count[0]:
+    if not _duplicating and len(bpy.data.objects) != _count[0]:
         _count[0] = len(bpy.data.objects)
         ensure_unique_uuid()
 

@@ -12,6 +12,7 @@ Ce module ne lit aucun .blend ; le .json est lu à l'installation."""
 import json
 import math
 from pathlib import Path
+import warnings
 
 import bmesh
 import bpy
@@ -414,6 +415,19 @@ def _make_object(name, vertices, polygons, material_ids, materials, parent_bone,
 def parts_of(body):
     rigs = skeleton.rigs_of(body)
     return [child for rig in rigs for child in rig.children if child.get(MARKER)]
+
+
+def part_of(body, kind):
+    """Résout un rôle sur les rigs du corps. Une pièce absente ou ambiguë est indisponible."""
+    # Les scènes existantes stockent le libellé d'origine dans le marqueur persistant.
+    marker = KINDS[kind][0]
+    candidates = [part for part in parts_of(body) if part.get(MARKER) == marker]
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        names = ", ".join(repr(part.name) for part in candidates)
+        warnings.warn(f"Pièces dentaires en double pour {body.name!r}, rôle {marker!r} ({names}).", RuntimeWarning)
+    return None
 
 
 def fingerprint(body):

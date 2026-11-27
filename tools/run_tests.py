@@ -1,30 +1,34 @@
 """Lanceur des tests HumanLoom (I-04, I-44, I-47). Python normal (pas Blender), Blender 5.2 uniquement.
 
-Usage :
-  python tools/run_tests.py --out <dossier_sortie> [--seed-validation <validation_source>] [--filter texte] [--compare ref.json]
+Le verdict strict (`verdict.json`) exige une référence valide et au moins un test requis
+sélectionné. Chaque test requis doit réussir. Code 1 si cette condition échoue, code 2
+si une précondition ou l'infrastructure fait défaut. Le filtre s'applique également
+aux tests attendus. Les tests déclarés obsolètes restent visibles comme historiques.
 
-Garanties :
-- les tests tournent dans un CLONE (`<out>/clone`, copie de `extension/` et `tools/`), jamais dans le dépôt ni dans son
-  `validation/` : plusieurs scripts écrivent en dur dans `validation/` ;
-- `--out` ne peut pas être dans le `validation/` du dépôt ; le dossier source `--seed-validation` n'est que LU (copie des
-  fichiers listés dans SEED, qui servent d'entrées à certains tests) ;
-- un Blender 5.2 séparé par test (`--background --factory-startup`), délai maximal 900 s ;
-- fixtures d'anciennes versions (`adult-original.blend`, `legacy-03.blend`) générées par `tools/make_legacy_fixtures.py`
-  (SYNTHÉTIQUES, voir son en-tête) et copiées dans le dossier de sortie des tests qui les attendent ;
-- sortie `<out>/resume.json` au même format que `docs/audit/baseline-tests.json`, puis comparaison avec la référence
-  (`--compare`, par défaut ce fichier) : code de sortie 1 si un test OK de la référence n'est plus OK."""
+Les tests et leurs sorties de travail sont isolés dans une copie de `extension/` et
+`tools/`. `--seed-validation` copie certaines entrées en lecture seule. Les tests
+utilisent Blender en arrière-plan, sauf `validate_install`, lancé en Python ordinaire
+avec un dossier de travail et des ressources utilisateur Blender isolés.
+
+`resume.json` conserve le format de la référence. `comparaison.json` décrit les écarts
+historiques. `--compare-only RESUME.json` compare des résultats déjà produits, avec un
+code de sortie historique (1 si régression), sans exécuter les tests ni établir un
+verdict strict."""
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BLENDER = r"C:/Program Files/Blender Foundation/Blender 5.2/blender.exe"
 TIMEOUT = 900
+INSTALL_TIMEOUT = 1830  # validate_install peut démarrer trois Blender de 600 s chacun.
 OLD_ASSET = "validation/proportions-14/extension-13/data/realistic.blend"
 # Entrées de tests lues dans validation/ (chemins relatifs, fichiers ou dossiers ; * accepté).
 SEED = (
@@ -35,19 +39,38 @@ SEED = (
     "muscles-regionaux-18/candidat-04.blend", "muscles-regionaux-18/apercus/*-inspection.blend", "atlas-15", "groom-25",
     "nature-cheveux-21", "cheveux-20", "physique-cheveux-22", "source-growth", "planches-modelisation-23/Revue-editable-*.blend",
 )
-# Tests qui attendent une fixture dans leur dossier de sortie : nom du test -> fichiers à y copier.
-FIXTURES = {"validate_controls": ("adult-original.blend",), "validate_presets": ("legacy-03.blend",)}
-# Scripts exclus : travail en cours de l'utilisateur.
-SKIP = {"validate_groom_collision29": "travail en cours de l'utilisateur (non suivi)"}
+# Un test requis ignoré reste bloquant pour le verdict strict.
+SKIP = {"validate_groom_collision29": "travail en cours de l'utilisateur"}
 # Tests périmés par décision de l'utilisateur (I-34) : listés OBSOLÈTE, jamais comptés comme échec ni comme régression.
 OBSOLETE = {
     "validate_controls": "D-21 : acceptation de la migration d'anciens fichiers, abandonnée (aucune migration au schéma 10) ; conservé",
     "validate_presets": "D-21 : acceptation de la migration d'anciens fichiers, abandonnée (aucune migration au schéma 10) ; conservé",
     "validate_surface_fix": "I-34 : dépend d'un ancien asset non reproductible (82 croisements) ; remplacé par validate_eyelids_native (corps natif) et validate_geometry_quality",
 }
-# Constats connus : le test échoue parce qu'il mesure un défaut réel, documenté dans SUIVI_REPRISE.md ; statut « ÉCHEC CONNU » (jamais compté OK, jamais régression).
-KNOWN_FAILURES = {
+# Tests Blender dont les arguments par défaut suffisent. Les autres sont dans registry().
+DEFAULT_BLENDER_TESTS = set("""
+check_delivery18 check_groom_continuity25 check_nature21 check_review_scenes23
+validate_accessories validate_animation_derived_library validate_animation_derived
+validate_animation_import validate_animation_index validate_animation_mapping_library
+validate_animation_mapping_ui validate_animation_mapping validate_animation_retarget_library
+validate_animation_retarget_ui validate_animation_retarget validate_animation_rigs_a5
+validate_animation_ui validate_cloth_sim validate_correctives validate_crowd
+validate_delivery12_reopen validate_delivery13_reopen validate_dense_hair20
+validate_dental validate_eyelids_native validate_face_pilot validate_face_poses
+validate_garments_import validate_garments validate_gaze validate_groom_collision29
+validate_groom_quality26 validate_groom_reopen25 validate_groom_workflow25 validate_groom25
+validate_groom28 validate_hair20 validate_human_rig validate_nature21
+validate_physics_profile22 validate_physics_rest21 validate_regional_compat18
+validate_regional_upgrade18 validate_surface_atlas15_ages validate_surface_atlas15
+""".split())
+DIRECTORY_OUTPUTS = {
+    "validate_anatomy", "validate_body_mass_neutral", "validate_geometry_quality",
+    "validate_landmark_sets", "validate_measurements", "validate_model",
+    "validate_modeling_workflow", "validate_muscle_workflow", "validate_skin_relief",
 }
+INSTALL_TEST = "validate_install"
+SCRIPT_NAME = re.compile(r"(?:validate|check)_\w+")
+SKIP_RESULT = re.compile(r"^\s*RESULT\s+(?:IGNOR[ÉE]|SKIP(?:PED)?)\b", re.MULTILINE)
 SHIM = '''import sys, types, runpy
 from pathlib import Path
 ROOT = Path(sys.argv[sys.argv.index("--shim-root") + 1]); TEST = sys.argv[sys.argv.index("--shim-test") + 1]
@@ -96,10 +119,9 @@ def registry(clone, out):
 def copy_isolated(out):
     clone = out / "clone"
     if clone.exists():
-        if not (clone / ".run_tests_clone").exists():
-            sys.exit(f"Refus : {clone} existe et n'est pas un clone créé par ce lanceur.")
-        shutil.rmtree(clone)
-    clone.mkdir(parents=True)
+        clone = Path(tempfile.mkdtemp(prefix="clone-", dir=out))
+    else:
+        clone.mkdir(parents=True)
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", "*.blend1")
     for name in ("extension", "tools"):
         shutil.copytree(ROOT / name, clone / name, ignore=ignore)
@@ -129,19 +151,37 @@ def blender_cmd(*extra):
     return [BLENDER, "--background", "--factory-startup", "--offline-mode", "--threads", "4", "--python-exit-code", "1", *extra]
 
 
-def run(cmd, cwd):
-    started = time.time()
+def run(cmd, cwd, *, timeout=TIMEOUT, env=None):
+    started = time.monotonic()
     try:
-        done = subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT, cwd=str(cwd), encoding="utf-8", errors="replace")
-        code, text = done.returncode, (done.stdout or "") + (done.stderr or "")
+        done = subprocess.run(cmd, capture_output=True, timeout=timeout, cwd=cwd, env=env)
+        code = done.returncode
+        text = (done.stdout + b"\n" + done.stderr).decode("utf-8", "replace")
+        status = "OK" if code == 0 else "ÉCHEC"
     except subprocess.TimeoutExpired as error:
-        output = error.stdout.decode("utf-8", "replace") if isinstance(error.stdout, bytes) else (error.stdout or "")
-        code, text = -9, f"TIMEOUT {TIMEOUT} s\n" + output
-    return code, text, round(time.time() - started, 1)
+        output = (error.stdout or b"") + b"\n" + (error.stderr or b"")
+        code, status, text = None, "TIMEOUT", f"TIMEOUT {timeout} s\n" + output.decode("utf-8", "replace")
+    except OSError as error:
+        code, status, text = None, "INFRASTRUCTURE", str(error)
+    return code, status, text, round(time.monotonic() - started, 1)
 
 
-def compare(summary, reference_path):
-    reference = {row["test"]: row for row in json.loads(Path(reference_path).read_text(encoding="utf-8"))}
+def load_results(path):
+    rows = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("liste de résultats vide ou invalide")
+    names = set()
+    for row in rows:
+        if (not isinstance(row, dict) or not isinstance(row.get("test"), str)
+                or not SCRIPT_NAME.fullmatch(row["test"]) or not isinstance(row.get("statut"), str)
+                or not row["statut"].strip() or row["test"] in names):
+            raise ValueError("résultat invalide ou nom de test répété")
+        names.add(row["test"])
+    return rows
+
+
+def compare(summary, reference_rows):
+    reference = {row["test"]: row for row in reference_rows}
     now = {row["test"]: row for row in summary}
     ok = lambda row: row is not None and row["statut"] == "OK"
     report = {
@@ -154,81 +194,147 @@ def compare(summary, reference_path):
     return report
 
 
+def write_report(path, value):
+    path.write_text(json.dumps(value, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def isolated_env(clone):
+    env = {key: value for key, value in os.environ.items()
+           if not key.upper().startswith("BLENDER_USER_")
+           and key.upper() not in {"PYTHONOPTIMIZE", "HL_RIG_WEIGHTS", "HL_RIG_ONLY_POSES"}}
+    scratch = clone / ".temp"
+    scratch.mkdir()
+    env.update(BLENDER=BLENDER, BLENDER_USER_RESOURCES=str(clone / ".blender-user"),
+               TMP=str(scratch), TEMP=str(scratch), TMPDIR=str(scratch))
+    return env
+
+
+def execute_test(name, script, args, clone, out, shim, env, timeout):
+    runtime = "Python" if name == INSTALL_TEST else "Blender"
+    if name == INSTALL_TEST:
+        # validate_install nettoie argv[1], qui doit donc être un emplacement neuf.
+        args = [str(clone / ".installation-isolee")]
+        cmd = [sys.executable, "-E", "-B", str(script), *args]
+    else:
+        outputs = clone / ".sorties"
+        for arg in args:
+            path = Path(arg)
+            if path.is_relative_to(outputs):
+                target = path if name in DIRECTORY_OUTPUTS else path.parent
+                target.mkdir(parents=True, exist_ok=True)
+            elif path.is_relative_to(clone) and not path.is_file():
+                return {"test": name, "statut": "BLOQUÉ", "runtime": runtime,
+                        "raison": f"entrée absente : {path.relative_to(clone)}"}
+        source = script.read_text(encoding="utf-8", errors="replace")
+        needs_alias = ("bl_ext.user_default" in source or "human_modeling" in source) and "register()" not in source
+        if needs_alias:
+            cmd = blender_cmd("--python", str(shim), "--", "--shim-root", str(clone),
+                              "--shim-test", str(script), "--", *args)
+        else:
+            cmd = blender_cmd("--python", str(script), "--", *args)
+
+    timeout = timeout or (INSTALL_TIMEOUT if name == INSTALL_TEST else TIMEOUT)
+    code, status, output, seconds = run(cmd, clone, timeout=timeout, env=env)
+    message = next((line for line in reversed(output.splitlines())
+                    if re.search(r"Error|Exception|FAILED", line)), "")
+    if status == "OK":
+        skip = SKIP_RESULT.search(output)
+        if skip:
+            status, message = "IGNORÉ", output[skip.start():].strip().splitlines()[0]
+        elif name == INSTALL_TEST and not re.search(r"^VALIDATE_INSTALL_PASS\b", output, re.MULTILINE):
+            status, message = "ÉCHEC", "marqueur VALIDATE_INSTALL_PASS absent"
+    if status in {"TIMEOUT", "INFRASTRUCTURE"}:
+        message = output.splitlines()[0]
+    (out / f"{name}.log").write_text(output, encoding="utf-8")
+    return {"test": name, "statut": status, "code": code, "secondes": seconds,
+            "runtime": runtime, "delai_s": timeout, "commande": cmd,
+            "args": [Path(arg).name if Path(arg).is_absolute() else arg for arg in args],
+            "derniere_erreur": message[:220]}
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     parser =argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--out", required=True, help="dossier de sortie (hors du validation/ du dépôt)")
+    parser.add_argument("--out", required=True, help="dossier de sortie des résultats et du clone")
     parser.add_argument("--seed-validation", help="dossier validation/ SOURCE, lu seulement")
     parser.add_argument("--filter", default="", help="sous-chaîne du nom de test")
-    parser.add_argument("--compare", default=str(ROOT / "docs/audit/baseline-tests.json"))
+    parser.add_argument("--compare", default=str(ROOT / "docs/audit/baseline-tests.json"), help="référence historique JSON")
+    parser.add_argument("--compare-only", metavar="RESUME.json", help="comparaison historique d'un résultat existant")
+    parser.add_argument("--timeout", type=int, metavar="SECONDES", help="remplace le délai maximal de chaque test")
     options = parser.parse_args()
+    if options.timeout is not None and options.timeout <= 0:
+        parser.error("--timeout doit être > 0")
+    if options.compare_only and (options.filter or options.seed_validation or options.timeout):
+        parser.error("--compare-only utilise uniquement --compare et --out")
     out = Path(options.out).resolve()
-    if (ROOT / "validation").resolve() in (out, *out.parents):
-        sys.exit("Refus : la sortie ne doit pas être dans le validation/ du dépôt.")
+    if any(out.is_relative_to((ROOT / name).resolve()) for name in ("validation", "extension", "tools")):
+        parser.error("la sortie doit être en dehors des répertoires validation/, extension/ et tools/ du dépôt")
     out.mkdir(parents=True, exist_ok=True)
-    clone = copy_isolated(out)
-    info = {"clone": str(clone)}
-    if options.seed_validation:
-        info["seed_copies"], info["seed_absents"] = seed(clone, Path(options.seed_validation).resolve())
-    (out / "shim.py").write_text(SHIM, encoding="utf-8")
-    code, text, _ = run(blender_cmd("--python", str(clone / "tools/make_legacy_fixtures.py"), "--", str(out / "fixtures")), clone)
-    (out / "fixtures.log").write_text(text, encoding="utf-8")
-    info["fixtures"] = "ok" if code == 0 else f"ÉCHEC (code {code}, voir fixtures.log)"
-    scripts = sorted(p for p in (clone / "tools").glob("*.py") if re.match(r"(validate|check)_", p.name))
-    args_by_test = registry(clone, out)
+    info = {"mode": "comparaison" if options.compare_only else "strict", "reference": options.compare}
+    try:
+        reference = load_results(options.compare)
+        if options.compare_only:
+            report = compare(load_results(options.compare_only), reference)
+            write_report(out / "comparaison.json", {"info": info, "comparaison": report})
+            return int(bool(report["regressions"]))
+    except (OSError, ValueError) as error:
+        info["erreur"] = str(error)
+        write_report(out / "comparaison.json", {"info": info, "comparaison": {}})
+        if not options.compare_only:
+            write_report(out / "resume.json", [])
+            write_report(out / "verdict.json", {"statut": "INFRASTRUCTURE", "code": 2, "info": info})
+        print(f"INFRASTRUCTURE : {error}", file=sys.stderr)
+        return 2
+
     summary = []
-    for script in scripts:
-        name = script.stem
-        if options.filter and options.filter not in name:
-            continue
-        if name in OBSOLETE:
-            summary.append({"test": name, "statut": "OBSOLÈTE", "raison": OBSOLETE[name]})
-            print(name, "OBSOLÈTE", flush=True)
-            continue
-        if name in SKIP:
-            summary.append({"test": name, "statut": "IGNORÉ", "raison": SKIP[name]})
-            continue
-        args = args_by_test.get(name, [])
-        outputs = [Path(a) for a in args if Path(a).parent == out]
-        text_source = script.read_text(encoding="utf-8", errors="replace")
-        needs_alias = ("bl_ext.user_default" in text_source or "human_modeling" in text_source) and "register()" not in text_source
-        if needs_alias:
-            cmd = blender_cmd("--python", str(out / "shim.py"), "--", "--shim-root", str(clone), "--shim-test", str(script), "--", *args)
-        else:
-            cmd = blender_cmd("--python", str(script), "--", *args)
-        # Some scripts write their output argument as a file, others as a folder (I-44): try the likely form, then the other.
-        modes = ("dir", "file") if name in FIXTURES else ("file", "dir")
-        for attempt, mode in enumerate(modes):
-            for path in outputs:
-                if path.is_dir() and not any(path.iterdir()):
-                    path.rmdir()
-                if mode == "dir":
-                    path.mkdir(parents=True, exist_ok=True)
-                    for fixture in FIXTURES.get(name, ()):
-                        if (out / "fixtures" / fixture).exists():
-                            shutil.copy2(out / "fixtures" / fixture, path / fixture)
-            code, text, seconds = run(cmd, clone)
-            if code == 0 or attempt == 1 or not re.search(r"(PermissionError|IsADirectoryError|NotADirectoryError|FileNotFoundError|for writing: No such file)", text):
-                break
-        (out / f"{name}.log").write_text(text, encoding="utf-8")
-        error = next((l for l in reversed(text.splitlines()) if re.search(r"(Error|Exception|AssertionError|FAILED)", l)), "")
-        status = "OK" if code == 0 else ("TIMEOUT" if code == -9 else "ÉCHEC")
-        if status == "ÉCHEC" and name in KNOWN_FAILURES:
-            status, error = "ÉCHEC CONNU", KNOWN_FAILURES[name]
-        if code == 0 and "RESULT IGNORÉ" in text:  # test qui s'ignore lui-même (ex. bibliothèque d'animations absente) : jamais compté OK
-            status = "IGNORÉ"
-            error = next((l for l in text.splitlines() if "RESULT IGNORÉ" in l), "")
-        summary.append({"test": name, "statut": status, "code": code,
-                        "secondes": seconds, "args": [Path(a).name if "/" in a or "\\" in a else a for a in args],
-                        "derniere_erreur": error[:220]})
-        (out / "resume.json").write_text(json.dumps(summary, indent=1, ensure_ascii=False), encoding="utf-8")
-        print(name, summary[-1]["statut"], seconds, flush=True)
-    (out / "resume.json").write_text(json.dumps(summary, indent=1, ensure_ascii=False), encoding="utf-8")
-    report = compare(summary, options.compare) if Path(options.compare).exists() else {}
-    (out / "comparaison.json").write_text(json.dumps({"info": info, "comparaison": report}, indent=1, ensure_ascii=False), encoding="utf-8")
-    print(json.dumps({"info": info, "comparaison": report}, indent=1, ensure_ascii=False))
-    sys.exit(1 if report.get("regressions") else 0)
+    info["filtre"] = options.filter
+    try:
+        clone = copy_isolated(out)
+        info["clone"] = str(clone)
+        if options.seed_validation:
+            info["seed_copies"], info["seed_absents"] = seed(clone, Path(options.seed_validation).resolve())
+        env = isolated_env(clone)
+        shim = clone / ".shim.py"
+        shim.write_text(SHIM, encoding="utf-8")
+        scripts = {path.stem: path for path in (clone / "tools").glob("*.py")
+                   if SCRIPT_NAME.fullmatch(path.stem)}
+        args_by_test = registry(clone, clone / ".sorties")
+        expected = DEFAULT_BLENDER_TESTS | args_by_test.keys() | {INSTALL_TEST}
+        names = expected | scripts.keys() | {row["test"] for row in reference}
+
+        for name in sorted(name for name in names if options.filter in name):
+            required = name not in OBSOLETE
+            if not required:
+                result = {"test": name, "statut": "OBSOLÈTE", "raison": OBSOLETE[name]}
+            elif name not in scripts:
+                result = {"test": name, "statut": "ABSENT", "raison": "script requis absent du clone"}
+            elif name in SKIP:
+                result = {"test": name, "statut": "IGNORÉ", "raison": SKIP[name]}
+            else:
+                result = execute_test(name, scripts[name], args_by_test.get(name, []), clone,
+                                      out, shim, env, options.timeout)
+            summary.append(dict(result, requis=required))
+            print(name, result["statut"], flush=True)
+    except OSError as error:
+        info["erreur"] = str(error)
+        print(f"INFRASTRUCTURE : {error}", file=sys.stderr)
+
+    required_results = [row for row in summary if row["requis"]]
+    failures = [row["test"] for row in required_results if row["statut"] != "OK"]
+    infrastructure = {"INFRASTRUCTURE", "BLOQUÉ", "ABSENT", "TIMEOUT"}
+    if "erreur" in info or any(row["statut"] in infrastructure for row in required_results):
+        status, exit_code = "INFRASTRUCTURE", 2
+    elif failures or not required_results:
+        status, exit_code = "ÉCHEC", 1
+    else:
+        status, exit_code = "OK", 0
+    write_report(out / "resume.json", summary)
+    write_report(out / "comparaison.json", {"info": info, "comparaison": compare(summary, reference)})
+    write_report(out / "verdict.json", {"statut": status, "code": exit_code, "info": info,
+                                        "requis": len(required_results), "non_valides": failures})
+    print(f"Verdict strict : {status} ({len(required_results) - len(failures)}/{len(required_results)} requis OK)")
+    return exit_code
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

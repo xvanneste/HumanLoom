@@ -22,6 +22,8 @@ import tempfile
 CACHE_VERSION = 1
 UNCATEGORIZED = "Sans catégorie"
 INVENTORY_NAME = "inventory.json"
+IMPORT_BLEND = "HumanLoom_Actions.blend"
+IMPORT_JOURNAL = ".humanloom-animation-journal.json"  # Protocol handled by importer.py
 ACTION_SEPARATOR = "__"
 
 # Colonnes d'une entrée (ordre du cache).
@@ -73,36 +75,55 @@ def default_cache_dir():
 
 
 def find_source(path):
-    """Résout la source : dossier ou fichier. Retourne (type, chemin) avec type « inventory » ou « blend » ; None si rien de lisible.
-    Le `inventory.json` voisin du .blend est préféré ; sinon le premier .blend du dossier (repli)."""
+    """Résout un inventaire ou le .blend lu par la galerie."""
     if not path:
         return None
     p = Path(path)
     if p.is_file():
         if p.suffix.lower() == ".json":
-            return ("inventory", p)
+            return "inventory", p
         if p.suffix.lower() == ".blend":
             sibling = p.with_name(INVENTORY_NAME)
-            return ("inventory", sibling) if sibling.is_file() else ("blend", p)
+            if sibling.is_file():
+                return "inventory", sibling
+            if p.name.casefold() == IMPORT_BLEND.casefold() and (p.parent / IMPORT_JOURNAL).exists():
+                return ("inventory", sibling) if sibling.is_file() else None
+            return "blend", p
         return None
     if p.is_dir():
-        if (p / INVENTORY_NAME).is_file():
-            return ("inventory", p / INVENTORY_NAME)
+        inventory = p / INVENTORY_NAME
+        if inventory.is_file():
+            return "inventory", inventory
         blends = sorted(p.glob("*.blend"))
+        if (p / IMPORT_JOURNAL).exists():
+            blends = [b for b in blends if b.name.casefold() != IMPORT_BLEND.casefold()]
+        if inventory.is_file():
+            return "inventory", inventory
         if blends:
-            return ("blend", blends[0])
+            return "blend", blends[0]
     return None
 
 
-def fingerprint(source):
-    stat = os.stat(source)
-    return {"path": str(source), "size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+def find_blend(path):
+    found = find_source(path)
+    if found is None:
+        return None
+    source_type, source = found
+    if source_type == "blend":
+        return source
+    preferred = source.with_name(IMPORT_BLEND)
+    if preferred.is_file():
+        return preferred
+    return next(iter(sorted(source.parent.glob("*.blend"))), None)
 
 
-def entries_from_inventory(path):
-    """Lit `inventory.json` (lecture seule). Une entrée = tuple dans l'ordre de `FIELDS`."""
-    with open(path, encoding="utf-8") as handle:
-        data = json.load(handle)
+def fingerprint(source, st=None):
+    if st is None:
+        st = os.stat(source)
+    return {"path": str(source), "size": st.st_size, "mtime_ns": st.st_mtime_ns}
+
+
+def _inventory_rows(data):
     rows = []
     for key, item in data["animations"].items():
         flags = set(item.get("flags") or ())
@@ -115,12 +136,21 @@ def entries_from_inventory(path):
     return rows
 
 
-def actions_from_inventory(path):
-    """Noms d'action du .blend si l'inventaire les déclare tous (champ « action », écrit par l'import du lot A1b) ; sinon None."""
+def entries_from_inventory(path):
+    """Lit les entrées de l’inventaire dans l’ordre de FIELDS."""
     with open(path, encoding="utf-8") as handle:
-        items = json.load(handle)["animations"].values()
-    names = [item.get("action") for item in items]
+        return _inventory_rows(json.load(handle))
+
+
+def _inventory_actions(data):
+    names = [item.get("action") for item in data["animations"].values()]
     return names if names and all(names) else None
+
+
+def actions_from_inventory(path):
+    """Lit les noms d’action de l’inventaire s’ils y sont tous déclarés."""
+    with open(path, encoding="utf-8") as handle:
+        return _inventory_actions(json.load(handle))
 
 
 def names_from_blend(path):
@@ -307,15 +337,22 @@ def open_index(path, directory, force=False):
     if found is None:
         raise FileNotFoundError(f"Aucune bibliothèque lisible à {path!r} (attendu : inventory.json ou un .blend)")
     source_type, source = found
-    stamp = fingerprint(source)
-    if not force:
-        cached = load_cache(directory, source_type, stamp)
+    if source_type == "inventory":
+        with open(source, encoding="utf-8") as handle:
+            file_stat = os.fstat(handle.fileno())
+            stamp = fingerprint(source, file_stat) | {"file_id": file_stat.st_ino}
+            cached = None if force else load_cache(directory, source_type, stamp)
+            if cached is not None:
+                return cached, "cache"
+            data = json.load(handle)
+        index = Index(_inventory_rows(data), source_type, stamp)
+        index.actions = _inventory_actions(data)
+    else:
+        stamp = fingerprint(source)
+        cached = None if force else load_cache(directory, source_type, stamp)
         if cached is not None:
             return cached, "cache"
-    rows = entries_from_inventory(source) if source_type == "inventory" else names_from_blend(source)
-    index = Index(rows, source_type, stamp)
-    if source_type == "inventory":
-        index.actions = actions_from_inventory(source)
+        index = Index(names_from_blend(source), source_type, stamp)
     save_cache(directory, index)
     return index, source_type
 

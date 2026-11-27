@@ -12,12 +12,13 @@ import bmesh
 import bpy
 import numpy as np
 
-from . import human
+from . import human, skin_mask
 from .animation import skeleton
 
 MARKER = "hl_garment"
 PARAMS = "hl_garment_params"
 COLLECTION_NAME = "Vêtements HumanLoom"
+MATERIAL_OWNER = "hl_garment_material"
 LAYERS = {"dessous": 0, "haut": 1, "veste": 2, "manteau": 3, "bas": 1, "chaussures": 2, "chaussettes": 0, "couvre-chef": 3, "cou": 2, "mains": 1}
 
 # Règles de masque : os dominant (préfixe) -> plage le long du membre (0 = articulation proximale, 1 = distale) ; `z` : fenêtre de hauteur en fraction de la stature (0 pieds, 1 sommet du crâne).
@@ -257,7 +258,8 @@ def border_roughness(obj):
 
 # --- construction -------------------------------------------------------------------------------------------------------------------------------------
 def _material(definition, name):
-    material = bpy.data.materials.get("HL " + name) or bpy.data.materials.new("HL " + name)
+    material = bpy.data.materials.new("HL " + name)
+    material[MATERIAL_OWNER] = True
     material.use_nodes = True
     shader = material.node_tree.nodes.get("Principled BSDF")
     if shader is not None:
@@ -280,12 +282,23 @@ def garments_of(body):
 
 
 def add_garment(body, key, color=None, offset_mm=None, clean_edges=True):
+    _guard_skin_change(body)
+    garment = _add_garment(body, key, color, offset_mm, clean_edges)
+    try:
+        _refresh_skin_mask(body)
+    except Exception:
+        _remove_garment(garment)
+        raise
+    return garment
+
+
+def _add_garment(body, key, color=None, offset_mm=None, clean_edges=True, *, replacing=False):
     """Crée la pièce `key` sur `body` (rig installé requis) : retourne l'objet. Une pièce déjà présente est refusée."""
     if key not in GARMENTS:
         raise ValueError("Pièce inconnue : %r" % (key,))
     if not skeleton.rigs_of(body):
         raise ValueError("Le corps n'a pas de squelette : posez-le d'abord (les vêtements héritent des poids).")
-    if any(g[MARKER] == key for g in garments_of(body)):
+    if not replacing and any(g[MARKER] == key for g in garments_of(body)):
         raise ValueError("Cette pièce est déjà sur le corps : %s" % key)
     definition = dict(GARMENTS[key])
     if color is not None:
@@ -489,24 +502,42 @@ def _add_dress(body, key, definition, state):
 
 
 def remove_garment(obj):
+    skin_mask.guard_garments([obj])
+    body = obj.parent
+    if body is not None:
+        _guard_skin_change(body)
+        mode = skin_mask.mode_of(body)
+        if _should_refresh_skin(body, mode):
+            remaining = [garment for garment in garments_of(body) if garment != obj]
+            skin_mask.set_mode(body, mode, remaining)
+    _remove_garment(obj)
+
+
+def _remove_garment(obj):
+    from . import cloth_sim
+
+    if obj.get(cloth_sim.ACTIVE_KEY) or cloth_sim.CLOTH_UID_KEY in obj:
+        cloth_sim.disable(obj)
     mesh = obj.data
+    materials = {slot.material for slot in obj.material_slots if slot.material is not None}
     bpy.data.objects.remove(obj, do_unlink=True)
     if mesh.users == 0:
         bpy.data.meshes.remove(mesh)
+    for material in materials:
+        if material.get(MATERIAL_OWNER) and material.users == 0:
+            bpy.data.materials.remove(material)
 
 
 def update_garment(obj):
     """Recalcule les positions de la pièce d'après la morphologie ACTUELLE (topologie fixe, sommets du corps mémorisés). Retourne le nombre de sommets."""
+    skin_mask.guard_garments([obj])
     body = obj.parent
     params = json.loads(obj[PARAMS])
     if "robe" in params:  # la jupe n'est pas un sous-maillage du corps : on reconstruit la pièce (même clé, même couleur et même décalage)
         key, color, offset = obj[MARKER], params["couleur"], params["decalage_mm"]
-        simulated = bool(obj.get("hl_cloth"))
-        remove_garment(obj)
-        rebuilt = add_garment(body, key, color, offset)
-        if simulated:
-            from . import cloth_sim
-            cloth_sim.enable(rebuilt)
+        old = garments_of(body)
+        keep = [garment for garment in old if garment != obj]
+        rebuilt, = _replace_garments(body, [obj], [(key, color, offset)], keep)
         return len(rebuilt.data.vertices)
     used = np.array(params["sommets_du_corps"])
     points = skeleton.cage_points(body)
@@ -539,7 +570,13 @@ def set_color(obj, color):
     params = json.loads(obj[PARAMS])
     params["couleur"] = list(color)
     obj[PARAMS] = json.dumps(params, ensure_ascii=False)
-    material = obj.data.materials[0]
+    slot = obj.material_slots[0]
+    material = slot.material
+    if material.users > 1 or obj.data.users > 1:
+        material = material.copy()
+        material[MATERIAL_OWNER] = True
+        slot.link = "OBJECT"
+        slot.material = material
     material.diffuse_color = (*color, 1.0)
     shader = material.node_tree.nodes.get("Principled BSDF") if material.use_nodes else None
     if shader is not None:
@@ -557,9 +594,50 @@ def outfit_of(body):
 
 
 def apply_outfit(body, pieces):
-    for g in garments_of(body):
-        remove_garment(g)
-    return [add_garment(body, p["piece"], p.get("couleur"), p.get("decalage_mm")) for p in pieces]
+    specs = []
+    keys = set()
+    for item in pieces:
+        try:
+            key = item["piece"]
+            color = item.get("couleur")
+            offset = item.get("decalage_mm")
+            if color is not None:
+                color = tuple(float(channel) for channel in color)
+                if len(color) != 3 or not all(math.isfinite(channel) for channel in color):
+                    raise ValueError("Une couleur doit contenir trois composantes finies.")
+            if offset is not None:
+                offset = float(offset)
+                if not math.isfinite(offset):
+                    raise ValueError("Le décalage doit être fini.")
+            if key not in GARMENTS or key in keys:
+                raise ValueError(f"Pièce inconnue ou en double : {key!r}.")
+        except (AttributeError, KeyError, TypeError) as error:
+            raise ValueError("Description de pièce invalide.") from error
+        specs.append((key, color, offset))
+        keys.add(key)
+    return _replace_garments(body, garments_of(body), specs, [])
+
+
+def _replace_garments(body, previous, specs, keep):
+    _guard_skin_change(body)
+    skin_mask.guard_garments(previous)
+    original = set(garments_of(body))
+    staged = []
+    try:
+        for key, color, offset in specs:
+            staged.append(_add_garment(body, key, color, offset, replacing=True))
+        mode = skin_mask.mode_of(body)
+        if _should_refresh_skin(body, mode):
+            skin_mask.set_mode(body, mode, [*keep, *staged])
+    except Exception:
+        # Les anciennes pièces restent liées jusqu'au succès du montage.
+        for garment in garments_of(body):
+            if garment not in original:
+                _remove_garment(garment)
+        raise
+    for garment in previous:
+        _remove_garment(garment)
+    return staged
 
 
 # --- import d'un vêtement de l'utilisateur (lot V2) -----------------------------------------------------------------------------------------------------
@@ -675,29 +753,39 @@ def import_garment(body, filepath, mode="pose", push_out_mm=2.0):
     return produced
 
 
-SKIN_GROUP = "Peau couverte"
-SKIN_MODIFIER = "Masque peau couverte"
+SKIN_GROUP = skin_mask.LEGACY_GROUP
+SKIN_MODIFIER = skin_mask.LEGACY_NAME
+
+
+def _guard_skin_change(body):
+    mode = skin_mask.mode_of(body)
+    if _should_refresh_skin(body, mode):
+        skin_mask.require_editable(body)
+        if mode == skin_mask.GEOMETRY or skin_mask.manages_geometry(body):
+            skin_mask.guard(body)
+
+
+def _should_refresh_skin(body, mode):
+    return mode in {skin_mask.RENDER, skin_mask.GEOMETRY} or (
+        mode == skin_mask.OFF and skin_mask.needs_repair(body, mode)
+    )
+
+
+def _refresh_skin_mask(body):
+    mode = skin_mask.mode_of(body)
+    if _should_refresh_skin(body, mode):
+        set_skin_mask_mode(body, mode)
+
+
+def set_skin_mask_mode(body, mode):
+    """Choix par personnage. Retourne le nombre de faces de cage couvertes."""
+    return skin_mask.set_mode(body, mode, garments_of(body))
 
 
 def hide_covered_skin(body, enabled=True):
-    """Masque (rendu et vue) la peau sous les vêtements : groupe de sommets du corps = union des sommets couverts + modificateur Masque (inversé) placé juste après le groupe de nœuds. Retourne le nombre de sommets masqués."""
-    modifier = body.modifiers.get(SKIN_MODIFIER)
-    if not enabled:
-        if modifier is not None:
-            body.modifiers.remove(modifier)
-        return 0
-    covered = sorted({v for g in garments_of(body) for v in json.loads(g[PARAMS])["sommets_du_corps"]})
-    group = body.vertex_groups.get(SKIN_GROUP) or body.vertex_groups.new(name=SKIN_GROUP)
-    group.remove(list(range(len(body.data.vertices))))
-    if covered:
-        group.add(covered, 1.0, "REPLACE")
-    if modifier is None:
-        modifier = body.modifiers.new(SKIN_MODIFIER, "MASK")
-        index = list(body.modifiers).index(body.modifiers[human.MODIFIER_NAME])
-        body.modifiers.move(len(body.modifiers) - 1, index + 1)
-    modifier.vertex_group = SKIN_GROUP
-    modifier.invert_vertex_group = True
-    return len(covered)
+    """Compatibilité de l'appel historique booléen, qui choisissait la géométrie."""
+    set_skin_mask_mode(body, skin_mask.GEOMETRY if enabled else skin_mask.OFF)
+    return len({v for g in garments_of(body) for v in json.loads(g[PARAMS])["sommets_du_corps"]}) if enabled else 0
 
 
 def fingerprint(obj):

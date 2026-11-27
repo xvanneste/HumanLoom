@@ -96,6 +96,7 @@ class HUMANLOOM_PT_cloth(bpy.types.Panel):
         dresses = [g for g in garments.garments_of(body) if g.get("hl_garment") and garments.GARMENTS.get(g[garments.MARKER], {}).get("robe")]
         layout.label(text="Simulation native de Blender 5.2 (expérimentale)", icon="INFO")
         layout.label(text="Premier plan seulement : jamais pour la foule.")
+        layout.label(text="Les correctifs de flexion sont COUPÉS pendant la simulation (conflit connu avec le collider ; GRM-017).", icon="ERROR")
         if not dresses:
             layout.label(text="Ajoutez une robe ou une jupe (panneau Vêtements).")
             return

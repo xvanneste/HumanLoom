@@ -5,7 +5,7 @@ from pathlib import Path
 import bpy
 import bpy.utils.previews
 
-from . import garments, human
+from . import garments, human, skin_mask
 from .animation import skeleton
 
 OUTFITS_KEY = "humanloom_outfits"
@@ -58,6 +58,36 @@ class HUMANLOOM_OT_garment_add(bpy.types.Operator):
         except ValueError as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_garment_color(bpy.types.Operator):
+    bl_idname = "humanloom.garment_color"
+    bl_label = "Couleur de la pièce"
+    bl_options = {"REGISTER", "UNDO"}
+    piece: bpy.props.StringProperty()
+    color: bpy.props.FloatVectorProperty(name="Couleur", subtype="COLOR", size=3, min=0, max=1)
+
+    @classmethod
+    def poll(cls, context):
+        return _body(context) is not None
+
+    def _piece(self, context):
+        return next((g for g in garments.garments_of(_body(context))
+                     if g[garments.MARKER] == self.piece), None)
+
+    def invoke(self, context, event):
+        garment = self._piece(context)
+        if garment is None or not garment.material_slots or garment.material_slots[0].material is None:
+            return {"CANCELLED"}
+        self.color = garment.material_slots[0].material.diffuse_color[:3]
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        garment = self._piece(context)
+        if garment is None or not garment.material_slots or garment.material_slots[0].material is None:
+            return {"CANCELLED"}
+        garments.set_color(garment, self.color)
         return {"FINISHED"}
 
 
@@ -117,9 +147,14 @@ class HUMANLOOM_OT_garment_remove(bpy.types.Operator):
         return _body(context) is not None
 
     def execute(self, context):
-        for g in garments.garments_of(_body(context)):
-            if g[garments.MARKER] == self.piece:
-                garments.remove_garment(g)
+        selected = [g for g in garments.garments_of(_body(context)) if g[garments.MARKER] == self.piece]
+        try:
+            skin_mask.guard_garments(selected)
+            for garment in selected:
+                garments.remove_garment(garment)
+        except ValueError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
         return {"FINISHED"}
 
 
@@ -135,30 +170,88 @@ class HUMANLOOM_OT_garment_update(bpy.types.Operator):
         return body is not None and bool(garments.garments_of(body))
 
     def execute(self, context):
-        for g in garments.garments_of(_body(context)):
-            garments.update_garment(g)
+        selected = garments.garments_of(_body(context))
+        try:
+            skin_mask.guard_garments(selected)
+            for garment in selected:
+                garments.update_garment(garment)
+        except ValueError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
         return {"FINISHED"}
+
+
+SKIN_MODES = (
+    (skin_mask.OFF, "Désactivé", "Affiche toute la peau sous les vêtements"),
+    (skin_mask.RENDER, "Rendu uniquement", "Masque la peau dans le rendu EEVEE et Cycles. Conserve la surface pour les simulations, les attaches et le groom. La peau peut rester visible en mode Solide"),
+    (skin_mask.GEOMETRY, "Géométrie", "Masque la peau en mode Solide et au rendu. Peut modifier les simulations, les attaches et le groom"),
+)
+LEGACY_SKIN_MODES = SKIN_MODES + ((skin_mask.LEGACY, "Conserver le masque historique", "Garde le masque et sa pile existants"),)
+
+
+def _skin_modes(operator, context):
+    body = _body(context) if context else None
+    return LEGACY_SKIN_MODES if body is not None and skin_mask.mode_of(body) == skin_mask.LEGACY else SKIN_MODES
 
 
 class HUMANLOOM_OT_garment_options(bpy.types.Operator):
     bl_idname = "humanloom.garment_options"
     bl_label = "Options des vêtements"
     bl_options = {"REGISTER", "UNDO"}
-    clearance: bpy.props.BoolProperty(name="Dégagement sous pose", description="Repousse les sommets qui pénètrent le corps sous une pose (coûte environ 15 ms par pièce et par image)", default=False)
-    hide_skin: bpy.props.BoolProperty(name="Masquer la peau couverte", default=False)
+    clearance_action: bpy.props.EnumProperty(name="Dégagement sous pose", items=(
+        ("KEEP", "Conserver les réglages", "Garde le réglage de chaque pièce"),
+        ("ON", "Activer sur les pièces", "Repousse les sommets qui pénètrent le corps sous une pose"),
+        ("OFF", "Désactiver sur les pièces", "Désactive le dégagement sur la tenue actuelle"),
+    ))
+    clearance: bpy.props.BoolProperty(options={"HIDDEN", "SKIP_SAVE"})
+    skin_mode: bpy.props.EnumProperty(name="Masque de peau", items=_skin_modes)
+    hide_skin: bpy.props.BoolProperty(options={"HIDDEN", "SKIP_SAVE"})
 
     @classmethod
     def poll(cls, context):
-        return _body(context) is not None
+        body = _body(context)
+        return body is not None and body.mode == "OBJECT" and body.is_editable
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
+        body = _body(context)
+        self.skin_mode = skin_mask.mode_of(body)
+        self.clearance_action = "KEEP"
+        return context.window_manager.invoke_props_dialog(self, width=470)
+
+    def draw(self, context):
+        self.layout.prop(self, "clearance_action")
+        self.layout.prop(self, "skin_mode", expand=True)
+        if self.skin_mode == skin_mask.RENDER:
+            self.layout.label(text="Surface complète pour les simulations, attaches et le groom.")
+            self.layout.label(text="La peau peut rester visible en mode Solide.")
+        elif self.skin_mode == skin_mask.GEOMETRY:
+            self.layout.label(text="Visible en mode Solide et au rendu.")
+            self.layout.label(text="Peut affecter les simulations, les attaches et le groom.", icon="INFO")
+        elif self.skin_mode == skin_mask.LEGACY:
+            self.layout.label(text="Les changements de tenue gardent le masque historique.", icon="INFO")
 
     def execute(self, context):
         body = _body(context)
-        for g in garments.garments_of(body):
-            garments.set_clearance(g, self.clearance)
-        garments.hide_covered_skin(body, self.hide_skin)
+        current = skin_mask.mode_of(body)
+        mode = current
+        if self.properties.is_property_set("skin_mode"):
+            mode = self.skin_mode
+        elif self.properties.is_property_set("hide_skin"):
+            mode = skin_mask.GEOMETRY if self.hide_skin else skin_mask.OFF
+        clearance = self.clearance_action
+        if clearance == "KEEP" and self.properties.is_property_set("clearance"):
+            clearance = "ON" if self.clearance else "OFF"
+        explicit = self.properties.is_property_set("skin_mode") or self.properties.is_property_set("hide_skin")
+        repair = explicit and clearance == "KEEP" and skin_mask.needs_repair(body, mode)
+        if mode != skin_mask.LEGACY and (mode != current or repair):
+            try:
+                garments.set_skin_mask_mode(body, mode)
+            except ValueError as error:
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
+        if clearance != "KEEP":
+            for garment in garments.garments_of(body):
+                garments.set_clearance(garment, clearance == "ON")
         return {"FINISHED"}
 
 
@@ -187,7 +280,11 @@ class HUMANLOOM_OT_outfit(bpy.types.Operator):
             if self.name not in store:
                 self.report({"ERROR"}, "Tenue inconnue : " + self.name)
                 return {"CANCELLED"}
-            garments.apply_outfit(body, store[self.name])
+            try:
+                garments.apply_outfit(body, store[self.name])
+            except ValueError as error:
+                self.report({"ERROR"}, str(error))
+                return {"CANCELLED"}
         return {"FINISHED"}
 
 
@@ -227,9 +324,9 @@ class HUMANLOOM_PT_garments(bpy.types.Panel):
                     row.operator("humanloom.garment_add", text=garments.GARMENTS[key]["label"], icon_value=icon if icon else 0).piece = key
                 row.operator("humanloom.garment_favorite", text="", icon="SOLO_ON" if key in fav else "SOLO_OFF").piece = key
                 if key in worn:
-                    material = worn[key].data.materials[0] if worn[key].data.materials else None
-                    if material is not None:
-                        cell.prop(material, "diffuse_color", text="")
+                    slots = worn[key].material_slots
+                    if slots and slots[0].material is not None:
+                        cell.operator("humanloom.garment_color", text="Couleur…").piece = key
         imported = [g for g in garments.garments_of(body) if g.get(garments.IMPORT_MARKER)]
         if imported:
             box = layout.box()
@@ -238,13 +335,17 @@ class HUMANLOOM_PT_garments(bpy.types.Panel):
                 box.operator("humanloom.garment_remove", text=g.name, icon="X").piece = g[garments.MARKER]
         layout.operator("humanloom.garment_import", icon="IMPORT")
         layout.operator("humanloom.garment_update", icon="FILE_REFRESH")
-        layout.operator("humanloom.garment_options", text="Dégagement et masque de peau…")
+        skin_mode = skin_mask.mode_of(body)
+        label = next(label for value, label, _ in LEGACY_SKIN_MODES if value == skin_mode)
+        if skin_mode == skin_mask.LEGACY:
+            label = "Historique"
+        layout.operator("humanloom.garment_options", text=f"Masque de peau · {label}…")
         row = layout.row(align=True)
         row.operator("humanloom.outfit", text="Enregistrer la tenue").action = "SAVE"
         row.operator("humanloom.outfit", text="Recharger").action = "LOAD"
 
 
-CLASSES = (HUMANLOOM_OT_garment_add, HUMANLOOM_OT_garment_favorite, HUMANLOOM_OT_garment_import, HUMANLOOM_OT_garment_remove, HUMANLOOM_OT_garment_update, HUMANLOOM_OT_garment_options, HUMANLOOM_OT_outfit, HUMANLOOM_PT_garments)
+CLASSES = (HUMANLOOM_OT_garment_add, HUMANLOOM_OT_garment_color, HUMANLOOM_OT_garment_favorite, HUMANLOOM_OT_garment_import, HUMANLOOM_OT_garment_remove, HUMANLOOM_OT_garment_update, HUMANLOOM_OT_garment_options, HUMANLOOM_OT_outfit, HUMANLOOM_PT_garments)
 
 
 def register():

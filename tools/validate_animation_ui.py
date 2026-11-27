@@ -105,14 +105,26 @@ try:
     glb = work / "Gestes" / "salut.glb"
     glb.parent.mkdir()
     bpy.ops.export_scene.gltf(filepath=str(glb), use_selection=True)
-    # La bibliothèque de test porte notre marqueur : l'import y est accepté. Le fichier ajouté doit apparaître après la fin du fil.
+    # Contrat ANI-005 : l'import n'écrit que dans un dossier dédié dont la paire blend/inventaire est démontrée. La bibliothèque factice ci-dessus
+    # (inventaire sans .blend) n'est pas une paire valide : l'import y est REFUSÉ ; il réussit dans un dossier dédié vierge.
+    refused = bpy.ops.humanloom.animation_import(filepath=str(glb), directory_mode=False)
+    thread = ui._state["thread"]
+    deadline = time.time() + 120
+    while thread is not None and thread.is_alive() and time.time() < deadline:
+        time.sleep(0.2)
+    ui.poll_import()
+    check("U8a_import_refuse_hors_paire_demontree", "dédié" in (ui._state["import_message"] or "") and not (library / "HumanLoom_Actions.blend").exists(),
+          {"retour": sorted(refused), "message": ui._state["import_message"]})
+    dedicated = work / "dediee"
+    dedicated.mkdir()
+    ui.OVERRIDE.update(library_dir=str(dedicated), cache_dir=str(work / "cache2"))
     result = bpy.ops.humanloom.animation_import(filepath=str(glb), directory_mode=False)
     thread = ui._state["thread"]
     deadline = time.time() + 120
     while thread is not None and thread.is_alive() and time.time() < deadline:
         time.sleep(0.2)
     ui.poll_import()
-    check("U8_import_en_arriere_plan", result == {"FINISHED"} and ui._state["thread"] is None and len(ui._state["index"]) == 11 and "1 ajoutée" in ui._state["import_message"],
+    check("U8_import_en_arriere_plan", result == {"FINISHED"} and ui._state["thread"] is None and len(ui._state["index"]) == 1 and "1 ajoutée" in ui._state["import_message"],
           {"message": ui._state["import_message"], "entrées": len(ui._state["index"]) if ui._state["index"] else None})
 
     ui.OVERRIDE.update(library_dir="")

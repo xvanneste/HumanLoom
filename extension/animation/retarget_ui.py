@@ -4,6 +4,7 @@ vitesse, découpe, échelle), vignettes générées hors processus, publication 
 Prérequis : un rig installé (rig_ui), une armature source choisie et un mapping calculé (mapping_ui), une animation sélectionnée (ui). L'action source est chargée seule
 depuis la bibliothèque de l'utilisateur (jamais écrite), convertie par `retarget`, puis l'action convertie est écrite pour NOS os. Aucune lecture de .blend à l'enregistrement.
 """
+from concurrent.futures import CancelledError
 import threading
 import time
 
@@ -11,11 +12,10 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty
 
 from .. import human
-from . import index as index_module
 from . import mapping, retarget, retarget_bpy, skeleton, thumbnails, ui
 
 _preview = retarget_bpy.Preview()
-_state = {"message": "", "report": None, "thumb_thread": None, "thumb_result": None}
+_state = {"message": "", "report": None, "thumb_thread": None, "thumb_result": None, "thumb_error": "", "thumb_cancel": None}
 
 
 def _rig_object(context):
@@ -29,7 +29,7 @@ def _entry_for(entry_id):
     position = index.positions.get(entry_id) if index is not None else None
     if position is None:
         return None, None
-    return index.entry(position), (index.actions[position] if index.actions else None)
+    return index.entry(position), ui.action_for(entry_id)
 
 
 def _selected_entry(context):
@@ -41,13 +41,7 @@ def _selected_entry(context):
 
 def _library_blend(context):
     library, _cache = ui.settings(context)
-    found = index_module.find_source(library) if library else None
-    folder = found[1].parent if found else None
-    blend = folder / "HumanLoom_Actions.blend" if folder and (folder / "HumanLoom_Actions.blend").is_file() else None
-    if blend is None and folder:
-        blends = sorted(folder.glob("*.blend"))
-        blend = blends[0] if blends else None
-    return blend
+    return ui.library_blend(library)
 
 
 def convert(context, entry, action_name):
@@ -68,21 +62,21 @@ def convert(context, entry, action_name):
         raise ValueError("Conflit dans le mapping : une même source sert plusieurs os.")
     options = retarget.Options(pose_mode=wm.hl_ret_pose, root_motion=wm.hl_ret_root, translation_scale=wm.hl_ret_scale if wm.hl_ret_scale > 0 else None,
                                ik_limbs=("arm", "leg") if wm.hl_ret_ik_arms else ("leg",), clavicle_scale=wm.hl_ret_clavicle)
-    key = retarget.signature(source, links, options, f"{entry['id']}|{action_name}")
+    with bpy.data.libraries.load(str(blend), link=False) as (_available, wanted):  # une seule action par chargement
+        wanted.actions = [action_name]
+    loaded = wanted.actions[0]
+    if loaded is None:
+        raise ValueError("Action introuvable dans le fichier de bibliothèque.")
+    try:
+        # La source du mapping sert de squelette de référence pour ce clip autonome.
+        motion, first = retarget_bpy.read_action(loaded, source, euler_order=ui.euler_order(wm))
+    finally:
+        bpy.data.actions.remove(loaded)
+    key = retarget_bpy.conversion_cache_key(source, target, links, options, motion, f"{entry['id']}|{action_name}")
     _library, cache = ui.settings(context)
     directory = ui.cache_directory(cache)
     result = retarget_bpy.cache_load(directory, key)
-    first = 1
     if result is None:
-        with bpy.data.libraries.load(str(blend), link=False) as (_available, wanted):  # une seule action par chargement
-            wanted.actions = [action_name]
-        loaded = wanted.actions[0]
-        if loaded is None:
-            raise ValueError("Action introuvable dans le fichier de bibliothèque.")
-        try:
-            motion, first = retarget_bpy.read_action(loaded, source)
-        finally:
-            bpy.data.actions.remove(loaded)
         result = retarget.retarget(source, target, links, motion, options)
         retarget_bpy.cache_save(directory, key, result)
     else:
@@ -108,6 +102,7 @@ class HUMANLOOM_OT_animation_apply(bpy.types.Operator):
         return _rig_object(context) is not None
 
     def execute(self, context):
+        _state["thumb_error"] = ""
         rig_object = _rig_object(context)
         if self.action == "STOP":
             _preview.stop()
@@ -146,11 +141,19 @@ class HUMANLOOM_OT_animation_publish_favorites(bpy.types.Operator):
         return _rig_object(context) is not None and ui._state["user"] is not None and bool(ui._state["user"].favorites)
 
     def execute(self, context):
+        _state["thumb_error"] = ""
         published, failed = 0, []
         wm = context.window_manager
         _library, cache = ui.settings(context)
         directory = ui.cache_directory(cache)
-        source_name = wm.hl_map_source.data.name if wm.hl_map_source is not None else ""
+        source = wm.hl_map_source
+        blend = _library_blend(context)
+        revision, scope = None, None
+        if source is not None and blend is not None and any((directory / "thumbs").glob("*.png")):
+            try:
+                _rig, revision, scope = ui.thumbnail_sources(source, blend, ui.euler_order(wm))
+            except (OSError, ValueError):
+                pass
         for entry_id in sorted(ui._state["user"].favorites):
             entry, action_name = _entry_for(entry_id)
             if entry is None:
@@ -160,12 +163,17 @@ class HUMANLOOM_OT_animation_publish_favorites(bpy.types.Operator):
                 converted, _result, _seconds = convert(context, entry, action_name)
             except ValueError as error:
                 failed.append(f"{entry['name']} : {error}")
-                break  # même cause pour toutes (mapping, bibliothèque) : inutile de répéter
+                continue
             converted.asset_mark()
             converted.asset_data.description = f"Animation « {entry['name']} » convertie pour HumanLoom (catégorie {ui._state['index'].category(ui._state['index'].positions[entry_id])})"
             converted.asset_data.tags.new(ui._state["index"].category(ui._state["index"].positions[entry_id])[:60], skip_if_exists=True)
-            thumb = thumbnails.thumb_path(directory, thumbnails.key_for(entry_id, source_name))
-            if thumb.is_file():
+            try:
+                current = scope is not None and _library_blend(context) == blend and thumbnails.request_library_revision(blend) == revision
+            except (OSError, ValueError):
+                current = False
+            key = thumbnails.key_for(entry_id, action_name, scope) if current else None
+            thumb = thumbnails.thumb_path(directory, key) if key is not None else None
+            if thumb is not None and thumb.is_file():
                 try:
                     with bpy.context.temp_override():
                         image = bpy.data.images.load(str(thumb))
@@ -181,8 +189,24 @@ class HUMANLOOM_OT_animation_publish_favorites(bpy.types.Operator):
         return {"FINISHED"} if published else {"CANCELLED"}
 
 
-def _thumbnail_job(directory, blender, library_blend, source_name, items, result):
-    result["value"] = thumbnails.generate(directory, blender, library_blend, source_name, items)
+def _thumbnail_items(entries, rig, revision, euler_order):
+    scope = thumbnails.scope_for(rig, revision, euler_order)
+    return [(thumbnails.key_for(entry_id, action_name, scope), action_name) for entry_id, action_name in entries]
+
+
+def _thumbnail_job(directory, blender, library_blend, source_name, entries, result, rig, euler_order, cancel):
+    try:
+        revision = thumbnails.library_revision(library_blend, cancel=cancel)
+        items = thumbnails.missing(directory, _thumbnail_items(entries, rig, revision, euler_order))
+        if items:
+            source_rig = {"names": rig.names, "parents": rig.parents, "rest": rig.rest.tolist()}
+            result["value"] = thumbnails.generate(directory, blender, library_blend, source_name, items, source_rig=source_rig, revision=revision, euler_order=euler_order, cancel=cancel)
+        else:
+            result["value"] = {"produced": [], "errors": [], "cached": True}
+    except CancelledError:
+        return
+    except (OSError, ValueError) as error:
+        result["value"] = {"produced": [], "errors": [{"message": str(error)}]}
 
 
 class HUMANLOOM_OT_animation_thumbnails(bpy.types.Operator):
@@ -202,35 +226,62 @@ class HUMANLOOM_OT_animation_thumbnails(bpy.types.Operator):
             return {"CANCELLED"}
         _library, cache = ui.settings(context)
         directory = ui.cache_directory(cache)
-        source_name = wm.hl_map_source.data.name
-        items = []
+        source = wm.hl_map_source
+        euler_order = ui.euler_order(wm)
+        try:
+            rig, revision, _scope = ui.thumbnail_sources(source, blend)
+        except (OSError, ValueError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        _state["thumb_error"] = ""
+        entries = []
         for position in range(wm.hl_anim_page * ui.PAGE_SIZE, min(len(wm.hl_anim_results), (wm.hl_anim_page + 1) * ui.PAGE_SIZE)):
             entry, action_name = _entry_for(wm.hl_anim_results[position].entry_id)
             if entry is not None and action_name:
-                items.append((thumbnails.key_for(entry["id"], source_name), action_name))
-        todo = thumbnails.missing(directory, items)
-        if not todo:
+                entries.append((entry["id"], action_name))
+        if not entries or (revision is not None and not thumbnails.missing(directory, _thumbnail_items(entries, rig, revision, euler_order))):
             _state["message"] = "Vignettes déjà en cache."
             return {"FINISHED"}
         _state["thumb_result"] = {}
-        thread = threading.Thread(target=_thumbnail_job, args=(directory, bpy.app.binary_path, blend, source_name, todo, _state["thumb_result"]), daemon=True)
+        cancel = threading.Event()
+        thread = threading.Thread(target=_thumbnail_job, args=(directory, bpy.app.binary_path, blend, source.data.name, entries, _state["thumb_result"], rig, euler_order, cancel), daemon=True)
+        _state["thumb_cancel"] = cancel
         _state["thumb_thread"] = thread
         thread.start()
-        bpy.app.timers.register(poll_thumbnails, first_interval=1.0)
-        _state["message"] = f"Génération de {len(todo)} vignette(s) en arrière-plan…"
+        if not bpy.app.timers.is_registered(poll_thumbnails):
+            bpy.app.timers.register(poll_thumbnails, first_interval=1.0)
+        _state["message"] = "Préparation des vignettes en arrière-plan…"
         return {"FINISHED"}
 
 
 def poll_thumbnails():
     thread = _state["thumb_thread"]
-    if thread is not None and thread.is_alive():
+    if thread is None:
+        return None
+    if thread.is_alive():
         return 1.0
-    _state["thumb_thread"] = None
+    _state.update(thumb_thread=None, thumb_cancel=None)
     value = (_state["thumb_result"] or {}).get("value", {"produced": [], "errors": []})
-    _state["message"] = f"Vignettes : {len(value['produced'])} générée(s)" + (f", {len(value['errors'])} échec(s)" if value["errors"] else ".")
+    errors = value["errors"]
+    _state["message"] = "Vignettes déjà en cache." if value.get("cached") else f"Vignettes : {len(value['produced'])} générée(s)."
+    if errors:
+        _state["message"] += f" {len(errors)} échec(s)."
+        _state["thumb_error"] = next((error["reason"] for error in errors if "reason" in error), errors[0]["message"])
+    else:
+        _state["thumb_error"] = ""
     for area in bpy.context.screen.areas if bpy.context.screen else ():
         area.tag_redraw()
     return None
+
+
+def cancel_thumbnails():
+    """Libère le panneau et annule le job qui appartenait au fichier précédent."""
+    cancel = _state["thumb_cancel"]
+    if cancel is not None:
+        cancel.set()
+    if bpy.app.timers.is_registered(poll_thumbnails):
+        bpy.app.timers.unregister(poll_thumbnails)
+    _state.update(thumb_thread=None, thumb_result=None, thumb_cancel=None, thumb_error="", message="")
 
 
 class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
@@ -248,6 +299,7 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
         layout.label(text=f"Animation : {entry['name']}" if entry else "Aucune animation sélectionnée", icon="ACTION")
         column = layout.column(align=True)
         column.prop(wm, "hl_ret_pose", text="Pose")
+        column.prop(wm, "hl_ret_euler_order", text="Ordre Euler source")
         column.prop(wm, "hl_ret_root", text="Root motion")
         column.prop(wm, "hl_ret_ik_arms", text="IK des bras (contacts mains-objets)")
         column.prop(wm, "hl_ret_clavicle", slider=True)
@@ -266,16 +318,24 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
         layout.operator("humanloom.animation_publish_favorites", icon="ASSET_MANAGER")
         if _state["message"]:
             layout.label(text=_state["message"][:90])
+        if _state["thumb_error"]:
+            layout.label(text=_state["thumb_error"], icon="ERROR")
 
 
 CLASSES = (HUMANLOOM_OT_animation_apply, HUMANLOOM_OT_animation_publish_favorites, HUMANLOOM_OT_animation_thumbnails, HUMANLOOM_PT_animation_apply)
-WINDOW_PROPERTIES = ("hl_ret_pose", "hl_ret_ik_arms", "hl_ret_clavicle", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
+WINDOW_PROPERTIES = ("hl_ret_euler_order", "hl_ret_pose", "hl_ret_ik_arms", "hl_ret_clavicle", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
 
 
 def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     wm = bpy.types.WindowManager
+    wm.hl_ret_euler_order = EnumProperty(
+        name="Ordre Euler du clip source",
+        description="Ordre utilisé pour les clips Euler détachés de leur armature d’origine. Ce choix s’applique à la galerie, aux vignettes et aux favoris. Traitez séparément les lots d’ordres différents. Les anciens clips peuvent utiliser XYZ",
+        items=[("NONE", "Non renseigné", "Refuse les clips Euler sans ordre explicite")]
+              + [(order, "XYZ (convention historique)" if order == "XYZ" else order, "") for order in retarget_bpy.EULER_ORDERS],
+        default="NONE")
     wm.hl_ret_pose = EnumProperty(name="Mode de pose", items=((retarget.ABSOLUTE_IK, "Absolu + IK des jambes", "Directions de la source, puis pieds replacés par IK à 2 os (jambes seules par défaut ; case « IK des bras » pour les contacts mains-objets) ; mesuré : coudes et genoux 1,2 % de la stature en médiane, mains et pieds 0,8 %"),
                                                                 (retarget.ABSOLUTE, "Absolu", "Le personnage reprend les directions monde de la source"),
                                                                 (retarget.DELTA, "Delta", "Rotations relatives au repos de la source")), default=retarget.ABSOLUTE_IK)
@@ -290,6 +350,7 @@ def register():
 
 
 def unregister():
+    cancel_thumbnails()
     wm = bpy.types.WindowManager
     for name in WINDOW_PROPERTIES:
         if hasattr(wm, name):

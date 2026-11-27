@@ -212,7 +212,7 @@ def mix_poses(first, second, factor):
 
 
 def _tongue_object(body):
-    return next((o for o in dental.parts_of(body) if o.name == dental.KINDS["tongue"][0]), None)
+    return dental.part_of(body, "tongue")
 
 
 def apply_pose(body, pose):
@@ -408,7 +408,7 @@ def remove_clips(body):
 def teeth_visible_fraction(body, kind="lower"):
     """Part (0-1) des sommets des dents `kind` ("lower" ou "upper") VISIBLES de face : le rayon horizontal parti de l'avant atteint la dent avant la peau du corps évalué (pose actuelle comprise). Les
     sommets cachés par construction (face postérieure, sous la dent) comptent dans le total : c'est une mesure relative, à comparer d'une expression à l'autre."""
-    teeth = next((o for o in dental.parts_of(body) if o.name == dental.KINDS[kind][0]), None)
+    teeth = dental.part_of(body, kind)
     if teeth is None:
         return None
     bpy.context.view_layer.update()

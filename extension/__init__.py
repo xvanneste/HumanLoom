@@ -42,8 +42,11 @@ def add_smooth_preview(body):
         modifier.levels = 1
         modifier.render_levels = 2
     # Apply fine relief to the subdivided surface, preserving its sampling.
-    if body.modifiers.get(skin_relief.NAME) and list(body.modifiers).index(modifier)>0:
-        body.modifiers.move(list(body.modifiers).index(modifier),0)
+    relief = body.modifiers.get(skin_relief.NAME)
+    if relief is not None:
+        stack = list(body.modifiers)
+        if stack.index(modifier) > stack.index(relief):
+            body.modifiers.move(stack.index(modifier), stack.index(relief))
     return modifier
 
 
