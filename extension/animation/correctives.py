@@ -21,7 +21,7 @@ BONES = {"coude": "arm_lower", "genou": "leg_lower"}
 BASIS = "Basis"
 SOURCE_PROP = "hlc_source"          # « generique » (données livrées, corps par défaut) ou empreinte de la morphologie pour laquelle les correctifs ont été recalculés
 JOINTS = {"coude": {"radius": 0.22, "dists": (0.0, 0.03, 0.06), "angles": [15, 30, 45, 60, 75, 90, 105, 120, 135, 150]},
-          "genou": {"radius": 0.26, "dists": (0.0, 0.04, 0.08), "angles": [15, 30, 45, 60, 75, 90, 105, 120, 135]}}
+          "genou": {"radius": 0.26, "dists": (0.0, 0.04, 0.08), "angles": [15, 30, 45, 60, 75, 90, 105, 120, 135, 150]}}  # 150° : la bibliothèque réelle va jusqu'à ~151° (mesuré)
 SOLVE = {"la": 150.0, "ls": 2.0, "lf": 1.0}  # poids des termes d'aire de section, de lissage et de plis : réglés par mesure
 TEMP_KEY = "tmp_correctif"
 
@@ -189,6 +189,14 @@ def generate(body, armature, joints=None):
     tris = np.array([t.vertices[:] for t in mesh.loop_triangles])
     edges = np.array([e.vertices[:] for e in mesh.edges])
     n = len(rest)
+    groups = {g.index: g.name for g in body.vertex_groups}
+    dominant = []
+    for vertex in mesh.vertices:
+        candidates = [g for g in vertex.groups if groups[g.group] not in (skeleton.GROUP_LBS, skeleton.GROUP_DQS)]
+        dominant.append(groups[max(candidates, key=lambda g: g.weight).group] if candidates else "")
+    # sommets DU MÊME CÔTÉ : os dominant dont le nom finit par le suffixe du côté. Sans cela, la région autour d'un genou ou d'un coude englobe le membre OPPOSÉ ou le tronc (distance < rayon) : ses sommets recevaient
+    # des déplacements pour une flexion qu'ils ne subissent pas (mesuré : jambe droite fléchie ⇒ plis +28 au genou gauche sur des poses réelles)
+    same_side = {side: np.array([d.endswith("." + side) for d in dominant]) for side in ("L", "R")}
     wanted = list(joints or JOINTS)
     total = sum(len(JOINTS[j]["angles"]) for j in wanted) * 2
     done = 0
@@ -208,7 +216,7 @@ def generate(body, armature, joints=None):
                 pivot = np.array(bone.head_local)
                 axis = (np.array(bone.tail_local) - pivot) / np.linalg.norm(np.array(bone.tail_local) - pivot)
                 dist = np.linalg.norm(rest - pivot, axis=1)
-                free = np.where(dist < spec["radius"])[0]
+                free = np.where((dist < spec["radius"]) & same_side[side])[0]
                 fade = np.clip((dist[free] - 0.8 * spec["radius"] + 0.05) / 0.1, 0.0, 1.0)
                 pull = 1.0 + 300.0 * fade * fade * (3 - 2 * fade)
                 region = np.zeros(n, bool)

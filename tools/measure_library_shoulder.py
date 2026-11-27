@@ -89,7 +89,11 @@ for name in candidates:
         wanted.actions = [name]
     action = wanted.actions[0]
     try:
-        motion, _first = retarget_bpy.read_action(action, source)
+        try:
+            motion, _first = retarget_bpy.read_action(action, source)
+        except ValueError as error:  # action refusée par le lecteur strict (échelle non unitaire, contrainte…) : ignorée et comptée
+            print('ACTION IGNOREE', name, str(error)[:80], flush=True)
+            continue
         animated = len({m.group(1) for layer in action.layers for strip in layer.strips for bag in strip.channelbags for c in bag.fcurves for m in [re.match(r'pose\.bones\["(.+?)"\]', c.data_path)] if m})
     finally:
         bpy.data.actions.remove(action)
