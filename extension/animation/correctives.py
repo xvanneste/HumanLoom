@@ -24,6 +24,7 @@ JOINTS = {"coude": {"radius": 0.22, "dists": (0.0, 0.03, 0.06), "angles": [15, 3
           "genou": {"radius": 0.26, "dists": (0.0, 0.04, 0.08), "angles": [15, 30, 45, 60, 75, 90, 105, 120, 135, 150]}}  # 150° : la bibliothèque réelle va jusqu'à ~151° (mesuré)
 SOLVE = {"la": 150.0, "ls": 2.0, "lf": 1.0}  # poids des termes d'aire de section, de lissage et de plis : réglés par mesure
 TEMP_KEY = "tmp_correctif"
+ENABLED_PROP = "hlc_actifs"         # correctifs ACTIFS (1) ou coupés (absent/0, défaut) : décision de l'utilisateur, le coude et le genou sans correctifs sont jugés corrects ; les rides des correctifs sont rejetées
 
 
 def _co(data):
@@ -90,6 +91,26 @@ def installed(body):
     return bool(keys_of(body.data))
 
 
+def enabled(body):
+    """Vrai si les correctifs de flexion sont actifs (défaut : coupés)."""
+    rigs = [c for c in body.children if c.type == "ARMATURE" and c.get("hl_rig")]
+    return bool(rigs and rigs[0].get(ENABLED_PROP, 0))
+
+
+def set_enabled(body, state):
+    """Active ou coupe les correctifs de flexion du corps et de ses vêtements (clés muettes ; les pilotes restent en place). Retourne le nombre de clés modifiées."""
+    rigs = [c for c in body.children if c.type == "ARMATURE" and c.get("hl_rig")]
+    if rigs:
+        rigs[0][ENABLED_PROP] = 1 if state else 0
+    changed = 0
+    for obj in [body] + list(_garments(body)):
+        for key in keys_of(obj.data):
+            if key.mute != (not state):
+                key.mute = not state
+                changed += 1
+    return changed
+
+
 def install(body, armature, data=None, source="generique"):
     """Crée les clés de forme et les pilotes sur `body` (maillage de base) d'après `data` (par défaut `human_rig_hinges.npz`) ; ne fait rien si les données sont absentes ou si c'est déjà installé. `source` est mémorisée sur l'armature.
     Retourne le nombre de clés créées."""
@@ -123,6 +144,7 @@ def install(body, armature, data=None, source="generique"):
             key.data.foreach_set("co", coords.ravel())
             key.value = 0.0
             key.relative_key = basis_block
+            key.mute = not bool(armature.get(ENABLED_PROP, 0))
             _add_driver(mesh.shape_keys, f'key_blocks["{key.name}"].value', _weight_expression(angles, index), [("x", "SINGLE_PROP", (armature, prop))])
             created += 1
     for garment in _garments(body):
@@ -150,7 +172,7 @@ def remove(body, armature=None):
         if armature.animation_data is not None:
             for fcurve in [f for f in armature.animation_data.drivers if f.data_path.startswith(f'["{PROP_PREFIX}')]:
                 armature.animation_data.drivers.remove(fcurve)
-        for prop in [k for k in armature.keys() if k.startswith(PROP_PREFIX) or k == SOURCE_PROP]:
+        for prop in [k for k in armature.keys() if k.startswith(PROP_PREFIX) or k in (SOURCE_PROP, ENABLED_PROP)]:
             del armature[prop]
             removed += 1
     return removed

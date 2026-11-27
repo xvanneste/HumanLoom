@@ -232,6 +232,21 @@ clean = all(p.data.shape_keys is None for p in worn)
 check("C8_vetements_suivent_les_correctifs", all(c == len(body_keys) for c in counts) and worst_delta < 1e-6 and values_equal and kept and basis_ok and clean,
       {"cles_par_piece": counts, "cles_corps": len(body_keys), "ecart_max_deplacement_m": worst_delta, "valeurs_pilotees_egales": values_equal, "deplacements_conserves_apres_mise_a_jour": kept, "base_synchronisee": basis_ok, "retrait_propre": clean})
 
+# C9 défaut : correctifs COUPÉS (décision de l'utilisateur : coude et genou corrects sans correctifs) ; bascule corps + vêtements ; état conservé
+body, rig = fresh()
+piece = garments.add_garment(body, "pantalon")
+all_keys = lambda: correctives.keys_of(body.data) + correctives.keys_of(piece.data)
+default_off = bool(all_keys()) and all(k.mute for k in all_keys()) and not correctives.enabled(body)
+changed_on = correctives.set_enabled(body, True)
+on = all(not k.mute for k in all_keys()) and correctives.enabled(body)
+changed_off = correctives.set_enabled(body, False)
+off = all(k.mute for k in all_keys()) and not correctives.enabled(body)
+correctives.set_enabled(body, True)
+kept_prop = bool(rig.get(correctives.ENABLED_PROP))
+skeleton.remove(body)
+check("C9_defaut_coupe_et_bascule", default_off and on and off and changed_on == changed_off and changed_on > 60 and kept_prop,
+      {"defaut_coupe": default_off, "active": on, "recoupe": off, "cles_modifiees": [changed_on, changed_off], "propriete_sur_le_rig": kept_prop})
+
 # C6 la foule n'installe pas de correctifs
 from extension import crowd  # noqa: E402
 for obj in list(bpy.data.objects):

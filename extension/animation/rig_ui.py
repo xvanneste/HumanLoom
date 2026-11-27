@@ -74,6 +74,25 @@ class HUMANLOOM_OT_rig_remove(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class HUMANLOOM_OT_correctives_toggle(bpy.types.Operator):
+    bl_idname = "humanloom.correctives_toggle"
+    bl_label = "Correctifs de flexion"
+    bl_description = ("Active ou coupe les formes correctives du coude et du genou (défaut : coupées ; le coude et le genou sont corrects sans elles, les correctifs peuvent former des rides). Le recalcul reste disponible")
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return body is not None and correctives.installed(body)
+
+    def execute(self, context):
+        body = _body(context)
+        state = not correctives.enabled(body)
+        correctives.set_enabled(body, state)
+        self.report({"INFO"}, "Correctifs de flexion " + ("activés." if state else "coupés."))
+        return {"FINISHED"}
+
+
 class HUMANLOOM_OT_correctives_rebuild(bpy.types.Operator):
     bl_idname = "humanloom.correctives_rebuild"
     bl_label = "Recalculer les correctifs de flexion"
@@ -232,6 +251,8 @@ class HUMANLOOM_PT_rig(bpy.types.Panel):
             text = {"absent": "Correctifs de flexion : absents", "generique": "Correctifs de flexion : génériques (corps par défaut)",
                     "a_jour": "Correctifs de flexion : recalculés pour ce corps", "obsolete": "Correctifs de flexion : à recalculer (morphologie changée)"}[status]
             layout.label(text=text, icon="CHECKMARK" if status == "a_jour" else "INFO")
+            if correctives.installed(body):
+                layout.operator("humanloom.correctives_toggle", depress=correctives.enabled(body), icon="MOD_SHAPEKEY")
             layout.operator("humanloom.correctives_rebuild", icon="FILE_REFRESH")
         if state != skeleton.NOT_INSTALLED:
             box = layout.box()
@@ -243,7 +264,7 @@ class HUMANLOOM_PT_rig(bpy.types.Panel):
             box.operator("humanloom.lid_follow", depress=skeleton.lid_follow_enabled(_body(context)))
 
 
-CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_rig_remove, HUMANLOOM_OT_correctives_rebuild, HUMANLOOM_OT_gaze_set, HUMANLOOM_OT_gaze_track, HUMANLOOM_OT_gaze_clear, HUMANLOOM_OT_lid_follow, HUMANLOOM_PT_rig)
+CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_rig_remove, HUMANLOOM_OT_correctives_toggle, HUMANLOOM_OT_correctives_rebuild, HUMANLOOM_OT_gaze_set, HUMANLOOM_OT_gaze_track, HUMANLOOM_OT_gaze_clear, HUMANLOOM_OT_lid_follow, HUMANLOOM_PT_rig)
 
 
 def register():
