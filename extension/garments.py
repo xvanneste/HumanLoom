@@ -281,6 +281,47 @@ def garments_of(body):
     return [c for c in body.children if c.get(MARKER)]
 
 
+def _body_dqs_members(body):
+    """Booléens (un par sommet du corps) : le sommet est déformé par le modificateur DQS du corps (groupe GROUP_DQS) ; None si le corps n'a pas ce masque (rig d'une version sans quaternions duals)."""
+    group = body.vertex_groups.get(skeleton.GROUP_DQS)
+    if group is None:
+        return None
+    member = np.zeros(len(body.data.vertices), bool)
+    for vertex in body.data.vertices:
+        for g in vertex.groups:
+            if g.group == group.index and g.weight > 0.5:
+                member[vertex.index] = True
+    return member
+
+
+def _add_armature_modifiers(obj, body, rig, body_vertices=None):
+    """Déformation du vêtement comme celle du corps : deux modificateurs Armature à masques COMPLÉMENTAIRES (linéaire « Armature » sur GROUP_LBS, quaternions duals « Armature DQS » avec conservation du volume sur GROUP_DQS), de sorte que les sommets du genou, du coude, de
+    l'avant-bras et de la cuisse suivent la peau (au genou plié, le tissu linéaire s'écrasait et laissait le corps le traverser). `body_vertices` : sommet du corps source de chaque sommet du vêtement ; si absent, les groupes déjà présents sur le vêtement (poids transférés) servent de masques.
+    Sans masque disponible : un seul Armature linéaire (comportement d'origine)."""
+    armature = obj.modifiers.new("Armature", "ARMATURE")
+    armature.object = rig
+    lbs, dqs = obj.vertex_groups.get(skeleton.GROUP_LBS), obj.vertex_groups.get(skeleton.GROUP_DQS)
+    if body_vertices is not None:
+        member = _body_dqs_members(body)
+        if member is None:
+            return armature
+        inside = [i for i, v in enumerate(body_vertices) if member[int(v)]]
+        outside = [i for i, v in enumerate(body_vertices) if not member[int(v)]]
+        lbs, dqs = obj.vertex_groups.new(name=skeleton.GROUP_LBS), obj.vertex_groups.new(name=skeleton.GROUP_DQS)
+        if inside:
+            dqs.add(inside, 1.0, "REPLACE")
+        if outside:
+            lbs.add(outside, 1.0, "REPLACE")
+    if lbs is None or dqs is None:
+        return armature
+    armature.vertex_group = skeleton.GROUP_LBS
+    second = obj.modifiers.new("Armature DQS", "ARMATURE")
+    second.object = rig
+    second.use_deform_preserve_volume = True
+    second.vertex_group = skeleton.GROUP_DQS
+    return armature
+
+
 def add_garment(body, key, color=None, offset_mm=None, clean_edges=True):
     _guard_skin_change(body)
     garment = _add_garment(body, key, color, offset_mm, clean_edges)
@@ -359,8 +400,7 @@ def _add_garment(body, key, color=None, offset_mm=None, clean_edges=True, *, rep
                 vertex[deform][group_index[bone]] = float(w[v, slot])
     bm.to_mesh(obj.data)
     bm.free()
-    armature = obj.modifiers.new("Armature", "ARMATURE")
-    armature.object = skeleton.rigs_of(body)[0]
+    _add_armature_modifiers(obj, body, skeleton.rigs_of(body)[0], used)
     solid = obj.modifiers.new("Epaisseur", "SOLIDIFY")
     solid.thickness = definition["epaisseur_mm"] / 1000.0
     solid.offset = 1.0
@@ -496,8 +536,7 @@ def _add_dress(body, key, definition, state):
             vertex[deform][pin_group.index] = float(pin[local])
     bm.to_mesh(obj.data)
     bm.free()
-    armature = obj.modifiers.new("Armature", "ARMATURE")
-    armature.object = skeleton.rigs_of(body)[0]
+    _add_armature_modifiers(obj, body, skeleton.rigs_of(body)[0], weights_from)
     return obj
 
 
@@ -740,8 +779,7 @@ def import_garment(body, filepath, mode="pose", push_out_mm=2.0):
             bpy.context.view_layer.objects.active = obj
             bpy.ops.object.datalayout_transfer(modifier=transfer.name)
             bpy.ops.object.modifier_apply(modifier=transfer.name)
-            armature = obj.modifiers.new("Armature", "ARMATURE")
-            armature.object = rigs[0]
+            _add_armature_modifiers(obj, body, rigs[0])
         else:
             deform = obj.modifiers.new("Suivi de surface", "SURFACE_DEFORM")
             deform.target = body
