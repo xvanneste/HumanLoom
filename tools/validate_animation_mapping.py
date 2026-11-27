@@ -9,6 +9,7 @@ terrain est connue ; on mesure la part d'appariements corrects. Aucun squelette 
 import json
 from pathlib import Path
 import random
+import zlib
 import shutil
 import sys
 import tempfile
@@ -42,7 +43,7 @@ by_name = {b["name"]: b for b in table}
 FINGER_NAMES = ("thumb", "index", "middle", "ring", "pinky")
 
 
-def derive(rename, prefix="", scale=1.0, offset=(0.0, 0.0, 0.0), extra=None, shuffle=None, flip_x=False, noise=0.0, x_scale=1.0):
+def derive(rename, prefix="", scale=1.0, offset=(0.0, 0.0, 0.0), extra=None, shuffle=None, flip_x=False, noise=0.0, x_scale=1.0, noise_seed=0):
     """Squelette source : `rename(nom_cible) -> nom_source | None` ; parent = plus proche ancêtre conservé ; retourne (Skeleton, vérité {cible: source})."""
     kept = {b["name"]: rename(b["name"]) for b in table if b["name"] != skeleton.JAW}  # les bibliothèques de corps n'ont pas de mâchoire
     kept = {k: (prefix + v) for k, v in kept.items() if v}
@@ -59,7 +60,7 @@ def derive(rename, prefix="", scale=1.0, offset=(0.0, 0.0, 0.0), extra=None, shu
         if x_scale != 1.0:
             head, tail = head * [x_scale, 1, 1], tail * [x_scale, 1, 1]
         if noise:  # proportions et placements d'un autre rig : bruit gaussien en fraction de la stature
-            generator = np.random.default_rng(abs(hash(name)) % 1000)
+            generator = np.random.default_rng(zlib.crc32(name.encode("utf-8")) % 1000 + noise_seed)  # crc32, PAS hash() : le hachage des chaînes de Python change à chaque processus (PYTHONHASHSEED), le bruit variait donc d'une exécution à l'autre (M13 intermittent)
             head, tail = head + generator.normal(0, noise * 1.66 * scale, 3), tail + generator.normal(0, noise * 1.66 * scale, 3)
         rows.append({"name": new, "parent": kept_parent(name), "head": head, "tail": tail})
     for name, _unused, parent_target, direction in (extra or []):
@@ -158,6 +159,9 @@ def opaque_factory():
     return rename
 
 
+M13_MEDIAN, M13_WORST = 0.85, 0.8  # pire tirage >= 0.8 = ancien critère à tirage unique ; médiane mesurée 0,90
+
+
 def accuracy(mapped, truth, only=None):
     keys = [t for t in truth if (only is None or t in only)]
     good = sum(1 for t in keys if t in mapped and mapped[t].source == truth[t])
@@ -196,8 +200,15 @@ check("M8_scores_de_confiance", all(0 < p.score <= 1 for p in report_o.pairs) an
       {"moyenne_noms": round(float(np.mean([p.score for p in mapped.values()])), 3), "moyenne_opaques": round(float(np.mean([p.score for p in mapped_o.values()])), 3), "faible_confiance_opaques": len(report_o.low_confidence)})
 
 # --- proportions différentes (bruit 1,5 % de la stature, rig 15 % plus large) et structure (un os de chaque bras sans nom reconnaissable) ----------------------------
-noisy_skel, noisy_truth = derive(opaque_factory(), scale=1.05, offset=(0.02, 0.04, 0.0), shuffle=9, noise=0.015, x_scale=1.15)
-_, report_noisy = run("M13_noms_opaques_proportions_differentes", noisy_skel, noisy_truth, 0.8, only=key_bones)
+# Le bruit est tiré par `noise_seed` (déterministe) : le critère porte sur la DISTRIBUTION de la précision sur 20 tirages (médiane et pire cas), pas sur un tirage unique.
+noisy_parts = []
+for noise_seed in range(20):
+    noisy_skel, noisy_truth = derive(opaque_factory(), scale=1.05, offset=(0.02, 0.04, 0.0), shuffle=9, noise=0.015, x_scale=1.15, noise_seed=noise_seed * 1000)
+    noisy_map, _report = mapping.auto_map(target, noisy_skel)
+    noisy_good, noisy_total = accuracy(noisy_map, noisy_truth, key_bones)
+    noisy_parts.append(noisy_good / noisy_total)
+print("M13 distribution", [round(p, 3) for p in noisy_parts])
+check("M13_noms_opaques_proportions_differentes", float(np.median(noisy_parts)) >= M13_MEDIAN and min(noisy_parts) >= M13_WORST, {"mediane": round(float(np.median(noisy_parts)), 3), "pire": round(min(noisy_parts), 3), "tirages": 20, "minimum_mediane": M13_MEDIAN, "minimum_pire": M13_WORST})
 
 
 def half_named(name):
