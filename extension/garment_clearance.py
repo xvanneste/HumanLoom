@@ -158,23 +158,6 @@ def _garment_points(obj, normals=False):
     return (points, shading.reshape(-1, 3).astype(np.float64)) if normals else points
 
 
-def _dominant_side(obj):
-    """Côté (« L » / « R » / «  ») de l'os dominant de chaque sommet de la pièce, d'après ses groupes de sommets nommés par os."""
-    from .animation import skeleton
-    names = {g.index: g.name for g in obj.vertex_groups}
-    sides = []
-    for vertex in obj.data.vertices:
-        best, side = 0.0, ""
-        for g in vertex.groups:
-            name = names.get(g.group, "")
-            if name in (skeleton.GROUP_LBS, skeleton.GROUP_DQS) or g.weight <= best:
-                continue
-            best = g.weight
-            side = name[-1] if name[-2:-1] == "." and name[-1] in "LR" else ""
-        sides.append(side)
-    return np.array(sides)
-
-
 def _adjacency(mesh, count):
     neighbours = [[] for _ in range(count)]
     for edge in mesh.edges:
@@ -300,40 +283,45 @@ def _forward_sign(label, armature):
 def generate(obj, body, armature, joints=None, report=None):
     """GÉNÉRATEUR qui calcule et installe les clés de dégagement de la pièce `obj` (voir l'en-tête) ; produit `(étiquette, étape, total)`. Remet les os dans leur pose d'origine à la fin. Retourne
     `{étiquette: nombre de sommets déplacés}`. `report` (dict) reçoit pour chaque étiquette et angle la profondeur maximale avant déplacement et le résidu prédit (information)."""
-    remove(obj)
+    if not any(m.type == "ARMATURE" for m in obj.modifiers):  # pièce suivant la surface du corps (Surface Deform) : elle suit déjà sa peau, rien à calculer
+        return {}
     wanted = [j for j in (joints or [k for k, v in JOINTS.items() if v.get("defaut", True)]) if j in JOINTS]
     mesh = obj.data
     count = len(mesh.vertices)
-    sides = _dominant_side(obj)
     neighbours = _adjacency(mesh, count)
     clearance = _clearance_of(obj)
     world = np.array(obj.matrix_world.to_3x3())
     world_inverse = np.linalg.inv(world)
     translation = np.array(obj.matrix_world.translation)
     animation = armature.animation_data
-    saved_animation = (animation.action, animation.use_nla) if animation is not None else None
-    if animation is not None:  # une animation (foule : bandes NLA) réécrirait la pose à chaque mise à jour du graphe
-        animation.action = None
-        animation.use_nla = False
-    saved_all = {b.name: (tuple(b.location), b.rotation_mode, tuple(b.rotation_quaternion), tuple(b.rotation_euler), tuple(b.scale)) for b in armature.pose.bones}
-    for b in armature.pose.bones:
-        b.location, b.rotation_mode, b.rotation_quaternion, b.scale = (0.0, 0.0, 0.0), "QUATERNION", (1.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0)  # pose de repos : le calcul ne dépend pas de la pose courante
-    bpy.context.view_layer.update()
-    saved_mods = _skin_only(obj)
-    saved_body = _body_skin_only(body)
-    was_basis = mesh.shape_keys is None
-    if was_basis:
-        obj.shape_key_add(name=BASIS, from_mix=False)
-    basis_block = mesh.shape_keys.key_blocks[0]
-    basis = _co(basis_block.data)
-    temp = obj.shape_key_add(name=TEMP_KEY, from_mix=False)
-    temp.relative_key = basis_block
-    temp.value = 1.0
+    saved_animation = None
+    saved_all, saved_mods, saved_body, temp, was_basis, succeeded = {}, [], [], None, False, False
+    old_keys = [(k, k.mute) for k in keys_of(mesh)]
+    for k, _state in old_keys:  # les anciennes clés sont seulement COUPÉES pendant le calcul : retirées au succès (annulation ou erreur : retour à l'état d'avant)
+        k.mute = True
     payload = {}
     pending = [(joint, side) for joint in wanted for side in ("L", "R") if f"{JOINTS[joint]['bone']}.{side}" in armature.pose.bones]
-    total = sum(len(JOINTS[j]["angles"]) for j, _ in pending)
+    total = sum(len(JOINTS[j]['angles']) for j, _ in pending)
     done = 0
     try:
+        saved_animation = (animation.action, animation.use_nla) if animation is not None else None
+        if animation is not None:  # une animation (foule : bandes NLA) réécrirait la pose à chaque mise à jour du graphe
+            animation.action = None
+            animation.use_nla = False
+        saved_all = {b.name: (tuple(b.location), b.rotation_mode, tuple(b.rotation_quaternion), tuple(b.rotation_euler), tuple(b.rotation_axis_angle), tuple(b.scale)) for b in armature.pose.bones}
+        for b in armature.pose.bones:
+            b.location, b.rotation_mode, b.rotation_quaternion, b.scale = (0.0, 0.0, 0.0), "QUATERNION", (1.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0)  # pose de repos : le calcul ne dépend pas de la pose courante
+        bpy.context.view_layer.update()
+        saved_mods = _skin_only(obj)
+        saved_body = _body_skin_only(body)
+        was_basis = mesh.shape_keys is None
+        if was_basis:
+            obj.shape_key_add(name=BASIS, from_mix=False)
+        basis_block = mesh.shape_keys.key_blocks[0]
+        basis = _co(basis_block.data)
+        temp = obj.shape_key_add(name=TEMP_KEY, from_mix=False)
+        temp.relative_key = basis_block
+        temp.value = 1.0
         for joint, side in pending:
             spec = JOINTS[joint]
             label = f"{joint}_{side}"
@@ -407,15 +395,28 @@ def generate(obj, body, armature, joints=None, report=None):
             if len(active):
                 payload[label] = {"sign": sign, "angles": list(spec["angles"]), "vertices": active, "delta": deltas[:, active]}
     finally:
-        obj.shape_key_remove(temp)
-        for name, (location, mode, quaternion, euler, scale) in saved_all.items():
+        if temp is not None:
+            obj.shape_key_remove(temp)
+        for name, (location, mode, quaternion, euler, axis_angle, scale) in saved_all.items():
             b = armature.pose.bones[name]
-            b.location, b.rotation_mode, b.rotation_quaternion, b.rotation_euler, b.scale = location, mode, quaternion, euler, scale
-        if animation is not None:
+            b.rotation_mode = mode
+            b.location, b.rotation_quaternion, b.rotation_euler, b.rotation_axis_angle, b.scale = location, quaternion, euler, axis_angle, scale
+        if animation is not None and saved_animation is not None:
             animation.action, animation.use_nla = saved_animation
         for m, state in saved_mods + saved_body:
             m.show_viewport = state
         bpy.context.view_layer.update()
+        if not succeeded:
+            for k, state in old_keys:
+                k.mute = state
+            if was_basis and mesh.shape_keys is not None and len(mesh.shape_keys.key_blocks) == 1:
+                obj.shape_key_remove(mesh.shape_keys.key_blocks[0])
+    remove(obj)  # calcul abouti : les anciennes clés laissent la place aux nouvelles
+    if mesh.shape_keys is None:
+        obj.shape_key_add(name=BASIS, from_mix=False)
+        was_basis = True
+    basis_block = mesh.shape_keys.key_blocks[0]
+    succeeded = True
     created = {}
     for label, data in payload.items():
         prop = _ensure_angle_prop(armature, label, data["sign"])

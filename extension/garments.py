@@ -608,7 +608,10 @@ def update_garment(obj):
         flex = garment_clearance.installed(obj)
         rebuilt, = _replace_garments(body, [obj], [(key, color, offset)], keep)
         if flex:
-            garment_clearance.build(rebuilt, body)
+            try:
+                garment_clearance.build(rebuilt, body)
+            except (RuntimeError, KeyError, ValueError):
+                pass
         return len(rebuilt.data.vertices)
     from . import garment_clearance
     flex = garment_clearance.installed(obj)  # les clés de dégagement de flexion (propres à la pièce) sont calculées pour la forme actuelle : à refaire après le déplacement des sommets
@@ -633,7 +636,10 @@ def update_garment(obj):
     obj.data.update()
     correctives.garment_restore(obj, held)
     if flex:
-        garment_clearance.build(obj, body)
+        try:
+            garment_clearance.build(obj, body)
+        except (RuntimeError, KeyError, ValueError):
+            pass  # la pièce reste valide, sans dégagement de flexion (à recalculer par le bouton du panneau)
     return len(used)
 
 

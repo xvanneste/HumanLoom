@@ -156,9 +156,10 @@ def install_independent(body, armature, data=None, source="generique"):
     """Correctifs du corps pour un personnage de FOULE (§17) : les clés de forme vivent sur le maillage de base, partagé entre tous les personnages ; un pilote par personnage exige donc un maillage de base PROPRE au personnage.
     Rend le maillage propre (copie : ~37 Mo de mémoire et ~18 Mo de fichier par personnage, mesuré par `tools/measure_crowd_correctives.py`) puis installe les correctifs. À réserver aux personnages proches de la caméra.
     Les blocs créés restent attachés à la foule (effacement et régénération). Retourne le nombre de clés créées."""
-    from . import skeleton
     if body.data.users > 1:
         body.data = body.data.copy()
+        if installed(body):  # la copie reprend les clés ET leurs pilotes, qui visent l'armature d'un autre personnage : on les refait
+            remove(body, None)
     created = install(body, armature, data=data, source=source)
     from .. import crowd
     if body.get(crowd.OBJECT_KEY) is not None:  # personnage de foule : les blocs créés ici appartiennent à la foule
