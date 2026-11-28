@@ -563,6 +563,8 @@ def _add_dress(body, key, definition, state):
     bm.to_mesh(obj.data)
     bm.free()
     _add_armature_modifiers(obj, body, skeleton.rigs_of(body)[0], weights_from)
+    from .animation import correctives
+    correctives.attach_garment(obj, body)  # correctifs de flexion du corps reportés par projection (sans effet s'il n'en a pas)
     return obj
 
 
@@ -602,8 +604,16 @@ def update_garment(obj):
         key, color, offset = obj[MARKER], params["couleur"], params["decalage_mm"]
         old = garments_of(body)
         keep = [garment for garment in old if garment != obj]
+        from . import garment_clearance
+        flex = garment_clearance.installed(obj)
         rebuilt, = _replace_garments(body, [obj], [(key, color, offset)], keep)
+        if flex:
+            garment_clearance.build(rebuilt, body)
         return len(rebuilt.data.vertices)
+    from . import garment_clearance
+    flex = garment_clearance.installed(obj)  # les clés de dégagement de flexion (propres à la pièce) sont calculées pour la forme actuelle : à refaire après le déplacement des sommets
+    if flex:
+        garment_clearance.remove(obj)
     used = np.array(params["sommets_du_corps"])
     points = skeleton.cage_points(body)
     mesh = body.data
@@ -622,6 +632,8 @@ def update_garment(obj):
     obj.data.vertices.foreach_set("co", coordinates.astype(np.float32).ravel())
     obj.data.update()
     correctives.garment_restore(obj, held)
+    if flex:
+        garment_clearance.build(obj, body)
     return len(used)
 
 
@@ -906,6 +918,9 @@ def import_garment(body, filepath, mode="pose", push_out_mm=2.0):
                 deform.target = body
                 bpy.context.view_layer.objects.active = obj
                 bpy.ops.object.surfacedeform_bind(modifier=deform.name)
+            if mode == "pose":
+                from .animation import correctives
+                correctives.attach_garment(obj, body)  # correctifs de flexion du corps reportés par projection (sans effet s'il n'en a pas)
             produced.append((obj, report))
     except Exception:
         _discard_imported(objects, materials_before)

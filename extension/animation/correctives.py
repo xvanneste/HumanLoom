@@ -152,6 +152,25 @@ def install(body, armature, data=None, source="generique"):
     return created
 
 
+def install_independent(body, armature, data=None, source="generique"):
+    """Correctifs du corps pour un personnage de FOULE (§17) : les clés de forme vivent sur le maillage de base, partagé entre tous les personnages ; un pilote par personnage exige donc un maillage de base PROPRE au personnage.
+    Rend le maillage propre (copie : ~37 Mo de mémoire et ~18 Mo de fichier par personnage, mesuré par `tools/measure_crowd_correctives.py`) puis installe les correctifs. À réserver aux personnages proches de la caméra.
+    Les blocs créés restent attachés à la foule (effacement et régénération). Retourne le nombre de clés créées."""
+    from . import skeleton
+    if body.data.users > 1:
+        body.data = body.data.copy()
+    created = install(body, armature, data=data, source=source)
+    from .. import crowd
+    if body.get(crowd.OBJECT_KEY) is not None:  # personnage de foule : les blocs créés ici appartiennent à la foule
+        body.data[crowd.OWNED_KEY] = True
+        if body.data.shape_keys is not None:
+            body.data.shape_keys[crowd.OWNED_KEY] = True
+        for garment in _garments(body):  # les clés reportées sur les pièces du personnage aussi
+            if garment.data.shape_keys is not None:
+                garment.data.shape_keys[crowd.OWNED_KEY] = True
+    return created
+
+
 def remove(body, armature=None):
     """Retire les clés de forme et les pilotes de correctifs (et la clé de base si elle est la seule restante) ; retire les propriétés de l'armature. Retourne le nombre d'éléments retirés."""
     removed = 0
@@ -379,7 +398,9 @@ def attach_garment(obj, body):
     from ..garments import PARAMS
     params = json.loads(obj.get(PARAMS, "{}"))
     used = params.get("sommets_du_corps") or []
-    if not used or "robe" in params or "mode" in params or not installed(body) or keys_of(obj.data):
+    if "robe" in params or params.get("mode") == "pose":  # pas de sommets correspondants : report par PROJECTION sur le corps (§17)
+        return attach_projected(obj, body)
+    if not used or "mode" in params or not installed(body) or keys_of(obj.data):
         return 0
     rigs = [c for c in body.children if c.type == "ARMATURE" and c.get("hl_rig")]
     if not rigs:
@@ -403,6 +424,66 @@ def attach_garment(obj, body):
             key.value = 0.0
             key.relative_key = basis_block
             key.mute = body_key.mute  # même état que la clé du corps (coupées pendant une simulation de tissu)
+            _add_driver(mesh.shape_keys, f'key_blocks["{key.name}"].value', _weight_expression(angles, index), [("x", "SINGLE_PROP", (armature, prop))])
+            created += 1
+    return created
+
+
+PROJECTION = {"voisins": 4, "plein": 0.03, "nul": 0.08}   # une pièce sans sommets correspondants (robe, pièce importée en mode « pose ») reçoit les déplacements des 4 sommets du corps les plus proches (pondération en 1/d²), à pleine valeur jusqu'à 3 cm de la peau, nulle au-delà de 8 cm
+
+
+def attach_projected(obj, body):
+    """Reporte les correctifs du corps sur une pièce SANS sommets correspondants par projection : chaque sommet de la pièce reçoit la moyenne pondérée (1/d²) des déplacements des sommets du corps les plus proches (repère du monde,
+    au repos), atténuée entre `plein` et `nul` de distance à la peau (une jupe évasée loin des jambes n'est pas touchée). Mêmes noms de clés et mêmes pilotes que le corps. Retourne le nombre de clés créées ; sans effet si le corps n'a pas de
+    correctifs ou si la pièce en porte déjà."""
+    from mathutils.kdtree import KDTree
+    from . import skeleton
+    if not installed(body) or keys_of(obj.data):
+        return 0
+    rigs = [c for c in body.children if c.type == "ARMATURE" and c.get("hl_rig")]
+    if not rigs:
+        return 0
+    armature = rigs[0]
+    body_world = np.array(body.matrix_world.to_3x3())
+    cage = skeleton.cage_points(body) @ body_world.T + np.array(body.matrix_world.translation)
+    garment_matrix = np.array(obj.matrix_world)
+    garment_basis = _co(obj.data.vertices)
+    rest = garment_basis @ garment_matrix[:3, :3].T + garment_matrix[:3, 3]
+    tree = KDTree(len(cage))
+    for index, point in enumerate(cage):
+        tree.insert(point.tolist(), index)
+    tree.balance()
+    count = len(rest)
+    neighbours = np.zeros((count, PROJECTION["voisins"]), int)
+    weights = np.zeros((count, PROJECTION["voisins"]))
+    fade = np.zeros(count)
+    for i, point in enumerate(rest):
+        found = tree.find_n(point.tolist(), PROJECTION["voisins"])
+        distances = np.array([max(d, 1e-4) for _co_, _index, d in found])
+        neighbours[i] = [index for _co_, index, _d in found]
+        weights[i] = 1.0 / distances ** 2
+        weights[i] /= weights[i].sum()
+        fade[i] = float(np.clip((PROJECTION["nul"] - distances.min()) / (PROJECTION["nul"] - PROJECTION["plein"]), 0.0, 1.0))
+    garment_inverse = np.linalg.inv(garment_matrix[:3, :3])
+    body_basis = _co(body.data.shape_keys.key_blocks[0].data)
+    mesh = obj.data
+    if mesh.shape_keys is None:
+        obj.shape_key_add(name=BASIS, from_mix=False)
+    basis_block = mesh.shape_keys.key_blocks[0]
+    basis = _co(basis_block.data)
+    created = 0
+    for label, rows in _by_label(body.data).items():
+        angles = [a for a, _ in rows]
+        prop = PROP_PREFIX + label
+        for index, (angle, body_key) in enumerate(rows):
+            body_delta = _co(body_key.data) - body_basis
+            delta = np.einsum("vk,vkj->vj", weights, body_delta[neighbours]) * fade[:, None]
+            delta = (delta @ body_world.T) @ garment_inverse.T
+            key = obj.shape_key_add(name=body_key.name, from_mix=False)
+            key.data.foreach_set("co", (basis + delta).ravel())
+            key.value = 0.0
+            key.relative_key = basis_block
+            key.mute = body_key.mute
             _add_driver(mesh.shape_keys, f'key_blocks["{key.name}"].value', _weight_expression(angles, index), [("x", "SINGLE_PROP", (armature, prop))])
             created += 1
     return created

@@ -20,7 +20,7 @@ ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = ARGS[ARGS.index("--out") + 1] if "--out" in ARGS else None
 sys.path.insert(0, str(ROOT))
 import extension as addon  # noqa: E402
-from extension import garments, human  # noqa: E402
+from extension import garment_clearance, garments, human  # noqa: E402
 from extension.animation import correctives, skeleton  # noqa: E402
 
 results, failures = {}, []
@@ -161,6 +161,26 @@ check("D2_non_traversee_coude_et_genou", ok, report)
 # D2b passe de dégagement (Shrinkwrap « OUTSIDE », opt-in : « Dégagement sous pose » du panneau) : le coude de la veste est ramené à 0 mm jusqu'à 110° et à moins de 7,5 mm à 135° ; le genou du jean à moins de 2,5 mm
 limits = {"coude_90": 1.0, "coude_110": 1.0, "coude_135": 7.5, "genou_90": 2.5, "genou_110": 2.5, "genou_135": 2.5}
 check("D2b_passe_de_degagement_coude_et_genou", all(clearance_report[k]["deux_modificateurs"]["profondeur_max_mm"] <= limits[k] for k in limits), {k: {"avec_degagement_mm": clearance_report[k]["deux_modificateurs"]["profondeur_max_mm"], "sans_mm": report[k]["deux_modificateurs"]["profondeur_max_mm"], "limite_mm": limits[k]} for k in limits})
+
+# D2c dégagement de flexion PROPRE À LA PIÈCE (clés de forme de la pièce, pilotées par l'angle ; `garment_clearance`) : sans passe Shrinkwrap, la pénétration du coude de la veste est ramenée sous 1 mm à 90/110/135° (8,4 / 11,9 / 13,0 mm sans) et
+# celle du genou du jean sous 2,5 mm (5,1 / 3,3 / 5,3 mm sans) ; les clés ne coûtent rien par image (voir validate_garment_correctives.py G4)
+for piece in (jacket, jean):
+    garment_clearance.build(piece, body, rig)
+keys_report = {}
+for joint, piece_key, bone, radius in (("coude", "veste", "arm_lower.L", 0.18), ("genou", "jean", "leg_lower.L", 0.22)):
+    piece = pieces[piece_key]
+    saved = skin_only(piece)
+    for angle in (90, 110, 135):
+        reset()
+        rig.pose.bones[bone].rotation_quaternion = Quaternion((1.0, 0.0, 0.0), math.radians(signs[joint] * angle))
+        bpy.context.view_layer.update()
+        pivot = np.array((rig.matrix_world @ rig.pose.bones[bone].head)[:])
+        keys_report[f"{joint}_{angle}"] = penetration(piece, body_tree(), pivot, radius)["profondeur_max_mm"]
+    for m, state in saved:
+        m.show_viewport = state
+reset()
+key_limits = {"coude_90": 1.0, "coude_110": 1.0, "coude_135": 1.0, "genou_90": 2.5, "genou_110": 2.5, "genou_135": 2.5}
+check("D2c_degagement_de_flexion_propre_a_la_piece", all(keys_report[k] <= key_limits[k] for k in key_limits), {k: {"avec_cles_mm": keys_report[k], "sans_mm": report[k]["deux_modificateurs"]["profondeur_max_mm"], "limite_mm": key_limits[k]} for k in key_limits})
 
 # D3 retrait propre : retirer le vêtement ne laisse aucun groupe ni objet
 before = len(bpy.data.objects)

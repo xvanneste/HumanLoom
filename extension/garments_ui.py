@@ -188,6 +188,41 @@ class HUMANLOOM_OT_garment_update(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class HUMANLOOM_OT_garment_flex_clearance(bpy.types.Operator):
+    bl_idname = "humanloom.garment_flex_clearance"
+    bl_label = "Dégagement de flexion"
+    bl_description = ("Calcule, pour chaque pièce de la tenue, des clés de forme propres à la pièce qui l'écartent du corps aux coudes et aux genoux pliés (pilotées par l'angle de l'os, quasi sans coût par image). "
+                      "À refaire après un changement de morphologie ; le calcul prend quelques secondes par pièce")
+    bl_options = {"REGISTER", "UNDO"}
+    action: bpy.props.EnumProperty(items=(("CALCULATE", "Calculer", "Calcule les clés de dégagement de toutes les pièces"), ("REMOVE", "Retirer", "Retire les clés de dégagement de toutes les pièces")), default="CALCULATE")
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return _object_mode(context) and body is not None and bool(garments.garments_of(body)) and bool(skeleton.rigs_of(body))
+
+    def execute(self, context):
+        from . import garment_clearance
+        body = _body(context)
+        pieces = garments.garments_of(body)
+        window = context.window_manager
+        try:
+            skin_mask.guard_garments(pieces)
+            window.progress_begin(0, max(1, len(pieces)))
+            for index, piece in enumerate(pieces):
+                if self.action == "REMOVE":
+                    garment_clearance.remove(piece, skeleton.rigs_of(body)[0])
+                else:
+                    garment_clearance.build(piece, body)
+                window.progress_update(index + 1)
+        except ERRORS as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        finally:
+            window.progress_end()
+        return {"FINISHED"}
+
+
 SKIN_MODES = (
     (skin_mask.OFF, "Désactivé", "Affiche toute la peau sous les vêtements"),
     (skin_mask.RENDER, "Rendu uniquement", "Masque la peau dans le rendu EEVEE et Cycles. Conserve la surface pour les simulations, les attaches et le groom. La peau peut rester visible en mode Solide"),
@@ -342,6 +377,7 @@ class HUMANLOOM_PT_garments(bpy.types.Panel):
                 box.operator("humanloom.garment_remove", text=g.name, icon="X").piece = g[garments.MARKER]
         layout.operator("humanloom.garment_import", icon="IMPORT")
         layout.operator("humanloom.garment_update", icon="FILE_REFRESH")
+        layout.operator("humanloom.garment_flex_clearance", text="Calculer le dégagement de flexion", icon="MOD_ARMATURE").action = "CALCULATE"
         skin_mode = skin_mask.mode_of(body)
         label = next(label for value, label, _ in LEGACY_SKIN_MODES if value == skin_mode)
         if skin_mode == skin_mask.LEGACY:
@@ -352,7 +388,7 @@ class HUMANLOOM_PT_garments(bpy.types.Panel):
         row.operator("humanloom.outfit", text="Recharger").action = "LOAD"
 
 
-CLASSES = (HUMANLOOM_OT_garment_add, HUMANLOOM_OT_garment_color, HUMANLOOM_OT_garment_favorite, HUMANLOOM_OT_garment_import, HUMANLOOM_OT_garment_remove, HUMANLOOM_OT_garment_update, HUMANLOOM_OT_garment_options, HUMANLOOM_OT_outfit, HUMANLOOM_PT_garments)
+CLASSES = (HUMANLOOM_OT_garment_add, HUMANLOOM_OT_garment_color, HUMANLOOM_OT_garment_favorite, HUMANLOOM_OT_garment_import, HUMANLOOM_OT_garment_remove, HUMANLOOM_OT_garment_update, HUMANLOOM_OT_garment_flex_clearance, HUMANLOOM_OT_garment_options, HUMANLOOM_OT_outfit, HUMANLOOM_PT_garments)
 
 
 def register():
