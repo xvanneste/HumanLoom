@@ -106,13 +106,24 @@ def eye_fit(body, context):
         try:
             mesh.calc_loop_triangles()
             points=np.array([v.co[:] for v in mesh.vertices])
-            matrix=np.array(obj.matrix_world)
+            matrix=np.array(evaluated.matrix_world)  # matrice évaluée : un œil parenté à un os suit la pose
             points=(matrix[:3,:3]@points.T).T+matrix[:3,3]
             faces=np.array([t.vertices[:] for t in mesh.loop_triangles],dtype=np.int32)
             return points,faces
         finally:evaluated.to_mesh_clear()
-    eyes=[o for o in body.children if o.type=='MESH' and o.data.shape_keys and 'Morphologie' in o.data.shape_keys.key_blocks]
-    if not eyes:return {'status':'no_separate_eyes','eyes':[]}
+    properties=getattr(body,'humanloom',None)
+    if properties is not None and properties.is_human:
+        # humain natif : les yeux sont les pointeurs `eye_left/eye_right` (ils restent valides une fois parentés aux os du rig)
+        pointed=[o for o in (properties.eye_left,properties.eye_right) if o is not None]
+        eyes=[o for o in pointed if o.type=='MESH']
+        if len(pointed)!=2 or len(eyes)!=2:return {'status':'invalid_eyes','reason':'Les deux pointeurs eye_left/eye_right doivent désigner un maillage chacun.','eyes':[]}
+        if eyes[0] is eyes[1]:return {'status':'invalid_eyes','reason':'eye_left et eye_right désignent le même objet.','eyes':[]}
+        source='humanloom.eye_left/eye_right'
+    else:
+        # ancien format (clé de forme « Morphologie ») : détection hiérarchique conservée
+        eyes=[o for o in body.children if o.type=='MESH' and o.data.shape_keys and 'Morphologie' in o.data.shape_keys.key_blocks]
+        source='legacy_hierarchy'
+    if not eyes:return {'status':'no_separate_eyes','eyes':[],'source':source}
     bp,bf=data(body)
     if len(bf)>250000:return {'status':'not_computed','reason':'Triangle budget exceeded'}
     tree=BVHTree.FromPolygons([Vector(p) for p in bp],bf.tolist(),all_triangles=True)
@@ -127,7 +138,7 @@ def eye_fit(body, context):
             for first,second in ((a,b),(b,a)):
                 for edge in range(3):hits|=segment_hits(first[:,edge],first[:,(edge+1)%3],second)
         results.append({'name':eye.name,'crossing_triangle_pairs':int(hits.sum())})
-    return {'status':'computed','eyes':results,'limitations':'Strict transverse crossings including internal orbital geometry. Coplanar tangency and nested surfaces are excluded.'}
+    return {'status':'computed','source':source,'eyes':results,'limitations':'Strict transverse crossings including internal orbital geometry. Coplanar tangency and nested surfaces are excluded.'}
 
 
 def report(body, context, check_intersections=True, include_eyes=False):

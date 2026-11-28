@@ -417,8 +417,19 @@ def register():
     # Aucun chargement ici : l'index est lu à la demande.
 
 
+def _stop_import_job():
+    """Détache la tâche d'import avant un chargement de fichier ou une désactivation (ANI-023) : le minuteur est retiré et le résultat tardif du fil (écrit dans un dictionnaire désormais détaché) est ignoré. Les imports sont transactionnels (journal) : relancer reprend proprement ; le fil ne peut pas être tué, il se termine seul."""
+    if bpy.app.timers.is_registered(poll_import):
+        bpy.app.timers.unregister(poll_import)
+    if _state["thread"] is not None:
+        _state["import_message"] = "Import interrompu par un changement de fichier ou la désactivation de l'extension : relancez-le (il reprend sans perte)."
+    _state["thread"] = None
+    _state["import_result"] = None
+
+
 @bpy.app.handlers.persistent
 def _stop_thumbnail_tasks(_unused=None):
+    _stop_import_job()
     retarget_ui.cancel_thumbnails()
     thumbnails.cancel_library_revisions()
     if bpy.app.timers.is_registered(_poll_thumbnail_revision):

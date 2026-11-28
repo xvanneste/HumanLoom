@@ -57,6 +57,33 @@ class HUMANLOOM_OT_rig_update(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class HUMANLOOM_OT_dentition(bpy.types.Operator):
+    bl_idname = "humanloom.dentition"
+    bl_label = "Dentition"
+    bl_description = "Choisit la dentition (automatique selon l'âge, adulte, lactéale ou mixte) : les dents sont régénérées, ce qui change leur topologie. Choix artistique, non calibré sur une population"
+    bl_options = {"REGISTER", "UNDO"}
+    mode: bpy.props.EnumProperty(name="Dentition", items=(("AUTO", "Automatique (selon l'âge)", ""), ("ADULT", "Adulte", ""), ("PRIMARY", "Lactéale", ""), ("MIXED", "Mixte (incisives permanentes)", "")), default="AUTO")
+
+    @classmethod
+    def poll(cls, context):
+        body = _body(context)
+        return body is not None and len(skeleton.rigs_of(body)) == 1
+
+    def invoke(self, context, event):
+        from . import dental
+        self.mode = dental.dentition_mode(_body(context))
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        from . import dental
+        try:
+            dental.set_dentition(_body(context), self.mode)
+        except (ValueError, RuntimeError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        return {"FINISHED"}
+
+
 class HUMANLOOM_OT_rig_remove(bpy.types.Operator):
     bl_idname = "humanloom.rig_remove"
     bl_label = "Retirer le squelette"
@@ -253,6 +280,8 @@ class HUMANLOOM_PT_rig(bpy.types.Panel):
         row.operator("humanloom.rig_update", icon="FILE_REFRESH")
         layout.operator("humanloom.rig_remove", icon="TRASH")
         if state != skeleton.NOT_INSTALLED:
+            layout.operator("humanloom.dentition", icon="MESH_MONKEY")
+        if state != skeleton.NOT_INSTALLED:
             status = correctives.status(body)
             text = {"absent": "Correctifs de flexion : absents", "generique": "Correctifs de flexion : génériques (corps par défaut)",
                     "a_jour": "Correctifs de flexion : recalculés pour ce corps", "obsolete": "Correctifs de flexion : à recalculer (morphologie changée)"}[status]
@@ -270,7 +299,7 @@ class HUMANLOOM_PT_rig(bpy.types.Panel):
             box.operator("humanloom.lid_follow", depress=skeleton.lid_follow_enabled(_body(context)))
 
 
-CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_rig_remove, HUMANLOOM_OT_correctives_toggle, HUMANLOOM_OT_correctives_rebuild, HUMANLOOM_OT_gaze_set, HUMANLOOM_OT_gaze_track, HUMANLOOM_OT_gaze_clear, HUMANLOOM_OT_lid_follow, HUMANLOOM_PT_rig)
+CLASSES = (HUMANLOOM_OT_rig_install, HUMANLOOM_OT_rig_update, HUMANLOOM_OT_dentition, HUMANLOOM_OT_rig_remove, HUMANLOOM_OT_correctives_toggle, HUMANLOOM_OT_correctives_rebuild, HUMANLOOM_OT_gaze_set, HUMANLOOM_OT_gaze_track, HUMANLOOM_OT_gaze_clear, HUMANLOOM_OT_lid_follow, HUMANLOOM_PT_rig)
 
 
 def register():

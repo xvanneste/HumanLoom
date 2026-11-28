@@ -24,20 +24,55 @@ CLOTH_UID_KEY = "hl_cloth_modifier_uid"
 SESSION_KEY = "hl_cloth_session"
 
 
+CLOTH_INPUTS = ("Substeps", "Constraint Steps", "Collision Radius", "Effectors Collection", "Pin Group")
+COLLIDER_INPUTS = ("Deforming",)
+
+
+def _valid_group(group, required):
+    """Un nom n'est pas une preuve d'origine : le groupe doit être local et exposer les entrées utilisées."""
+    if group.library is not None or group.bl_idname != "GeometryNodeTree":
+        return False
+    names = {item.name for item in group.interface.items_tree if item.item_type == "SOCKET" and item.in_out == "INPUT"}
+    return all(name in names for name in required)
+
+
+def _find_group(name, required):
+    return next((g for g in bpy.data.node_groups if (g.name == name or (g.name.startswith(name + ".") and g.name[len(name) + 1:].isdigit()))
+                 and _valid_group(g, required)), None)
+
+
+def _localize(tree, memo):
+    """Rend locale toute la fermeture transitive : les sous-groupes (Edge Length, Curve Segment) restent sinon liés au fichier d'assets de l'installation Blender (GRM-018)."""
+    key = tree.as_pointer()
+    if key in memo:
+        return memo[key]
+    result = tree.copy() if tree.library is not None else tree
+    memo[key] = result
+    for node in result.nodes:
+        if node.type == "GROUP" and node.node_tree is not None:
+            node.node_tree = _localize(node.node_tree, memo)
+    return result
+
+
 def _groups():
-    """Groupes de nœuds du fichier d'assets de Blender (chargés une fois, locaux)."""
-    for name in (CLOTH_GROUP, COLLIDER_GROUP):
-        if name not in bpy.data.node_groups or bpy.data.node_groups[name].library is not None:
-            break
-    else:
-        return bpy.data.node_groups[CLOTH_GROUP], bpy.data.node_groups[COLLIDER_GROUP]
-    path = bpy.utils.system_resource("DATAFILES") + "/" + ASSET
-    with bpy.data.libraries.load(path, link=False) as (source, target):
-        for name in (CLOTH_GROUP, COLLIDER_GROUP):
-            if name not in source.node_groups:
-                raise ValueError("Groupe Blender 5.2 absent : " + name)
-        target.node_groups = [CLOTH_GROUP, COLLIDER_GROUP]
-    return target.node_groups[0], target.node_groups[1]
+    """Groupes de nœuds du fichier d'assets de Blender (chargés si absents, locaux sur toute leur fermeture)."""
+    wanted = {CLOTH_GROUP: CLOTH_INPUTS, COLLIDER_GROUP: COLLIDER_INPUTS}
+    found = {name: _find_group(name, required) for name, required in wanted.items()}
+    missing = [name for name, group in found.items() if group is None]
+    if missing:
+        path = bpy.utils.system_resource("DATAFILES") + "/" + ASSET
+        with bpy.data.libraries.load(path, link=False) as (source, target):
+            for name in missing:
+                if name not in source.node_groups:
+                    raise ValueError("Groupe Blender 5.2 absent : " + name)
+            target.node_groups = list(missing)  # Blender remplace les noms par les blocs dans la liste donnée
+        loaded = list(target.node_groups)
+        for name in missing:
+            found[name] = next((g for g in loaded if g is not None and g.name.startswith(name) and _valid_group(g, wanted[name])), None)
+            if found[name] is None:
+                raise ValueError("Groupe Blender 5.2 incompatible : " + name)
+    memo = {}
+    return tuple(_localize(found[name], memo) for name in (CLOTH_GROUP, COLLIDER_GROUP))
 
 
 def _input(group, name):
@@ -153,7 +188,9 @@ def enable(garment, settings=None):
             # Les deux robes d'un même corps partagent leurs effecteurs. Deux corps
             # distincts ont chacun leur collection, même dans une scène commune.
             collection = bpy.data.collections.new(COLLECTION)
-            bpy.context.scene.collection.children.link(collection)
+            owners = list(body.users_scene)
+            scene = bpy.context.scene if bpy.context.scene in owners or not owners else owners[0]
+            scene.collection.children.link(collection)
             collection.hide_render = True
             collection.objects.link(body)
 

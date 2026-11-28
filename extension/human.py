@@ -59,8 +59,66 @@ def sockets():
     return _SOCKETS
 
 
+class HumanStateError(ValueError):
+    """Le corps natif est dans un état que l'extension ne peut pas piloter (modificateur absent, dupliqué ou remplacé)."""
+
+
+_COMPATIBLE = {}  # session_uid du groupe -> le groupe porte toutes les entrées attendues
+
+
+def _compatible(group):
+    """Le groupe de nœuds expose-t-il toutes les entrées de « HL Human » (par identifiant de socket, pas par nom de groupe) ?"""
+    key = group.session_uid
+    if key not in _COMPATIBLE:
+        have = {item.identifier for item in group.interface.items_tree if item.item_type == "SOCKET" and item.in_out == "INPUT"}
+        _COMPATIBLE[key] = all(values[0] in have for values in sockets().values())
+    return _COMPATIBLE[key]
+
+
+def modifier_status(obj):
+    """(état, modificateur) du pilote de l'humain natif. États : « ok » (nom canonique), « renamed » (renommé par l'utilisateur, retrouvé par son groupe), « missing », « duplicate » (deux modificateurs portent le groupe), « incompatible » (le modificateur « HL Human » existe mais son groupe n'a pas les entrées attendues)."""
+    if obj is None or obj.type != "MESH":
+        return "missing", None
+    candidates = [m for m in obj.modifiers if m.type == "NODES" and m.node_group is not None and _compatible(m.node_group)]
+    if len(candidates) > 1:
+        return "duplicate", None
+    if candidates:
+        return ("ok" if candidates[0].name == MODIFIER_NAME else "renamed"), candidates[0]
+    named = obj.modifiers.get(MODIFIER_NAME)
+    return ("incompatible" if named is not None else "missing"), None
+
+
+_STATE_MESSAGES = {
+    "missing": "le modificateur « HL Human » est absent",
+    "duplicate": "plusieurs modificateurs portent le groupe « HL Human » (supprimez la copie)",
+    "incompatible": "le modificateur « HL Human » utilise un groupe de nœuds qui n'a pas les entrées attendues",
+}
+
+
 def modifier_of(obj):
-    return obj.modifiers.get(MODIFIER_NAME) if obj is not None and obj.type == "MESH" else None
+    """Le modificateur pilote, ou None s'il est absent, dupliqué ou remplacé (voir `modifier_status`). Un renommage ordinaire est toléré."""
+    return modifier_status(obj)[1]
+
+
+def require_modifier(obj):
+    """Comme `modifier_of`, mais lève `HumanStateError` avec la cause : aucune commande ne doit échouer en silence."""
+    state, modifier = modifier_status(obj)
+    if modifier is None:
+        raise HumanStateError(f"{getattr(obj, 'name', obj)} : {_STATE_MESSAGES.get(state, state)}.")
+    return modifier
+
+
+def repair_modifier(obj):
+    """Remet le nom canonique au modificateur renommé (les pilotes des yeux et du relief le désignent par son nom) ; renvoie l'état final. Les valeurs ne changent pas."""
+    state, modifier = modifier_status(obj)
+    if state == "renamed":
+        occupant = obj.modifiers.get(MODIFIER_NAME)
+        if occupant is not None and occupant != modifier:
+            raise HumanStateError(f"{obj.name} : le nom « {MODIFIER_NAME} » est pris par un autre modificateur.")
+        modifier.name = MODIFIER_NAME
+    elif state != "ok":
+        raise HumanStateError(f"{obj.name} : {_STATE_MESSAGES[state]} ; réparation impossible automatiquement.")
+    return modifier_status(obj)[0]
 
 
 def is_native(obj):
@@ -107,7 +165,10 @@ def has_control(obj, name):
 
 def get_value(obj, name, default=0.0):
     if is_native(obj):
-        return float(getattr(obj.humanloom, name)) if name in sockets() else default
+        if name not in sockets():
+            return default
+        require_modifier(obj)
+        return float(getattr(obj.humanloom, name))
     keys = obj.data.shape_keys
     if name == "sex":
         return float(keys.key_blocks["Morphologie"].value)
@@ -116,6 +177,7 @@ def get_value(obj, name, default=0.0):
 
 def set_value(obj, name, value):
     if is_native(obj):
+        require_modifier(obj)
         setattr(obj.humanloom, name, float(value))
         return
     keys = obj.data.shape_keys
@@ -124,6 +186,64 @@ def set_value(obj, name, value):
     else:
         keys[_legacy_name(name)] = float(value)
     keys.update_tag()
+
+
+def native_path(name):
+    """Chemin de données natif d'une commande : l'entrée du modificateur (existe SANS l'extension, contrairement au chemin de la façade `humanloom.<nom>`)."""
+    return f'modifiers["{MODIFIER_NAME}"].properties.inputs.{sockets()[name][0]}.value'
+
+
+def _facade_actions(obj):
+    """(action, fente) de l'action active et des bandes NLA de l'objet."""
+    animation = obj.animation_data
+    if animation is None:
+        return
+    if animation.action is not None:
+        yield animation.action, animation.action_slot
+    for track in animation.nla_tracks:
+        for strip in track.strips:
+            if strip.action is not None:
+                yield strip.action, strip.action_slot
+
+
+def bake_facade_animation(obj):
+    """Convertit les courbes et drivers dont le chemin passe par la façade (`humanloom.<nom>`) en chemins natifs des entrées du modificateur, pour que l'animation reste lisible sans l'extension (INT-003).
+    Ne crée jamais de doublon : si une courbe native existe déjà pour la même entrée, la courbe de façade est signalée (« conflits ») et laissée telle quelle. Retourne {converted, conflits, drivers}."""
+    from bpy_extras.anim_utils import action_get_channelbag_for_slot
+    report = {"converted": 0, "conflits": [], "drivers": 0}
+    if not is_native(obj):
+        return report
+    prefix = "humanloom."
+    mapping = {prefix + name: native_path(name) for name in sockets()}
+    seen = set()
+    for action, slot in _facade_actions(obj):
+        if (action.as_pointer(), slot.handle if slot is not None else None) in seen:
+            continue
+        seen.add((action.as_pointer(), slot.handle if slot is not None else None))
+        bag = action_get_channelbag_for_slot(action, slot)
+        if bag is None:
+            continue
+        existing = {(c.data_path, c.array_index) for c in bag.fcurves}
+        for curve in list(bag.fcurves):
+            target = mapping.get(curve.data_path)
+            if target is None:
+                continue
+            if (target, curve.array_index) in existing:
+                report["conflits"].append(curve.data_path)
+                continue
+            existing.discard((curve.data_path, curve.array_index))
+            curve.data_path = target
+            existing.add((target, curve.array_index))
+            report["converted"] += 1
+    animation = obj.animation_data
+    if animation is not None:
+        for driver in animation.drivers:
+            target = mapping.get(driver.data_path)
+            if target is not None and not any(d.data_path == target and d.array_index == driver.array_index for d in animation.drivers):
+                driver.data_path = target
+                report["drivers"] += 1
+    obj.update_tag()
+    return report
 
 
 def touch(obj):
@@ -174,9 +294,7 @@ def _getter(name):
 
 def _setter(name):
     def set_value(self, value):
-        modifier = modifier_of(self.id_data)
-        if modifier is None:
-            return
+        modifier = require_modifier(self.id_data)  # lève HumanStateError : pas d'écriture muette
         getattr(modifier.properties.inputs, sockets()[name][0]).value = float(value)
         self.id_data.update_tag()
     return set_value
@@ -269,7 +387,55 @@ def _amplify_eye_key(fcurve, keys, control, body, names):
     key.slider_max = max(key.slider_max, 1.0) * top
 
 
+_TRACKED = ("objects", "meshes", "shape_keys", "node_groups", "materials", "textures", "images", "actions", "armatures", "curves")  # ordre de retrait (les objets d'abord)
+
+
+def _inventory():
+    return {name: {item.session_uid for item in getattr(bpy.data, name)} for name in _TRACKED}
+
+
+def _rollback(before):
+    """Retire uniquement les blocs créés depuis `before` (jamais de purge globale) : une création échouée ne laisse aucun reste."""
+    for name in _TRACKED:
+        collection = getattr(bpy.data, name)
+        for item in [i for i in collection if i.session_uid not in before[name]]:
+            try:
+                if name == "objects":
+                    collection.remove(item, do_unlink=True)
+                else:
+                    collection.remove(item)
+            except (ReferenceError, RuntimeError, ValueError):  # déjà retiré avec son propriétaire
+                pass
+
+
+def _preflight():
+    """Vérifie les ressources AVANT de toucher à `bpy.data` : fichiers présents et blocs attendus listés dedans."""
+    for path, kind, names in ((NODES_PATH, "node_groups", [GROUP_NAME]), (NODES_PATH, "meshes", [MESH_NAME]), (EYES_PATH, "objects", list(_EYE_OBJECTS))):
+        if not Path(path).is_file():
+            raise OSError(f"Ressource manquante : {path}")
+        with bpy.data.libraries.load(str(path), link=False) as (source, _):
+            missing = [n for n in names if n not in getattr(source, kind)]
+        if missing:
+            raise KeyError(f"{Path(path).name} ne contient pas {missing}")
+    sockets()
+
+
+_EYE_OBJECTS = ("HL Relief Source", "Œil gauche", "Œil droit")
+
+
 def create_human(context, location=None):
+    """Crée un humain natif complet (corps, deux yeux, relief de peau) ou n'en crée aucun : en cas d'échec les blocs créés sont retirés et l'erreur est relancée. Le marqueur `is_human` n'est publié qu'à la fin."""
+    _preflight()
+    before = _inventory()
+    try:
+        return _build_human(context, location)
+    except Exception:
+        _rollback(before)
+        mark_objects_current()
+        raise
+
+
+def _build_human(context, location):
     group, mesh = load_nodes()
     body = bpy.data.objects.new("Humain", mesh)
     collection = context.collection
@@ -283,12 +449,8 @@ def create_human(context, location=None):
     for polygon in mesh.polygons:
         polygon.use_smooth = True
     properties = body.humanloom
-    properties.is_human = True
-    properties.uuid = _new_uuid()
-    properties.schema_version = SCHEMA_VERSION
-    properties.generator_version = GENERATOR_VERSION
     with bpy.data.libraries.load(str(EYES_PATH), link=False) as (_, target):
-        target.objects = ["HL Relief Source", "Œil gauche", "Œil droit"]
+        target.objects = list(_EYE_OBJECTS)
     source, *eyes = target.objects
     for attribute, eye in zip(("eye_left", "eye_right"), eyes):
         collection.objects.link(eye)
@@ -305,6 +467,10 @@ def create_human(context, location=None):
             del mesh[stale]
     if location is not None:
         body.location = location
+    properties.uuid = _new_uuid()
+    properties.schema_version = SCHEMA_VERSION
+    properties.generator_version = GENERATOR_VERSION
+    properties.is_human = True  # publié en dernier : corps + yeux + relief entièrement construits
     return body
 
 
@@ -337,7 +503,7 @@ class HUMANLOOM_OT_create(bpy.types.Operator):
     def execute(self, context):
         try:
             body = create_human(context, context.scene.cursor.location)
-        except (OSError, RuntimeError, KeyError) as error:
+        except Exception as error:  # noqa: BLE001 : toute panne est rapportée, le rollback a déjà nettoyé
             self.report({"ERROR"}, f"Impossible de créer l'humain ({error}).")
             return {"CANCELLED"}
         body.humanloom.sex = self.sex
@@ -346,6 +512,25 @@ class HUMANLOOM_OT_create(bpy.types.Operator):
             obj.select_set(False)
         body.select_set(True)
         context.view_layer.objects.active = body
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_repair_modifier(bpy.types.Operator):
+    """Remet le nom « HL Human » au modificateur pilote renommé (les pilotes des yeux et du relief le désignent par son nom)."""
+    bl_idname = "humanloom.repair_modifier"
+    bl_label = "Réparer le modificateur pilote"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return is_native(context.object) and modifier_status(context.object)[0] == "renamed"
+
+    def execute(self, context):
+        try:
+            repair_modifier(context.object)
+        except HumanStateError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
         return {"FINISHED"}
 
 
@@ -423,7 +608,26 @@ def _on_depsgraph(scene, depsgraph=None):
             ensure_unique_uuid()
 
 
-CLASSES = (HumanLoomProperties, HUMANLOOM_OT_create, HUMANLOOM_OT_assign_uuid, HUMANLOOM_OT_duplicate)
+class HUMANLOOM_OT_facade_animation_to_native(bpy.types.Operator):
+    """Convertit l'animation des réglages (chemins de la façade `humanloom.*`) en chemins natifs du modificateur : elle reste lisible si l'extension est désactivée ou absente."""
+    bl_idname = "humanloom.facade_animation_to_native"
+    bl_label = "Rendre l'animation indépendante de l'extension"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return is_native(context.object) and context.object.animation_data is not None
+
+    def execute(self, context):
+        report = bake_facade_animation(context.object)
+        if report["conflits"]:
+            self.report({"WARNING"}, f"{report['converted']} courbes converties ; conflit (courbe native existante) : {', '.join(report['conflits'][:3])}")
+        else:
+            self.report({"INFO"}, f"{report['converted']} courbes et {report['drivers']} pilotes convertis.")
+        return {"FINISHED"}
+
+
+CLASSES = (HumanLoomProperties, HUMANLOOM_OT_create, HUMANLOOM_OT_repair_modifier, HUMANLOOM_OT_facade_animation_to_native, HUMANLOOM_OT_assign_uuid, HUMANLOOM_OT_duplicate)
 
 
 def register():

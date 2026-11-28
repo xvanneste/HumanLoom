@@ -237,7 +237,7 @@ check("G4_penetration_sous_6_poses_avec_degagement_part_des_sommets", worst_afte
 results["G4b_profondeur_max_INFO"] = {"ok": True, "critere_valide": bool(worst_after[1] <= 2.0), "informatif": True, "detail": {"statut": "NON atteint : profondeur maximale %.1f mm apres degagement (critere V-2 : <= 2 mm)" % worst_after[1], "cause": "sous l'epaule flechie ou levee le corps lui-meme s'auto-intersecte a l'aisselle : quelques sommets de la piece y restent a l'interieur", "pire_apres_mm": round(worst_after[1], 1)}}
 print("INFO V-2 profondeur : %s (%.1f mm ; critère <= 2 mm) : résultat INFORMATIF, non compté comme validation (GRM-013)" % ("atteint" if worst_after[1] <= 2.0 else "NON ATTEINT", worst_after[1]))
 
-# G6 tenue enregistrable
+# G6 tenue enregistrable (GRM-009 : la couleur relue est celle du shader rendu, en flottant 32 bits : comparaison à 1e-6)
 outfit = garments.outfit_of(body)
 prints = sorted(garments.fingerprint(g) for g in garments.garments_of(body))
 garments.set_color(next(g for g in garments.garments_of(body) if g[garments.MARKER] == "jean"), (0.5, 0.1, 0.1))
@@ -247,7 +247,7 @@ prints = sorted(garments.fingerprint(g) for g in garments.garments_of(body))
 garments.apply_outfit(body, json.loads(text))
 prints_after = sorted(garments.fingerprint(g) for g in garments.garments_of(body))
 order_ok = [garments.LAYERS[garments.GARMENTS[p["piece"]]["couche"]] for p in outfit] == sorted(garments.LAYERS[garments.GARMENTS[p["piece"]]["couche"]] for p in outfit)
-check("G6_tenue_rechargee_a_l_identique", prints == prints_after and order_ok and len(outfit) == len(test_pieces) and any(p["couleur"] == [0.5, 0.1, 0.1] for p in outfit), {"pieces": [p["piece"] for p in outfit]})
+check("G6_tenue_rechargee_a_l_identique", prints == prints_after and order_ok and len(outfit) == len(test_pieces) and any(all(abs(a - b) < 1e-6 for a, b in zip(p["couleur"], (0.5, 0.1, 0.1))) for p in outfit), {"pieces": [p["piece"] for p in outfit]})
 
 # G5 mise à jour quand la morphologie change
 if surface is not None:

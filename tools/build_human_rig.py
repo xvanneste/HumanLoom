@@ -251,10 +251,15 @@ print("RIG poids : somme", float(chosen.sum(1).min()), float(chosen.sum(1).max()
       "poids max moyen", float(chosen[:, 0].mean()))
 
 if CHECK:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import rig_check
     stored = json.loads(skeleton.ANCHORS_FILE.read_text(encoding="utf-8"))
-    ok = stored["anchors"].keys() == data["anchors"].keys() and all(stored["anchors"][k]["vertices"] == data["anchors"][k]["vertices"] for k in data["anchors"])
     old = np.load(skeleton.WEIGHTS_FILE)
-    print("RIG vérification : ancres identiques", ok, "poids identiques", bool(np.allclose(old["w"], chosen, atol=1e-6) and (old["idx"] == order).all()))
+    comparison = rig_check.compare(stored["anchors"], data["anchors"], old["names"], old["idx"], old["w"], np.array(names), order, chosen)
+    print("RIG vérification :", json.dumps(comparison, ensure_ascii=False)[:2000])
+    if not comparison["identique"]:
+        print("RIG vérification : DIFFÉRENCE (voir le rapport ci-dessus)", file=sys.stderr)
+        sys.exit(1)
 elif os.environ.get("HL_RIG_WEIGHTS_OUT"):  # essais de paramètres : poids seulement, vers un fichier temporaire
     np.savez_compressed(os.environ["HL_RIG_WEIGHTS_OUT"], names=np.array(names), idx=order.astype(np.int16), w=chosen.astype(np.float32))
     print("RIG écrit (essai)", os.environ["HL_RIG_WEIGHTS_OUT"])

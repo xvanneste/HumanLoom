@@ -10,6 +10,8 @@ import json
 import math
 
 import bpy
+import re
+
 import numpy as np
 
 from .. import human
@@ -278,14 +280,20 @@ def bake_shapes(body, arkit=True, name=None):
             if n not in driven:
                 human.set_value(body, n, 0.0)
         base = _evaluated_points(body)
-        mesh = bpy.data.meshes.new((name or body.name) + " export")
-        mesh.from_pydata([tuple(p) for p in base], [], [])
         source_mesh = body.data
-        if len(source_mesh.vertices) == len(base):  # topologie conservée : on copie les polygones du maillage source
-            mesh.clear_geometry()
-            mesh.from_pydata([tuple(p) for p in base], [], [tuple(p.vertices) for p in source_mesh.polygons])
-        mesh.update()
+        if len(source_mesh.vertices) == len(base):
+            # Copie du maillage source : UV, indices de matériaux, emplacements de matériaux et attributs sont conservés (ANI-011) ; seules les positions sont remplacées.
+            mesh = source_mesh.copy()
+            mesh.name = (name or body.name) + " export"
+            for attribute in [a for a in mesh.attributes if re.fullmatch(r"b(_u)?\d+", a.name)]:  # couches de construction du modèle natif : inutiles à l'export
+                mesh.attributes.remove(attribute)
+            mesh.vertices.foreach_set("co", base.astype(np.float32).ravel())
+        else:
+            mesh = bpy.data.meshes.new((name or body.name) + " export")
+            mesh.from_pydata([tuple(p) for p in base], [], [])
         obj = bpy.data.objects.new((name or body.name) + " export", mesh)
+        if mesh.shape_keys is not None:  # maillage source historique avec ses formes : on repart d'une base propre
+            obj.shape_key_clear()
         bpy.context.scene.collection.objects.link(obj)
         obj.matrix_world = body.matrix_world.copy()
         obj.shape_key_add(name="Basis", from_mix=False)
@@ -451,12 +459,26 @@ def teeth_visible_fraction(body, kind="lower"):
     return visible / max(len(vertices), 1)
 
 
+def normal_flux(rest, posed, triangles):
+    """Flux normal du déplacement par sommet : (d · n) A, avec n la normale de sommet (pondérée par les aires) et A l'aire associée, calculés au REPOS (m³ par sommet).
+    Invariant par rotation et translation rigides ; proportionnel à k³ sous mise à l'échelle isotrope de facteur k. Sur une surface FERMÉE et au premier ordre, la somme est la variation de volume enclos ; sur un disque ouvert de peau, c'est seulement le flux à travers cette surface : il ne mesure ni un volume de tissu ni sa conservation (ANI-025)."""
+    cross = np.cross(rest[triangles[:, 1]] - rest[triangles[:, 0]], rest[triangles[:, 2]] - rest[triangles[:, 0]])
+    area = np.linalg.norm(cross, axis=1) / 2.0
+    normals = cross / np.maximum(2 * area, 1e-18)[:, None]
+    vertex_n, vertex_a = np.zeros_like(rest), np.zeros(len(rest))
+    for k in range(3):
+        np.add.at(vertex_n, triangles[:, k], normals * area[:, None] / 3.0)
+        np.add.at(vertex_a, triangles[:, k], area / 3.0)
+    vertex_n /= np.maximum(np.linalg.norm(vertex_n, axis=1), 1e-18)[:, None]
+    return np.einsum("ij,ij->i", posed - rest, vertex_n) * vertex_a
+
+
 SMILE_LID_UP, SMILE_LID_DOWN, SMILE_CHEEK = 7000, 6790, 7380  # sommets de la cage (côté +x) : peau de la paupière supérieure (8 mm au-dessus du centre de l'œil), de l'inférieure (8 mm au-dessous), pommette
 
 
 def smile_metrics(body, levels=(0.25, 0.5, 0.75, 1.0)):
     """Mesures du sourire de Duchenne (commande `smile_duchenne`, les autres commandes à 0) sur la CAGE : pour chaque intensité, déplacement de la commissure (angle au-dessus de l'horizontale, vers l'extérieur et le haut),
-    VOLUME local des joues (flux du déplacement à travers la surface, Σ (d·n) A sur un disque de 35 mm centré sur le sommet de pommette `SMILE_CHEEK` : variation nette, brute, rapport net/brut), réduction de l'ouverture palpébrale
+    FLUX NORMAL local des joues (Σ (d·n) A sur un disque de 35 mm centré sur le sommet de pommette `SMILE_CHEEK` : valeur nette, brute, rapport net/brut ; c'est un proxy de surface, PAS un volume de tissu : voir `normal_flux`), réduction de l'ouverture palpébrale
     (écart vertical, en mm, entre deux points de peau de la paupière supérieure et de l'inférieure, côté +x ; négatif = l'ouverture diminue) et faces retournées (aire > 1 mm²). Les valeurs des commandes sont restaurées."""
     mesh = body.data
     mesh.calc_loop_triangles()
@@ -470,14 +492,6 @@ def smile_metrics(body, levels=(0.25, 0.5, 0.75, 1.0)):
         rest = skeleton.cage_points(body)
         corner = int(slit[np.argmax(rest[slit, 0])])
         lid_up, lid_down, cheek_id = SMILE_LID_UP, SMILE_LID_DOWN, SMILE_CHEEK  # sommets de la cage (topologie commune à toutes les morphologies)
-        cross = np.cross(rest[triangles[:, 1]] - rest[triangles[:, 0]], rest[triangles[:, 2]] - rest[triangles[:, 0]])
-        area = np.linalg.norm(cross, axis=1) / 2.0
-        normals = cross / np.maximum(2 * area, 1e-18)[:, None]
-        vertex_n, vertex_a = np.zeros_like(rest), np.zeros(len(rest))
-        for k in range(3):
-            np.add.at(vertex_n, triangles[:, k], normals * area[:, None] / 3.0)
-            np.add.at(vertex_a, triangles[:, k], area / 3.0)
-        vertex_n /= np.maximum(np.linalg.norm(vertex_n, axis=1), 1e-18)[:, None]
         region = (np.linalg.norm(rest - rest[cheek_id], axis=1) < 0.035) & (rest[:, 1] < rest[cheek_id, 1] + 0.012)
         n0 = np.cross(rest[triangles[:, 1]] - rest[triangles[:, 0]], rest[triangles[:, 2]] - rest[triangles[:, 0]])
         rows = {}
@@ -485,13 +499,13 @@ def smile_metrics(body, levels=(0.25, 0.5, 0.75, 1.0)):
             human.set_value(body, "smile_duchenne", float(level))
             posed = skeleton.cage_points(body)
             d = posed - rest
-            flux = np.einsum("ij,ij->i", d, vertex_n) * vertex_a
+            flux = normal_flux(rest, posed, triangles)
             n1 = np.cross(posed[triangles[:, 1]] - posed[triangles[:, 0]], posed[triangles[:, 2]] - posed[triangles[:, 0]])
             flips = int(((np.einsum("ij,ij->i", n0, n1) < 0) & (np.linalg.norm(n0, axis=1) > 4e-6)).sum())
             cd = d[corner]
             rows[float(level)] = {
                 "commissure_mm": round(float(np.linalg.norm(cd)) * 1000, 2), "commissure_angle_deg": round(float(np.degrees(np.arctan2(cd[2], cd[0]))), 1),
-                "joue_volume_net_cm3": round(float(flux[region].sum()) * 1e6, 4), "joue_volume_brut_cm3": round(float(np.abs(flux[region]).sum()) * 1e6, 4),
+                "joue_flux_normal_net_cm3": round(float(flux[region].sum()) * 1e6, 4), "joue_flux_normal_brut_cm3": round(float(np.abs(flux[region]).sum()) * 1e6, 4),
                 "joue_net_sur_brut": round(float(abs(flux[region].sum()) / max(np.abs(flux[region]).sum(), 1e-18)), 3),
                 "ouverture_palpebrale_mm": round(float((posed[lid_up, 2] - posed[lid_down, 2]) - (rest[lid_up, 2] - rest[lid_down, 2])) * 1000, 2),
                 "faces_retournees": flips}

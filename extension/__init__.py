@@ -400,6 +400,17 @@ class HUMANMODELING_PT_model(bpy.types.Panel):
         layout = self.layout
         layout.operator(human.HUMANLOOM_OT_create.bl_idname, icon="ADD", text="Créer un humain")
         body = active_body(context)
+        if body is not None and human.is_native(body):
+            state = human.modifier_status(body)[0]
+            if state != "ok":
+                box = layout.box()
+                box.alert = state != "renamed"
+                box.label(text={"renamed": "Modificateur « HL Human » renommé.", "missing": "Modificateur « HL Human » absent.",
+                                "duplicate": "Modificateur « HL Human » en double.", "incompatible": "Groupe de nœuds incompatible."}[state], icon="ERROR")
+                if state == "renamed":
+                    box.operator(human.HUMANLOOM_OT_repair_modifier.bl_idname, icon="TOOL_SETTINGS")
+            elif body.animation_data is not None:
+                layout.operator(human.HUMANLOOM_OT_facade_animation_to_native.bl_idname, icon="DRIVER")
         if body and (human.is_native(body) or body.data.shape_keys):
             if human.has_control(body, "sex"):
                 human.draw_control(layout, body, "sex", "Morphologie")

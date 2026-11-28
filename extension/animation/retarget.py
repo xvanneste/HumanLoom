@@ -32,9 +32,16 @@ class Rig:
 
     def __post_init__(self):
         self.rest = np.asarray(self.rest, float)
+        if len(self.names) == 0:
+            raise ValueError("Squelette vide.")
+        if self.rest.shape != (len(self.names), 4, 4) or len(self.parents) != len(self.names):
+            raise ValueError("Squelette incohérent : noms, parents et matrices de repos doivent avoir la même longueur.")
+        if not np.isfinite(self.rest).all():
+            raise ValueError("Les matrices de repos du squelette doivent être finies.")
         self.index = {n: i for i, n in enumerate(self.names)}
         for i, p in enumerate(self.parents):
-            assert p < i, "les parents doivent précéder leurs enfants"
+            if not p < i:
+                raise ValueError("Les parents doivent précéder leurs enfants (hiérarchie acyclique).")
 
     def local_rest(self):
         local = self.rest.copy()
@@ -145,8 +152,8 @@ def arc_rotations(a, b):
     c = (a * b).sum(-1)
     k = np.zeros(a.shape[:1] + (3, 3))
     k[:, 0, 1], k[:, 0, 2], k[:, 1, 0], k[:, 1, 2], k[:, 2, 0], k[:, 2, 1] = -v[:, 2], v[:, 1], v[:, 2], -v[:, 0], -v[:, 1], v[:, 0]
-    out = np.eye(3)[None] + k + np.einsum("fij,fjk->fik", k, k) / (1 + c)[:, None, None]
     opposite = c < -0.999999
+    out = np.eye(3)[None] + k + np.einsum("fij,fjk->fik", k, k) / np.where(opposite, 1.0, 1 + c)[:, None, None]
     for f in np.nonzero(opposite)[0]:
         out[f] = arc_rotation(a[f], b[f])
     return out
@@ -261,9 +268,54 @@ def clavicle_rhythm(theta, rest_direction, side):
     return _axis_rotations(c2, sign * np.interp(theta, RHYTHM_NODES, RHYTHM_AXIAL)) @ arc
 
 
+POSE_MODES = (ABSOLUTE, DELTA, ABSOLUTE_IK)
+ROOT_MOTIONS = (IN_PLACE, KEEP, EXTRACT)
+
+
+def _finite_in(value, low, high, label):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value) or not low <= value <= high:
+        raise ValueError(f"{label} doit être un nombre fini compris entre {low} et {high}.")
+
+
+def validate_inputs(source, target, mapping, motion, options):
+    """Refuse les entrées dégénérées AVANT tout calcul (ANI-007) : erreurs explicites, aucune mutation."""
+    if not mapping:
+        raise ValueError("La correspondance des os est vide.")
+    for t_name, s_name in mapping.items():
+        if t_name not in target.index:
+            raise ValueError(f"Os cible inconnu dans la correspondance : {t_name}")
+        if s_name not in source.index:
+            raise ValueError(f"Os source inconnu dans la correspondance : {s_name}")
+    loc, quat = np.asarray(motion.loc), np.asarray(motion.quat)
+    if loc.ndim != 3 or quat.ndim != 3 or loc.shape[0] < 1 or loc.shape[:2] != quat.shape[:2] or loc.shape[2] != 3 or quat.shape[2] != 4:
+        raise ValueError("Animation vide ou de forme invalide (images, os, 3) / (images, os, 4).")
+    if loc.shape[1] != len(source.names):
+        raise ValueError("L'animation ne correspond pas au squelette source (nombre d'os).")
+    if not np.isfinite(loc).all() or not np.isfinite(quat).all():
+        raise ValueError("L'animation contient des valeurs non finies.")
+    if (np.linalg.norm(quat, axis=-1) < 1e-9).any():
+        raise ValueError("L'animation contient un quaternion nul.")
+    if not np.isfinite(motion.fps) or motion.fps <= 0:
+        raise ValueError("La cadence de l'animation doit être positive.")
+    if options.pose_mode not in POSE_MODES:
+        raise ValueError(f"Mode de pose inconnu : {options.pose_mode}")
+    if options.root_motion not in ROOT_MOTIONS:
+        raise ValueError(f"Gestion du déplacement racine inconnue : {options.root_motion}")
+    if options.translation_scale is not None and (not np.isfinite(options.translation_scale) or options.translation_scale <= 0):
+        raise ValueError("L'échelle de translation doit être un nombre fini positif.")
+    _finite_in(options.clavicle_scale, 0.0, 2.0, "L'échelle de clavicule")
+    _finite_in(options.neck_twist, 0.0, 1.0, "La part de torsion du cou")
+    _finite_in(options.tibial_rotation, 0.0, 20.0, "La rotation tibiale")
+    _finite_in(options.limb_blend, 0.0, 1.0, "Le mélange des membres")
+    if "pelvis" in mapping and options.translation_scale is None:
+        if abs(source.rest[source.index[mapping["pelvis"]], 2, 3]) < 1e-6 or abs(target.rest[target.index["pelvis"], 2, 3]) < 1e-6:
+            raise ValueError("La hauteur du bassin est nulle : l'échelle automatique est impossible, fournissez l'échelle de translation.")
+
+
 def retarget(source, target, mapping, motion, options=None, main_child=None):
     """Retourne un `Result`. `mapping` : {os cible: os source}. `main_child` : {os cible: enfant cible principal} (pour la direction de chaîne) ; déduit si absent."""
     options = options or Options()
+    validate_inputs(source, target, mapping, motion, options)
     frames = motion.frames
     s_world = forward_kinematics(source, motion.loc, motion.quat)
     s_rest_rot = source.rest[:, :3, :3]
@@ -327,7 +379,7 @@ def retarget(source, target, mapping, motion, options=None, main_child=None):
             if clavicle in mapping and arm in mapping:
                 ci, ai = target.index[clavicle], target.index[arm]
                 direction = np.einsum("fji,fj->fi", thorax_delta, rotations[:, ai, :, 1])  # axe de l'os du bras dans le repère du thorax
-                direction = direction / np.linalg.norm(direction, axis=-1, keepdims=True)
+                direction = direction / np.maximum(np.linalg.norm(direction, axis=-1, keepdims=True), 1e-12)
                 theta = np.degrees(np.arccos(np.clip(-direction[:, 2], -1.0, 1.0)))
                 C = clavicle_rhythm(theta, t_rest_rot[ci][:, 1], side)
                 rotations[:, ci] = np.einsum("fij,fjk,kl->fil", thorax_delta, C, t_rest_rot[ci])
@@ -379,6 +431,8 @@ def retarget(source, target, mapping, motion, options=None, main_child=None):
 def trim_and_speed(result, start=0, end=None, speed=1.0):
     """Découpe (images `start` à `end` incluses) puis change la vitesse (1 = inchangée ; 2 = deux fois plus rapide) par rééchantillonnage (nlerp des quaternions, linéaire des translations).
     Retourne un nouveau `Result` ; la durée est divisée par `speed`."""
+    if not np.isfinite(speed) or speed <= 0:
+        raise ValueError("La vitesse doit être un nombre fini positif.")
     frames = result.quat.shape[0]
     end = frames - 1 if end is None else min(int(end), frames - 1)
     start = max(0, min(int(start), end))

@@ -6,6 +6,10 @@ from mathutils import Vector
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import extension as addon
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import render_cache
+FORCE='--force' in sys.argv
+SOURCE=render_cache.source_fingerprint(ROOT,extra_files=[__file__])
 OUT=ROOT/'validation/comparaison-corpulence-24'
 (OUT/'images').mkdir(parents=True,exist_ok=True)
 (OUT/'presets').mkdir(exist_ok=True)
@@ -67,7 +71,9 @@ for morph,sex in ((0.,'F'),(1.,'M')):
                 camera.data.ortho_scale=2.05 if region=='body' else .78
                 scene.render.resolution_x=900;scene.render.resolution_y=1500 if region=='body' else 1000
                 path=OUT/'images'/f'{identifier}-{angle}.png';scene.render.filepath=str(path)
-                if not path.exists():bpy.ops.render.render(write_still=True)
+                expected=render_cache.fingerprint(SOURCE,{'identifiant':identifier,'moteur':scene.render.engine,'eclairage':shade.light,'resolution':[scene.render.resolution_x,scene.render.resolution_y],'niveaux':mod.levels,'mesures':entry['measures']},{'cible':list(target),'direction':list(direction),'ortho':camera.data.ortho_scale},bpy.app.version_string)
+                if not render_cache.is_current(path,expected,FORCE):bpy.ops.render.render(write_still=True);render_cache.record(path,expected)
+                entry.setdefault('empreintes',{})[angle]=expected
                 entry['images'][angle]=path.relative_to(OUT).as_posix()
             results.append(entry)
             (OUT/'comparaisons.json').write_text(json.dumps(results,indent=2,ensure_ascii=False),encoding='utf-8')

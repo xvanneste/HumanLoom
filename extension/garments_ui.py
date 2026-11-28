@@ -35,6 +35,13 @@ def favorites(scene):
         return []
 
 
+ERRORS = (ValueError, RuntimeError, KeyError, IndexError, StopIteration, AttributeError, TypeError)  # GRM-016 : une erreur de ressource ou d'état est rapportée, jamais un traceback
+
+
+def _object_mode(context):
+    return context.mode == "OBJECT"
+
+
 def _body(context):
     body = human.body_of(context.active_object)
     return body if human.is_native(body) else None
@@ -50,12 +57,12 @@ class HUMANLOOM_OT_garment_add(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         body = _body(context)
-        return body is not None and bool(skeleton.rigs_of(body))
+        return _object_mode(context) and body is not None and bool(skeleton.rigs_of(body))
 
     def execute(self, context):
         try:
             garments.add_garment(_body(context), self.piece)
-        except ValueError as error:
+        except ERRORS as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         return {"FINISHED"}
@@ -70,7 +77,7 @@ class HUMANLOOM_OT_garment_color(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _body(context) is not None
+        return _object_mode(context) and _body(context) is not None
 
     def _piece(self, context):
         return next((g for g in garments.garments_of(_body(context))
@@ -80,7 +87,7 @@ class HUMANLOOM_OT_garment_color(bpy.types.Operator):
         garment = self._piece(context)
         if garment is None or not garment.material_slots or garment.material_slots[0].material is None:
             return {"CANCELLED"}
-        self.color = garment.material_slots[0].material.diffuse_color[:3]
+        self.color = garments.color_of(garment)
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
@@ -119,7 +126,7 @@ class HUMANLOOM_OT_garment_import(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _body(context) is not None
+        return _object_mode(context) and _body(context) is not None
 
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
@@ -128,7 +135,7 @@ class HUMANLOOM_OT_garment_import(bpy.types.Operator):
     def execute(self, context):
         try:
             produced = garments.import_garment(_body(context), self.filepath, self.mode)
-        except ValueError as error:
+        except ERRORS as error:
             self.report({"ERROR"}, str(error)[:300])
             return {"CANCELLED"}
         for obj, report in produced:
@@ -144,7 +151,7 @@ class HUMANLOOM_OT_garment_remove(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _body(context) is not None
+        return _object_mode(context) and _body(context) is not None
 
     def execute(self, context):
         selected = [g for g in garments.garments_of(_body(context)) if g[garments.MARKER] == self.piece]
@@ -152,7 +159,7 @@ class HUMANLOOM_OT_garment_remove(bpy.types.Operator):
             skin_mask.guard_garments(selected)
             for garment in selected:
                 garments.remove_garment(garment)
-        except ValueError as error:
+        except ERRORS as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         return {"FINISHED"}
@@ -167,7 +174,7 @@ class HUMANLOOM_OT_garment_update(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         body = _body(context)
-        return body is not None and bool(garments.garments_of(body))
+        return _object_mode(context) and body is not None and bool(garments.garments_of(body))
 
     def execute(self, context):
         selected = garments.garments_of(_body(context))
@@ -175,7 +182,7 @@ class HUMANLOOM_OT_garment_update(bpy.types.Operator):
             skin_mask.guard_garments(selected)
             for garment in selected:
                 garments.update_garment(garment)
-        except ValueError as error:
+        except ERRORS as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         return {"FINISHED"}
@@ -246,7 +253,7 @@ class HUMANLOOM_OT_garment_options(bpy.types.Operator):
         if mode != skin_mask.LEGACY and (mode != current or repair):
             try:
                 garments.set_skin_mask_mode(body, mode)
-            except ValueError as error:
+            except ERRORS as error:
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
         if clearance != "KEEP":
@@ -265,7 +272,7 @@ class HUMANLOOM_OT_outfit(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return _body(context) is not None
+        return _object_mode(context) and _body(context) is not None
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -282,7 +289,7 @@ class HUMANLOOM_OT_outfit(bpy.types.Operator):
                 return {"CANCELLED"}
             try:
                 garments.apply_outfit(body, store[self.name])
-            except ValueError as error:
+            except ERRORS as error:
                 self.report({"ERROR"}, str(error))
                 return {"CANCELLED"}
         return {"FINISHED"}
@@ -297,7 +304,7 @@ class HUMANLOOM_PT_garments(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return _body(context) is not None
+        return _object_mode(context) and _body(context) is not None
 
     def draw(self, context):
         layout, body = self.layout, _body(context)

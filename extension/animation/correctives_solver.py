@@ -5,11 +5,15 @@ import math
 import numpy as np
 
 
+def _invariant(cov):
+    """Deuxième invariant de la covariance (λ1λ2 + λ1λ3 + λ2λ3) : même grandeur au repos et dans le gradient (ANI-013)."""
+    return 0.5 * (np.trace(cov) ** 2 - np.trace(cov @ cov))
+
+
 def section_area(points, selection):
-    """Aire d'une tranche (sqrt(λ1·λ2) des deux plus grandes variances de l'analyse en composantes principales)."""
+    """Mesure de section au repos : racine du MÊME invariant que celui dérivé par `section_grad` (invariant par rotation et translation ; un repos a donc un résidu et un gradient nuls)."""
     c = points[selection] - points[selection].mean(0)
-    eig = np.sort(np.linalg.eigvalsh(c.T @ c / len(selection)))[::-1]
-    return math.sqrt(max(eig[0] * eig[1], 1e-18))
+    return math.sqrt(max(_invariant(c.T @ c / len(selection)), 1e-18))
 
 
 def section_selection(rest, axis_head, axis_unit, pivot, distance, radius=0.11, half=0.01):
@@ -21,6 +25,11 @@ def section_selection(rest, axis_head, axis_unit, pivot, distance, radius=0.11, 
 
 class Problem:
     def __init__(self, rest, edges, tris, free, sections, protect, pull, tau=0.3):
+        rest = np.asarray(rest, dtype=float)
+        if not np.isfinite(rest).all():
+            raise ValueError("Les positions de repos doivent être finies.")
+        if len(free) == 0:
+            raise ValueError("Aucun sommet libre à optimiser.")
         self.rest, self.edges, self.tris, self.free = rest, edges, tris, free
         n = len(rest)
         self.local = -np.ones(n, int)
@@ -30,6 +39,8 @@ class Problem:
         sel = region[edges[:, 0]] | region[edges[:, 1]]
         self.E = edges[sel]
         self.L0 = np.linalg.norm(rest[self.E[:, 0]] - rest[self.E[:, 1]], axis=1)
+        if len(self.E) == 0 or self.L0.min() <= 1e-9:
+            raise ValueError("Une arête de longueur nulle (ou aucune arête) interdit la mesure d'étirement relatif.")
         both = region[edges[:, 0]] & region[edges[:, 1]]
         self.ea, self.eb = self.local[edges[both, 0]], self.local[edges[both, 1]]
         tri_free = region[tris].any(1)
@@ -38,7 +49,7 @@ class Problem:
             if tri_free[t]:
                 for k in range(3):
                     pair_map.setdefault((min(tri[k], tri[(k + 1) % 3]), max(tri[k], tri[(k + 1) % 3])), []).append(t)
-        self.pairs = np.array([v for v in pair_map.values() if len(v) == 2])
+        self.pairs = np.array([v for v in pair_map.values() if len(v) == 2], dtype=int).reshape(-1, 2)
         rn = self.normals(rest)[0]
         self.thr = np.minimum(tau, np.einsum("ij,ij->i", rn[self.pairs[:, 0]], rn[self.pairs[:, 1]]) - 0.25)
         self.sections, self.protect, self.pull = sections, protect, pull
@@ -71,13 +82,58 @@ class Problem:
         for sel, rest_area in self.sections:
             cen = x[sel] - x[sel].mean(0)
             C = cen.T @ cen / len(sel)
-            e2 = 0.5 * (np.trace(C) ** 2 - np.trace(C @ C))
+            e2 = _invariant(C)
             f = max(e2 / (rest_area ** 2), 1e-9)
             r = math.sqrt(f) - 1.0
             G = (np.trace(C) * np.eye(3) - C) / (rest_area ** 2)
             gx[sel] += (r / math.sqrt(f)) * (2.0 / len(sel)) * cen @ G.T
 
-    def solve(self, start, iterations=400, lr=0.0006, le=1.0, lf=0.5, la=2.0, ls=25.0):
+    def section_energy(self, x):
+        total = 0.0
+        for sel, rest_area in self.sections:
+            cen = x[sel] - x[sel].mean(0)
+            f = max(_invariant(cen.T @ cen / len(sel)) / (rest_area ** 2), 1e-9)
+            total += (math.sqrt(f) - 1.0) ** 2
+        return total
+
+    def energy(self, x, start, le=1.0, lf=0.5, la=2.0, ls=25.0):
+        """Énergie dont `solve` descend le gradient (mêmes pondérations)."""
+        E, L0 = self.E, self.L0
+        length = np.linalg.norm(x[E[:, 0]] - x[E[:, 1]], axis=1)
+        total = le * float((((length - L0) / L0) ** 2).sum())
+        if lf > 0 and len(self.pairs):
+            u = self.normals(x)[0]
+            h = np.maximum(self.thr - np.einsum("ij,ij->i", u[self.pairs[:, 0]], u[self.pairs[:, 1]]), 0.0)
+            total += lf * float((h ** 2).sum())
+        if la > 0:
+            total += la * self.section_energy(x)
+        disp = x[self.free] - start[self.free]
+        total += float((self.pull * (disp ** 2).sum(1)).sum())
+        diff = disp[self.ea] - disp[self.eb]
+        return total + ls * float((diff ** 2).sum())
+
+    def solve(self, start, **options):
+        """Positions optimisées ; le résultat n'est jamais pire que le départ (voir `solve_report`)."""
+        return self.solve_report(start, **options)[0]
+
+    def solve_report(self, start, iterations=400, lr=0.0006, le=1.0, lf=0.5, la=2.0, ls=25.0):
+        """(positions, rapport) : énergie initiale/finale, finitude, déplacement maximal, motif d'arrêt. Si le résultat n'est pas fini ou n'abaisse pas l'énergie, le DÉPART est retourné (`accepte` = False)."""
+        start = np.asarray(start, dtype=float)
+        if start.shape != self.rest.shape or not np.isfinite(start).all():
+            raise ValueError("Les positions de départ doivent être finies et de même forme que le repos.")
+        weights = dict(le=le, lf=lf, la=la, ls=ls)
+        initial = self.energy(start, start, **weights)
+        x = self._descend(start, iterations, lr, le, lf, la, ls)
+        finite = bool(np.isfinite(x).all())
+        final = self.energy(x, start, **weights) if finite else float("inf")
+        accepted = finite and final <= initial * (1.0 + 1e-9)
+        displacement = float(np.linalg.norm(x[self.free] - start[self.free], axis=1).max()) if finite else float("inf")
+        report = {"energie_initiale": initial, "energie_finale": final if accepted else initial, "finie": finite, "accepte": bool(accepted),
+                  "iterations": iterations, "motif_arret": "iterations_max" if accepted else ("non_fini" if not finite else "energie_non_reduite"),
+                  "deplacement_max_m": displacement if finite else None}
+        return (x if accepted else start.copy()), report
+
+    def _descend(self, start, iterations, lr, le, lf, la, ls):
         x = start.copy()
         free = self.free
         m_ = np.zeros((len(free), 3))

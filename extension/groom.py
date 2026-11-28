@@ -162,6 +162,13 @@ def sample(body,region,count,seed):
     return root,normals,np.einsum('ni,nij->nj',bary,uvc),ids,bary,w,float(np.sum(areas*mask))
 
 
+def points_per_strand(region,cfg):
+    """Borne supérieure du nombre de points d'une mèche telle que `make_positions` la produit (GRM-011) : la résolution de l'analyse (fibre) ET celle du coiffage le long du crâne (un point tous les 4 mm) ; la longueur d'une mèche ne dépasse jamais `length`."""
+    count=len(fiber(cfg['length'],cfg['nature']))
+    if region=='SCALP' and cfg['style']!='UPRIGHT' and cfg['nature']<.35:count=max(count,int(cfg['length']/.004)+2)
+    return count
+
+
 def make_positions(body,root,normals,region,cfg):
     rng=np.random.default_rng(cfg['seed']+17);arrays=[]
     bvh=BVHTree.FromPolygons([v.co[:] for v in body.data.vertices],[p.vertices[:] for p in body.data.polygons]) if region=='SCALP' else None
@@ -244,6 +251,27 @@ def validate(cfg):
         if type(cfg[key]) is not bool:raise ValueError('Booléen attendu : '+key)
     if not isinstance(cfg['color'],(list,tuple)) or len(cfg['color'])!=3 or not all(type(v) in (int,float) and math.isfinite(v) and 0<=v<=1 for v in cfg['color']):raise ValueError('Couleur invalide.')
     return cfg
+
+
+SAFE_SUBSTEPS = 19  # manuel Blender 5.2 (Hair Dynamics) : rester sous 20 sous-pas à cause des erreurs d'arrondi liées à l'inverse du carré du pas
+VERIFIED_XPBD_LENGTH = .06  # profil historique vérifié (tools/hair_physics22.py : mèches de 6 cm) ; au-delà, aucun résultat de convergence n'est publié
+
+
+def domain_warnings(cfg):
+    """Avertissements de domaine (GRM-012) : l'interface accepte plus large que ce qui est justifié ; ils sont affichés, jamais bloquants."""
+    warnings=[]
+    if cfg['physics']=='XPBD':
+        warnings.append('Simulation XPBD expérimentale de Blender : résultats non validés, aucun résidu natif exposé.')
+        if cfg['substeps']>SAFE_SUBSTEPS:warnings.append(f'Sous-pas {cfg["substeps"]} : le manuel 5.2 conseille moins de 20 (erreurs d’arrondi) ; augmenter ne garantit pas la convergence.')
+        if cfg['length']>VERIFIED_XPBD_LENGTH:warnings.append(f'Longueur {cfg["length"]*100:.0f} cm : hors du domaine vérifié (6 cm) pour la simulation.')
+    return warnings
+
+
+def render_warnings(scene):
+    """Avertissements de rendu (GRM-019) : le shader Principled Hair BSDF n'existe que sous Cycles (manuel 5.2 : non pris en charge par EEVEE). Ne change jamais le moteur de la scène."""
+    engine=scene.render.engine
+    if engine=='CYCLES':return []
+    return ['Le matériau des fibres (Principled Hair BSDF) demande le moteur Cycles : avec le moteur actuel les fibres s’affichent sans ce shader. Le moteur n’est pas modifié.']
 
 
 def add_interpolation(hair,region):
@@ -342,7 +370,7 @@ def build(body,region,cfg):
     if not body.is_editable or not body.data.is_editable:raise ValueError('Le personnage doit être éditable.')
     if region not in LABELS:raise ValueError('Zone inconnue.')
     root,normals,uv,ids,bary,mask,area=sample(body,region,cfg['guides'],cfg['seed'])
-    estimate=(area*cfg['density']+cfg['guides'])*len(fiber(cfg['length'],cfg['nature']))
+    estimate=(area*cfg['density']+cfg['guides'])*points_per_strand(region,cfg)
     if estimate>40000000 or estimate*cfg['viewport']>12000000:
         raise ValueError('Cette combinaison dépasse le budget de mèches. Réduisez densité ou quantité en aperçu, puis reconstruisez.')
     positions=make_positions(body,root,normals,region,cfg)
@@ -427,7 +455,7 @@ class HL_GroomSettings(bpy.types.PropertyGroup):
     grey:bpy.props.FloatProperty(name='Cheveux gris',default=0,min=0,max=1,subtype='FACTOR')
     visible:bpy.props.BoolProperty(name='Visible',default=True)
     physics:bpy.props.EnumProperty(name='Dynamique',items=(('ANIMATION','Suivi sans physique','Suit le corps sans simuler la gravité'),('XPBD','XPBD expérimental','Simule les guides avec gravité ; appliquer puis lire la timeline depuis sa première image')))
-    substeps:bpy.props.IntProperty(name='Sous-pas',default=8,min=1,max=32)
+    substeps:bpy.props.IntProperty(name='Sous-pas',default=8,min=1,max=32,soft_max=19,description='Le manuel 5.2 conseille moins de 20 sous-pas')
     iterations:bpy.props.IntProperty(name='Itérations',default=1024,min=16,max=32768)
     bendiness:bpy.props.FloatProperty(name='Souplesse',default=.2,min=0,max=1)
     root_bendiness:bpy.props.FloatProperty(name='Souplesse des racines',default=.1,min=0,max=1)
@@ -625,12 +653,13 @@ class HL_PT_groom(bpy.types.Panel):
         op=quality.operator('humanloom.groom_quality',text='Appliquer mon pourcentage');op.all_layers=body.hl_groom_quality_all
         quality.label(text='Rendu : densité complète, aperçu indépendant')
         box=layout.box();box.label(text='Matériau des fibres')
+        for line in render_warnings(context.scene):box.label(text=line,icon='ERROR')
         for name in ('color','grey','roughness','visible'):box.prop(cfg,name)
         box=layout.box();box.prop(cfg,'physics')
         mode=input_value(hair.modifiers['HumanLoom · suivi 5.2'],'Mode')
         box.label(text='Actif : gravité XPBD' if mode=='Physics (Experimental)' else 'Actif : suivi du corps, sans gravité',icon='INFO')
         if cfg.physics=='XPBD':
-            box.label(text='Simulation native expérimentale',icon='INFO')
+            for line in domain_warnings(state(cfg)):box.label(text=line,icon='ERROR')
             for name in ('substeps','iterations','bendiness','root_bendiness','collisions'):box.prop(cfg,name)
             box.label(text='Revenir à la première image après changement')
             box.label(text='Puis lire la timeline pour calculer la chute')

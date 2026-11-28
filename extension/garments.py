@@ -322,6 +322,31 @@ def _add_armature_modifiers(obj, body, rig, body_vertices=None):
     return armature
 
 
+MAX_OFFSET_MM = 60.0
+
+
+def checked_color(color):
+    """Couleur à trois composantes finies dans [0, 1] (GRM-016) : retourne un tuple de flottants ou lève ValueError."""
+    try:
+        values = tuple(float(channel) for channel in color)
+    except (TypeError, ValueError) as error:
+        raise ValueError("La couleur doit être une suite de trois nombres.") from error
+    if len(values) != 3 or not all(math.isfinite(v) and 0.0 <= v <= 1.0 for v in values):
+        raise ValueError("La couleur doit avoir trois composantes finies comprises entre 0 et 1.")
+    return values
+
+
+def checked_offset(offset_mm):
+    """Décalage à la peau en millimètres : fini, de 0 à 60 mm (GRM-016)."""
+    try:
+        value = float(offset_mm)
+    except (TypeError, ValueError) as error:
+        raise ValueError("Le décalage doit être un nombre.") from error
+    if not math.isfinite(value) or not 0.0 <= value <= MAX_OFFSET_MM:
+        raise ValueError(f"Le décalage doit être compris entre 0 et {MAX_OFFSET_MM:.0f} mm.")
+    return value
+
+
 def add_garment(body, key, color=None, offset_mm=None, clean_edges=True):
     _guard_skin_change(body)
     garment = _add_garment(body, key, color, offset_mm, clean_edges)
@@ -343,9 +368,9 @@ def _add_garment(body, key, color=None, offset_mm=None, clean_edges=True, *, rep
         raise ValueError("Cette pièce est déjà sur le corps : %s" % key)
     definition = dict(GARMENTS[key])
     if color is not None:
-        definition["couleur"] = tuple(color)
+        definition["couleur"] = checked_color(color)
     if offset_mm is not None:
-        definition["decalage_mm"] = float(offset_mm)
+        definition["decalage_mm"] = checked_offset(offset_mm)
     state = body_state(body)
     if definition.get("robe"):
         return _add_dress(body, key, definition, state)
@@ -606,7 +631,20 @@ def set_clearance(obj, enabled=True):
         modifier.show_viewport = modifier.show_render = bool(enabled)
 
 
+def color_of(obj):
+    """Couleur RÉELLEMENT rendue de la pièce (GRM-009) : entrée « Base Color » du Principled BSDF quand le matériau a des nœuds, sinon couleur d'affichage ; repli sur la couleur enregistrée si la pièce n'a pas de matériau.
+    Interface et sérialisation de la tenue lisent cette valeur : un réglage fait directement dans l'éditeur de matériaux est donc suivi."""
+    material = obj.material_slots[0].material if obj.material_slots else None
+    if material is not None:
+        shader = material.node_tree.nodes.get("Principled BSDF") if material.use_nodes and material.node_tree is not None else None
+        if shader is not None:
+            return tuple(float(c) for c in shader.inputs["Base Color"].default_value[:3])
+        return tuple(float(c) for c in material.diffuse_color[:3])
+    return tuple(float(c) for c in json.loads(obj[PARAMS])["couleur"])
+
+
 def set_color(obj, color):
+    color = checked_color(color)
     params = json.loads(obj[PARAMS])
     params["couleur"] = list(color)
     obj[PARAMS] = json.dumps(params, ensure_ascii=False)
@@ -630,7 +668,7 @@ def outfit_of(body):
     # GRM-001 : une pièce IMPORTÉE (marqueur `import_<nom>`, absente du registre procédural) n'est pas recréable depuis son nom : elle n'entre pas dans la tenue enregistrée (et n'est pas touchée par son chargement).
     for g in sorted((g for g in garments_of(body) if not g.get(IMPORT_MARKER)), key=lambda o: LAYERS[GARMENTS[o[MARKER]]["couche"]]):
         params = json.loads(g[PARAMS])
-        pieces.append({"piece": g[MARKER], "couleur": params["couleur"], "decalage_mm": params["decalage_mm"]})
+        pieces.append({"piece": g[MARKER], "couleur": list(color_of(g)), "decalage_mm": params["decalage_mm"]})
     return pieces
 
 
@@ -643,13 +681,9 @@ def apply_outfit(body, pieces):
             color = item.get("couleur")
             offset = item.get("decalage_mm")
             if color is not None:
-                color = tuple(float(channel) for channel in color)
-                if len(color) != 3 or not all(math.isfinite(channel) for channel in color):
-                    raise ValueError("Une couleur doit contenir trois composantes finies.")
+                color = checked_color(color)
             if offset is not None:
-                offset = float(offset)
-                if not math.isfinite(offset):
-                    raise ValueError("Le décalage doit être fini.")
+                offset = checked_offset(offset)
             if key not in GARMENTS or key in keys:
                 raise ValueError(f"Pièce inconnue ou en double : {key!r}.")
         except (AttributeError, KeyError, TypeError) as error:
@@ -731,6 +765,57 @@ def _discard_imported(objects, materials_before):
         bpy.data.materials.remove(material)
 
 
+def mesh_is_closed(triangles):
+    """Surface fermée : chaque arête est partagée par exactement deux triangles (GRM-014 : seule une surface fermée définit un intérieur sans ambiguïté)."""
+    counts = {}
+    for tri in np.asarray(triangles):
+        for k in range(3):
+            edge = (min(int(tri[k]), int(tri[(k + 1) % 3])), max(int(tri[k]), int(tri[(k + 1) % 3])))
+            counts[edge] = counts.get(edge, 0) + 1
+    return bool(counts) and all(c == 2 for c in counts.values())
+
+
+_PARITY_RAYS = ((0.577350269, 0.577350269, 0.577350269), (-0.267261242, 0.534522484, 0.801783726), (0.707106781, -0.707106781, 0.0))
+
+
+def inside_flags(tree, points):
+    """Intérieur par PARITÉ de rayons (vote majoritaire de trois directions obliques) : valable près des arêtes, des concavités et pour des normales de faces incohérentes, contrairement au signe de la normale de la face la plus proche (GRM-014).
+    Fiable pour une surface fermée (voir `mesh_is_closed`) ; sur une surface ouverte le résultat est une heuristique à signaler."""
+    from mathutils import Vector
+    flags = []
+    for point in points:
+        votes = 0
+        for direction in _PARITY_RAYS:
+            origin, hits = Vector(point), 0
+            vector = Vector(direction)
+            for _ in range(64):
+                location, _, _, _ = tree.ray_cast(origin, vector)
+                if location is None:
+                    break
+                hits += 1
+                origin = location + vector * 1e-6
+            votes += hits % 2
+        flags.append(votes >= 2)
+    return flags
+
+
+def crossing_triangles(tree, vertices, triangles):
+    """Indices des triangles du vêtement dont AUCUN sommet n'est à l'intérieur mais dont le centre, un milieu d'arête ou un point intermédiaire l'est : une face qui traverse le corps (GRM-014)."""
+    from mathutils import Vector
+    vertices = np.asarray(vertices, float)
+    triangles = np.asarray(triangles)
+    corner_flags = inside_flags(tree, [Vector(v) for v in vertices])
+    found = []
+    barycentric = ((1 / 3, 1 / 3, 1 / 3), (.5, .5, 0), (0, .5, .5), (.5, 0, .5), (.7, .15, .15), (.15, .7, .15), (.15, .15, .7))
+    for index, tri in enumerate(triangles):
+        if any(corner_flags[int(v)] for v in tri):
+            continue
+        samples = [Vector(np.array(b) @ vertices[tri]) for b in barycentric]
+        if any(inside_flags(tree, samples)):
+            found.append(index)
+    return found
+
+
 def fit_report(body, obj, push_out_mm=2.0, apply=True):
     """Ajustement automatique au repos : mesure (distance moyenne à la peau, part des sommets à l'intérieur, profondeur maximale) puis, si `apply`, repousse les sommets intérieurs jusqu'à `push_out_mm` au-dessus de la peau.
     Retourne un rapport chiffré ; `statut` vaut « ok » ou « échec : … » (jamais masqué)."""
@@ -742,15 +827,24 @@ def fit_report(body, obj, push_out_mm=2.0, apply=True):
     tree = BVHTree.FromPolygons([Vector(p) for p in points], [t.vertices[:] for t in mesh.loop_triangles])
     to_body = body.matrix_world.inverted() @ obj.matrix_world
     coordinates = [to_body @ v.co for v in obj.data.vertices]
+    body_triangles = np.array([t.vertices[:] for t in mesh.loop_triangles])
+    closed = mesh_is_closed(body_triangles)
+    flags = inside_flags(tree, coordinates)
     inside, depths, distances, moved = [], [], [], 0
     for i, c in enumerate(coordinates):
         location, normal, _, distance = tree.find_nearest(c)
         distances.append(distance)
-        if location is not None and (c - location).dot(normal) < 0:
+        if flags[i]:
             inside.append(i)
             depths.append(distance)
+    garment_triangles = np.array([t.vertices[:] for t in (obj.data.calc_loop_triangles() or obj.data.loop_triangles)]) if len(obj.data.vertices) else np.zeros((0, 3), int)
+    crossing = crossing_triangles(tree, [tuple(c) for c in coordinates], garment_triangles) if len(garment_triangles) and len(garment_triangles) <= 20000 else []
+    quantiles = np.percentile(np.array(depths) * 1000, [50, 95]) if depths else (0.0, 0.0)
+    worst = inside[int(np.argmax(depths))] if depths else None
     report = {"sommets": len(coordinates), "distance_moyenne_m": round(float(np.mean(distances)), 4) if distances else None, "part_a_l_interieur_avant": round(len(inside) / max(len(coordinates), 1), 4),
-              "profondeur_max_avant_mm": round(max(depths, default=0.0) * 1000, 1)}
+              "profondeur_max_avant_mm": round(max(depths, default=0.0) * 1000, 1), "profondeur_p50_avant_mm": round(float(quantiles[0]), 1), "profondeur_p95_avant_mm": round(float(quantiles[1]), 1),
+              "sommet_le_plus_profond": worst, "faces_traversantes_avant": len(crossing), "surface_corps_fermee": closed,
+              "classification": "parité de rayons" + ("" if closed else " : INDÉTERMINÉ (surface du corps non fermée, résultat heuristique)")}
     if apply and inside:
         inverse = obj.matrix_world.inverted() @ body.matrix_world
         for i in inside:
@@ -758,6 +852,8 @@ def fit_report(body, obj, push_out_mm=2.0, apply=True):
             obj.data.vertices[i].co = inverse @ (location + normal * (push_out_mm / 1000.0))
             moved += 1
         obj.data.update()
+        after = [to_body @ v.co for v in obj.data.vertices]
+        report["part_a_l_interieur_apres"] = round(sum(inside_flags(tree, after)) / max(len(after), 1), 4)
     report["sommets_repousses"] = moved
     if not distances:
         report["statut"] = "échec : maillage vide"
@@ -771,6 +867,9 @@ def fit_report(body, obj, push_out_mm=2.0, apply=True):
 
 
 def import_garment(body, filepath, mode="pose", push_out_mm=2.0):
+    push_out_mm = float(push_out_mm) if isinstance(push_out_mm, (int, float)) and not isinstance(push_out_mm, bool) and math.isfinite(push_out_mm) and 0.0 <= push_out_mm <= 20.0 else None
+    if push_out_mm is None:
+        raise ValueError("La marge de repoussage doit être comprise entre 0 et 20 mm.")
     """Importe un vêtement de l'utilisateur et l'ajuste au corps. `mode` : « pose » (poids de peau transférés du corps + Armature : suit les animations) ou « morphologie » (Surface Deform lié au corps :
     suit la morphologie et la pose, pas d'Armature). Une pièce en échec d'ajustement est supprimée et l'erreur levée (rien n'est laissé à moitié). Retourne [(objet, rapport), …]."""
     if mode not in ("pose", "morphologie"):

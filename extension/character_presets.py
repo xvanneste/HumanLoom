@@ -6,12 +6,19 @@ import os
 import tempfile
 from pathlib import Path
 
-from .proportions import BASE_ID, CONTROLS, property_name
+from .proportions import BASE_ID, CONTROLS, FACE_COMMANDS, property_name
 from . import human, landmark_sets, measurements
 
 
 FORMAT = "human_modeling.character"
 VERSION = 1
+# Commandes faciales natives (champ FACULTATIF « facial_commands » du format version 1 : absent = visage non touché). `mouth_open` est dérivée de la rotation de l'os de mâchoire : elle n'est jamais enregistrée.
+FACE_KEYS = tuple(name for name in FACE_COMMANDS if name != "mouth_open")
+
+
+def _face_bounds(name):
+    _, _, low, high = human.sockets()[name]
+    return float(low), float(high)
 
 
 def number(value, label, lower=None, upper=None):
@@ -42,6 +49,14 @@ def validate(payload):
     unknown = set(controls) - known
     if unknown:
         raise ValueError("Réglages inconnus dans le préréglage " + ", ".join(sorted(unknown)))
+    facial = payload.get("facial_commands")
+    if facial is not None:
+        if not isinstance(facial, dict):
+            raise ValueError("Les commandes faciales du préréglage sont invalides.")
+        unknown_face = set(facial) - set(FACE_KEYS)
+        if unknown_face:
+            raise ValueError("Commandes faciales inconnues dans le préréglage " + ", ".join(sorted(map(str, unknown_face))))
+        facial = {name: number(value, name, *_face_bounds(name)) for name, value in facial.items()}
     scale = payload.get("scale")
     if not isinstance(scale, list) or len(scale) != 3:
         raise ValueError("L’échelle du personnage doit contenir trois valeurs.")
@@ -57,7 +72,7 @@ def validate(payload):
         ):
             raise ValueError("La référence de mesure du préréglage est invalide.")
         reference = {key: reference[key] for key in ("id", "group", "sex", "percentile")}
-    return {
+    result = {
         "format": FORMAT,
         "version": VERSION,
         "base": BASE_ID,
@@ -71,10 +86,14 @@ def validate(payload):
         "measurement_reference": reference,
         "landmarks": landmark_sets.validate(payload["landmarks"]) if payload.get("landmarks") is not None else None,
     }
+    if facial is not None:
+        result["facial_commands"] = facial
+    return result
 
 
 def capture(body):
-    return validate({
+    facial = {name: human.get_value(body, name) for name in FACE_KEYS} if human.is_native(body) else None
+    payload = {
         "format": FORMAT,
         "version": VERSION,
         "base": body.data.get("human_modeling_base", BASE_ID),
@@ -91,11 +110,17 @@ def capture(body):
             "percentile": body.hm_reference_percentile,
         },
         "landmarks": landmark_sets.capture(body) if any(obj.get("hm_measurement_landmark") for obj in body.children) else None,
-    })
+    }
+    if facial is not None:
+        payload["facial_commands"] = facial
+    return validate(payload)
 
 
 def assign(body, state):
     for identifier, value in state["controls"].items():
+        if human.has_control(body, identifier):
+            human.set_value(body, identifier, value)
+    for identifier, value in state.get("facial_commands", {}).items():
         if human.has_control(body, identifier):
             human.set_value(body, identifier, value)
     human.set_value(body, "sex", state["morphology"])
@@ -121,6 +146,7 @@ def apply(body, payload, factor=1.0):
         identifier for identifier, value in requested["controls"].items()
         if not human.has_control(body, identifier) and value != 0
     ]
+    missing += [name for name, value in requested.get("facial_commands", {}).items() if not human.has_control(body, name) and value != 0]
     if missing:
         raise ValueError("Ajoutez d’abord les derniers réglages corps et visage à ce personnage.")
     if requested["age_stage"] != 2.0 and not human.has_control(body, "age"):
@@ -137,6 +163,8 @@ def apply(body, payload, factor=1.0):
             for identifier, value in requested["controls"].items()
         },
         "scale": [old * (1 - factor) + new * factor for old, new in zip(previous["scale"], requested["scale"])],
+        **({"facial_commands": {name: previous.get("facial_commands", {}).get(name, 0.0) * (1 - factor) + value * factor
+                                for name, value in requested["facial_commands"].items()}} if "facial_commands" in requested else {}),
         "measurement_reference": (
             requested["measurement_reference"] if factor == 1 and requested["measurement_reference"]
             else previous["measurement_reference"]

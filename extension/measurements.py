@@ -11,7 +11,7 @@ from mathutils import Vector
 import numpy as np
 
 from . import anatomy, landmark_sets, human
-from .proportions import CONTROLS, NATIVE_CONTROLS
+from .proportions import CONTROLS, FACE_COMMANDS, NATIVE_CONTROLS
 
 
 GROUPS = (
@@ -144,6 +144,9 @@ def report(body, context):
             "controls": (
                 {name: human.get_value(body, name) for name, _ in NATIVE_CONTROLS} if human.is_native(body)
                 else {name: body.data.shape_keys[name] for name in body.data.shape_keys.keys() if name.startswith("hm_")}
+            ),
+            "facial_commands": (
+                {name: human.get_value(body, name) for name in FACE_COMMANDS if name != "mouth_open"} if human.is_native(body) else {}
             ),
             "matrix_world": [list(row) for row in body.matrix_world],
             "scene_unit_scale_m": context.scene.unit_settings.scale_length,

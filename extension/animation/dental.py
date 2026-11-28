@@ -40,17 +40,33 @@ def load_reference():
 
 # --- paramètres -----------------------------------------------------------------------------------------------------------------------------------
 
-def tooth_table(reference, sex, age):
-    """Dents d'une hémi-arcade : listes (nom, largeur, hauteur de couronne, épaisseur) en mm, supérieure puis inférieure, + indicateurs de provenance. `sex` : 0 = homme, 1 = femme."""
+DENTITION_MODES = ("AUTO", "ADULT", "PRIMARY", "MIXED")  # AUTO : selon l'âge du corps (ancien comportement) ; les trois autres sont des CHOIX ARTISTIQUES explicites, jamais déduits d'un âge exact (ANI-024)
+DENTITION_KEY = "hl_dentition"
+MIXED_PERMANENT = ("incisive_centrale", "incisive_laterale")  # dentition mixte : incisives permanentes de taille adulte, canines et molaires encore lactéales (états par dent, schématique ; non calibrée sur une population)
+
+
+def dentition_mode(body):
+    mode = body.get(DENTITION_KEY, "AUTO")
+    return mode if mode in DENTITION_MODES else "AUTO"
+
+
+def tooth_table(reference, sex, age, mode="AUTO"):
+    """Dents d'une hémi-arcade : listes (nom, largeur, hauteur de couronne, épaisseur) en mm, supérieure puis inférieure, + indicateurs de provenance. `sex` : 0 = homme, 1 = femme.
+    `mode` : voir `DENTITION_MODES`. Retourne (haut, bas, lactéale, facteur d'arcade) : `lactéale` est vrai pour la dentition entièrement lactéale."""
+    if mode not in DENTITION_MODES:
+        raise ValueError(f"Dentition inconnue : {mode!r} (choix : {', '.join(DENTITION_MODES)})")
     published = reference["valeurs"]["dents_maxillaires_anterieures_adultes"]
     prov = reference["provisoires"]
-    primary = age <= prov["dentition_lacteale"]["age_max"]
-    names = prov["dentition_lacteale"]["dents_par_cote"] if primary else prov["dentition_adulte_dents_par_cote"]
-    size = prov["dentition_lacteale"]["facteur_taille"] if primary else 1.0
+    primary = (age <= prov["dentition_lacteale"]["age_max"]) if mode == "AUTO" else mode == "PRIMARY"
+    mixed = mode == "MIXED"
+    names = prov["dentition_lacteale"]["dents_par_cote"] if primary or mixed else prov["dentition_adulte_dents_par_cote"]
+    primary_size = prov["dentition_lacteale"]["facteur_taille"]
+    size = primary_size if primary else 1.0
     wear_cfg = prov["usure_senior_mm"]
     wear = float(np.clip((age - 2.0) / max(wear_cfg["age"] - 2.0, 1e-6), 0.0, 1.0)) * wear_cfg["perte_de_hauteur_incisives_canines"] if not primary else 0.0
     upper, lower = [], []
     for name in names:
+        size = (1.0 if name in MIXED_PERMANENT else primary_size) if mixed else size
         base = name.replace("molaire_1", "molaire_1")
         sourced = base in published["hommes"]
         if sourced:
@@ -67,7 +83,7 @@ def tooth_table(reference, sex, age):
         cut = wear if anterior else 0.0
         upper.append({"nom": base, "largeur": width_u * size, "hauteur": max(height_u * size - cut, 2.0), "epaisseur": thickness * size, "source": "publié (Alsahli 2025)" if sourced else "provisoire", "usure": cut})
         lower.append({"nom": base, "largeur": width_l * size, "hauteur": max(height_l * size - cut, 2.0), "epaisseur": thickness * size * 0.9, "source": "provisoire", "usure": cut})
-    return upper, lower, primary
+    return upper, lower, primary, (0.8 if primary else 0.9 if mixed else 1.0)
 
 
 # --- géométrie de l'arcade ---------------------------------------------------------------------------------------------------------------------
@@ -445,8 +461,8 @@ def install(body, armature, points=None, hint=None):
     sex, age = human.get_value(body, "sex"), human.get_value(body, "age", 2.0)
     stature = float(points[:, 2].max() - points[:, 2].min())
     scale = stature / prov["arcade"]["stature_de_reference_m"]
-    upper, lower, primary = tooth_table(reference, sex, age)
-    half_width = prov["arcade"]["demi_largeur_derniere_dent_mm_adulte"] * MM * scale * (0.8 if primary else 1.0)
+    upper, lower, primary, arch_factor = tooth_table(reference, sex, age, dentition_mode(body))
+    half_width = prov["arcade"]["demi_largeur_derniere_dent_mm_adulte"] * MM * scale * arch_factor
     clearance = prov["fente_dents_mm"] * MM
     exposure = prov["exposition_verticale"]["exposition_incisives_hautes_sous_le_bord_labial_mm"] * MM * scale  # les incisives hautes DÉPASSENT sous le bord de la lèvre haute (sinon elles restent cachées)
     overbite = prov["exposition_verticale"]["recouvrement_vertical_mm"] * MM
@@ -503,6 +519,7 @@ def install(body, armature, points=None, hint=None):
         obj["hl_dental_teeth"] = json.dumps(teeth)
         obj["hl_dental_arch_k"] = float(k)
         obj["hl_dental_primary"] = bool(primary)
+        obj["hl_dental_mode"] = dentition_mode(body)
         obj[FINGERPRINT] = fingerprint(body)
         made.append(obj)
     vertices, polygons = tongue_mesh(points, body, tree, z_slit, y_slit, stature, prov, opening=(open_tree, rotate))
@@ -523,6 +540,26 @@ def remove(body):
             bpy.data.meshes.remove(mesh)
         count += 1
     return count
+
+
+def set_dentition(body, mode):
+    """Choix explicite de la dentition (ANI-024) : enregistré sur le corps ; si des dents existent, elles sont régénérées (changement topologique assumé). Retourne les pièces."""
+    if mode not in DENTITION_MODES:
+        raise ValueError(f"Dentition inconnue : {mode!r} (choix : {', '.join(DENTITION_MODES)})")
+    previous = body.get(DENTITION_KEY)
+    body[DENTITION_KEY] = mode
+    parts = parts_of(body)
+    if not parts:
+        return []
+    rigs = skeleton.rigs_of(body)
+    try:
+        return update(body, rigs[0])
+    except Exception:
+        if previous is None:
+            del body[DENTITION_KEY]
+        else:
+            body[DENTITION_KEY] = previous
+        raise
 
 
 def update(body, armature, points=None):

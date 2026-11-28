@@ -1,10 +1,14 @@
 """Make side-by-side comparison boards; never resize bodies independently."""
 from pathlib import Path
-import json,html,zipfile
+import json,html,zipfile,sys
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import render_cache
 from PIL import Image,ImageDraw,ImageFont
 ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'validation/comparaison-corpulence-24'
 entries=json.loads((OUT/'comparaisons.json').read_text(encoding='utf-8'))
 assert len(entries)==16
+for entry in entries:
+    for angle,relative in entry['images'].items():render_cache.require_current(OUT/relative,entry['empreintes'][angle])
 for d in ('planches','vignettes'):(OUT/d).mkdir(exist_ok=True)
 def font(size,bold=False):return ImageFont.truetype('C:/Windows/Fonts/segoeuib.ttf' if bold else 'C:/Windows/Fonts/segoeui.ttf',size)
 boards=[]

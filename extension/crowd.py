@@ -368,8 +368,8 @@ def _check_motion(positions, yaws, members, blender=False):
             raise ValueError(f"Simulation de foule : {name} non représentables à l'image {frame + 1}, personnage {members[index]['id']}.")
 
 
-def simulate(spec, members):
-    """Positions (F, N, 2) et caps (F, N, radians) dans l'ordre d'entrée."""
+def simulate(spec, members, frozen=None):
+    """Positions (F, N, 2) et caps (F, N, radians) dans l'ordre d'entrée. `frozen` : {identifiant: (positions (F, 2), caps (F,))} de membres DÉJÀ figés (éventuellement édités à la main) : ils servent d'obstacles cinématiques et leur trajet est repris tel quel (ANI-019)."""
     frames, dt = _simulation_step(spec, len(members))
     seed = _integer(spec.get("seed"), "seed")
     avoidance = _spec_flag(spec, "avoidance")
@@ -382,7 +382,7 @@ def simulate(spec, members):
     ordered = [members[i] for i in order]
     try:
         with np.errstate(over="raise", invalid="raise", divide="raise", under="ignore"):
-            positions, yaws = _simulate(frames, dt, seed, avoidance, ordered)
+            positions, yaws = _simulate(frames, dt, seed, avoidance, ordered, frozen)
     except FloatingPointError as error:
         raise ValueError(f"Simulation de foule : calcul non fini ({error}).") from error
     except MemoryError as error:
@@ -394,8 +394,16 @@ def simulate(spec, members):
     return positions, yaws
 
 
-def _simulate(frames, dt, seed, avoidance, members):
+def _simulate(frames, dt, seed, avoidance, members, frozen=None):
     n = len(members)
+    frozen = {} if frozen is None else frozen
+    pinned = {}
+    for i, member in enumerate(members):
+        if member["id"] in frozen:
+            fpos, fyaw = np.asarray(frozen[member["id"]][0], float), np.asarray(frozen[member["id"]][1], float)
+            if fpos.shape != (frames, 2) or fyaw.shape != (frames,) or not np.isfinite(fpos).all() or not np.isfinite(fyaw).all():
+                raise ValueError(f"Personnage {member['id']} : trajet figé invalide (forme ou valeurs non finies).")
+            pinned[i] = (fpos, fyaw)
     pos = np.empty((n, 2))
     lateral, speed, delay = np.empty(n), np.empty(n), np.empty(n)
     paths = []
@@ -433,7 +441,7 @@ def _simulate(frames, dt, seed, avoidance, members):
         t = f * dt
         desired = np.zeros((n, 2))
         for i in range(n):
-            if not moving[i] or t < delay[i] or finished[i] or len(paths[i]) == 0:
+            if i in pinned or not moving[i] or t < delay[i] or finished[i] or len(paths[i]) == 0:
                 continue
             goal = paths[i][target_index[i]] + np.array([0.0, lateral[i]])
             d = goal - pos[i]
@@ -483,6 +491,8 @@ def _simulate(frames, dt, seed, avoidance, members):
         heading = np.arctan2(velocity[:, 1], velocity[:, 0])
         turn = (heading - yaw + math.pi) % (2 * math.pi) - math.pi
         yaw = np.where(speed_now > 0.05, yaw + turn * 0.25, yaw)
+        for i, (fpos, fyaw) in pinned.items():  # membre figé : obstacle cinématique, trajet repris tel quel
+            pos[i], yaw[i] = fpos[f], fyaw[f]
         out_pos[f], out_yaw[f] = pos, yaw
     return out_pos, out_yaw
 
@@ -806,7 +816,12 @@ def _scene_collections(scene):
     return {scene.collection, *scene.collection.children_recursive}
 
 
+COLLECTION_KEY = "humanloom_crowd_collection"  # ANI-020 : la collection de foule se reconnaît à son marqueur, pas seulement à son nom (renommable)
+
+
 def _is_crowd_collection(collection):
+    if collection.get(COLLECTION_KEY):
+        return True
     prefix, separator, suffix = collection.name.rpartition(".")
     return collection.name == COLLECTION or (separator and prefix == COLLECTION and suffix.isdecimal())
 
@@ -1020,6 +1035,7 @@ def _replace(context, spec, members, prepared, positions, yaws, old_bodies, resu
         if destination is None:
             destination = bpy.data.collections.new(COLLECTION)
             scene.collection.children.link(destination)
+        destination[COLLECTION_KEY] = True
         for obj in staging.objects:
             if obj not in templates:
                 destination.objects.link(obj)
@@ -1140,7 +1156,13 @@ def regenerate_member(context, index):
     if spec["rig"]:
         _requested_action(planned)
     simulated = [planned, *(m for m in members if m["id"] != index)]
-    positions, yaws = simulate(spec, simulated)  # le nouveau personnage évite les autres tels qu'ils sont
+    frames = list(range(spec["frames"]))
+    forward_yaw = math.atan2(skeleton.FORWARD[1], skeleton.FORWARD[0])
+    frozen = {}
+    for other in members_of(scene):
+        if other[OBJECT_KEY] != index:  # les voisins sont des obstacles qui gardent leurs courbes réelles (éditées ou non)
+            frozen[other[OBJECT_KEY]] = (_trajectory(other, [1 + f for f in frames])[:, :2], _yaw_trajectory(other, [1 + f for f in frames]) + forward_yaw)
+    positions, yaws = simulate(spec, simulated, frozen)  # le nouveau personnage évite les autres tels qu'ils sont réellement
     _check_motion(positions, yaws, simulated, blender=True)
     members[members.index(old)] = planned
     return _replace(context, spec, members, [planned], positions, yaws, [body], lambda: planned)
@@ -1254,6 +1276,17 @@ def _location_curves(body):
     if channelbag is None:
         return {}
     return {c.array_index: c for c in channelbag.fcurves if c.data_path == "location"}
+
+
+def _yaw_trajectory(body, frames):
+    """Rotation Z du corps à chaque image demandée, lue sur les courbes."""
+    animation = body.animation_data
+    action = animation.action if animation else None
+    channelbag = action_get_channelbag_for_slot(action, animation.action_slot) if action else None
+    curve = next((c for c in channelbag.fcurves if c.data_path == "rotation_euler" and c.array_index == 2), None) if channelbag else None
+    if curve is None:
+        return np.full(len(frames), float(body.rotation_euler[2]))
+    return np.array([curve.evaluate(f) for f in frames])
 
 
 def _trajectory(body, frames):

@@ -30,7 +30,13 @@ from extension import geometry_quality, human  # noqa: E402
 from extension.animation import skeleton  # noqa: E402
 
 addon.register()
+if SOURCE == OUT:
+    raise SystemExit("SOURCE et SORTIE doivent être deux fichiers distincts (l'entrée n'est jamais modifiée).")
+SOURCE_SHA256 = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
+# Les corrections sont calculées sur la géométrie de l'ENTRÉE (et non sur l'asset de l'extension courante, qui peut différer) : le corps de calcul est créé depuis SOURCE.
+human.NODES_PATH = SOURCE
 bpy.ops.humanloom.create()
+print("CALCUL_SUR", SOURCE_SHA256, str(human.NODES_PATH), flush=True)
 body = bpy.context.object
 mesh_body = body.data
 mesh_body.calc_loop_triangles()
@@ -186,7 +192,8 @@ group.use_fake_user = True
 mesh.use_fake_user = True
 OUT.parent.mkdir(parents=True, exist_ok=True)
 bpy.data.libraries.write(str(OUT), {group, mesh}, compress=True)
-report = {"couches": len(layers), "sommets_corriges": len(union), "deplacement_max_mm": round(max_mm, 3), "octets": OUT.stat().st_size, "noeuds": len(group.nodes)}
+assert hashlib.sha256(SOURCE.read_bytes()).hexdigest() == SOURCE_SHA256, "l'entrée a changé pendant le calcul"
+report = {"source_sha256": SOURCE_SHA256, "calcule_sur_source": True, "couches": len(layers), "sommets_corriges": len(union), "deplacement_max_mm": round(max_mm, 3), "octets": OUT.stat().st_size, "noeuds": len(group.nodes)}
 if REPORT:
     REPORT.write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")
 print("UNFOLD_OK", json.dumps(report, ensure_ascii=False))

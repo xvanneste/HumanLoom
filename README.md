@@ -8,7 +8,7 @@ Contenu livré (détails : `docs/guide-utilisateur.md`, `docs/foule.md`, `docs/g
 
 **Migration d'un fichier existant** : un squelette posé avant cette version est de version 1 ; il passe à l'état *À configurer* jusqu'à **Mettre à jour le squelette** (les poids sont sauvegardés dans le fichier d'abord ; `skeleton.restore_weights_backup` les restitue). Les retargetings DÉJÀ faits ne sont pas rejoués : refaites-les pour profiter du rythme scapulo-huméral (actif par défaut, désactivable). Les correctifs de flexion du coude et du genou sont coupés par défaut (bouton pour les activer). Dents et langue ne suivent une nouvelle morphologie qu'après **Mettre à jour le squelette**.
 
-**État de validation** : suite de tests (`python tools/run_tests.py`, Blender 5.2) : 77/78 tests requis OK au 28 nov. 2026, le seul en échec (`validate_groom_collision29`) est un travail en cours. Les mesures de foule, de tissu et de rendu sont celles d'UNE machine ; les formes de visage, les correctifs de flexion, le groom et le tissu restent à valider à l'œil par l'utilisateur ; l'épaule levée vers l'avant au-delà de 135° est une limite documentée (`CONCEPTION_RIG_CORRECTIFS.md` §12).
+**État de validation** : suite de tests (`python tools/run_tests.py`, Blender 5.2) : tous les tests requis sont OK au 28 nov. 2026 ; seul `validate_groom_collision29` n'est pas requis (travail en cours, ignoré par la suite) ; le nombre exact est affiché par la commande, pas figé ici. Les mesures de foule, de tissu et de rendu sont celles d'UNE machine ; les formes de visage, les correctifs de flexion, le groom et le tissu restent à valider à l'œil par l'utilisateur ; l'épaule levée vers l'avant au-delà de 135° est une limite documentée (`CONCEPTION_RIG_CORRECTIFS.md` §12).
 
 ## Masque de peau sous les vêtements
 
@@ -27,7 +27,7 @@ Un fichier existant garde son masque historique et l’ordre de ses modificateur
 ## Organisation
 
 - `extension/` : extension installable, interface, opérateurs, mesures et contrôles de morphologie.
-- `extension/data/realistic.blend` : base géométrique nécessaire au fonctionnement, incluse dans Git. Provenance et crédits dans `extension/CREDITS.md`.
+- `extension/data/human_nodes.blend` et `extension/data/human_eyes.blend` : groupe de nœuds « HL Human » (77 entrées), maillage de base et yeux du corps natif (schéma 10), inclus dans Git ; l'ancien asset `realistic.blend` n'est plus dans le paquet (il reste sous `tools/data/` pour la migration de l'ancien moteur). Provenance et crédits dans `extension/CREDITS.md`.
 - `tools/` : constructeurs, diagnostics, migrations, validations et rendus de développement. Les prototypes de groom s'y trouvent également.
 - `docs/groom.md` : utilisation du groom intégré, vérifications et limites.
 - `unreal/HumanReferenceStudy/` : configuration et scripts du projet d'étude des références Unreal.
@@ -73,7 +73,7 @@ Les outils Blender utilisent `bpy` et, selon le script, NumPy fourni avec Blende
 
 La géométrie et les prototypes restent en revue. Les planches de comparaison du 20 novembre 2026 montrent notamment un dosage insuffisant des extrêmes de corpulence et de la projection abdominale, surtout sur le corps masculin. Les scripts `render_corpulence24.py` et `assemble_corpulence24.py` reproduisent cette comparaison sans corriger les formes.
 
-Le groom 0.15 est intégré au panneau **Humain > HumanLoom · Cheveux et pilosité**. Les coiffures procédurales restent des points de départ à affiner en Curves Sculpt. La physique XPBD est expérimentale ; son banc court ne valide pas toutes les coiffures ni les collisions complexes. Le rig n'est pas livré. Les recherches biologiques guident des contrôles artistiques ; elles ne constituent pas une calibration clinique des personnages.
+Le groom 0.15 est intégré au panneau **Humain > HumanLoom · Cheveux et pilosité**. Les coiffures procédurales restent des points de départ à affiner en Curves Sculpt. La physique XPBD est expérimentale ; son banc court ne valide pas toutes les coiffures ni les collisions complexes. Le squelette HumanLoom, le retargeting, le visage, les vêtements, la foule et le tissu sont livrés dans cette branche (voir « État de la branche »). Les recherches biologiques guident des contrôles artistiques ; elles ne constituent pas une calibration clinique des personnages.
 
 ## Dépôt et licence
 
