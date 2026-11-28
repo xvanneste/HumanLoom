@@ -2,6 +2,7 @@
 
 Une POSE est un dictionnaire : noms de commandes de `proportions.FACE_COMMANDS` (valeurs 0-1), plus des clés réservées :
   `_jaw`     angle d'ouverture de la mâchoire en degrés (os `jaw`) ;
+  `_jaw_side` translation latérale de la mâchoire en mm (gauche > 0 ; max 7,5) ; `_jaw_forward` propulsion en mm (max 8,4) ;
   `_tongue`  {nom de forme de `dental.TONGUE_SHAPES`: valeur 0-1} ;
   `_gaze`    [horizontal, vertical] en degrés (os `eye.L/.R`).
 D-34 : toutes les poses sont ÉCRITES PAR NOUS ; aucune donnée de visage tierce. D-35 : ce qui n'a pas été lu dans une publication est déclaré « non vérifié »."""
@@ -48,19 +49,21 @@ VISEMES = {
 # Les 52 noms de coefficients sont ceux du jeu de formes ARKit (documentation d'Apple, relue de mémoire : la page n'a pas été relue ici). Aucun coefficient n'est inventé : chaque ligne dit si notre visage
 # le couvre (« direct » : même geste, « approx » : geste voisin, « os » : porté par un os, « forme » : forme de langue, « non couvert » : rien). Le sens gauche/droite (côté du sujet ou de l'observateur)
 # n'est pas vérifié : nos commandes `.L` sont du côté +x du personnage. Poids = valeur de commande pour un coefficient à 1.
+# ANI-009 : les 8 coefficients eyeLook* sont « approchés » (et non « os ») : `_gaze` n'est qu'un regard commun [horizontal, vertical] ; les mouvements INDÉPENDANTS des deux yeux (un œil vers l'intérieur, l'autre vers le haut) sont
+# perdus à la conversion (moyenne des deux yeux). Couvrir pleinement ces coefficients demande un regard par œil.
 ARKIT = {
     "eyeBlinkLeft": ("direct", [("blink_L", 1.0)]), "eyeBlinkRight": ("direct", [("blink_R", 1.0)]),
-    "eyeLookDownLeft": ("os", [("_gaze", 1.0)]), "eyeLookDownRight": ("os", [("_gaze", 1.0)]),
-    "eyeLookInLeft": ("os", [("_gaze", 1.0)]), "eyeLookInRight": ("os", [("_gaze", 1.0)]),
-    "eyeLookOutLeft": ("os", [("_gaze", 1.0)]), "eyeLookOutRight": ("os", [("_gaze", 1.0)]),
-    "eyeLookUpLeft": ("os", [("_gaze", 1.0)]), "eyeLookUpRight": ("os", [("_gaze", 1.0)]),
+    "eyeLookDownLeft": ("approx", [("_gaze", 1.0)]), "eyeLookDownRight": ("approx", [("_gaze", 1.0)]),
+    "eyeLookInLeft": ("approx", [("_gaze", 1.0)]), "eyeLookInRight": ("approx", [("_gaze", 1.0)]),
+    "eyeLookOutLeft": ("approx", [("_gaze", 1.0)]), "eyeLookOutRight": ("approx", [("_gaze", 1.0)]),
+    "eyeLookUpLeft": ("approx", [("_gaze", 1.0)]), "eyeLookUpRight": ("approx", [("_gaze", 1.0)]),
     "eyeSquintLeft": ("approx", [("eye_squint", 1.0)]), "eyeSquintRight": ("approx", [("eye_squint", 1.0)]),
     "eyeWideLeft": ("approx", [("eye_wide", 1.0)]), "eyeWideRight": ("approx", [("eye_wide", 1.0)]),
-    "jawForward": ("non couvert", []), "jawLeft": ("non couvert", []), "jawRight": ("non couvert", []),
+    "jawForward": ("os", [("_jaw_forward", 1.0)]), "jawLeft": ("os", [("_jaw_side", 1.0)]), "jawRight": ("os", [("_jaw_side", -1.0)]),
     "jawOpen": ("os", [("_jaw", 1.0)]),
-    "mouthClose": ("non couvert", []),
+    "mouthClose": ("approx", [("lips_press", 0.7)]),
     "mouthFunnel": ("approx", [("lip_pucker", 0.5)]), "mouthPucker": ("direct", [("lip_pucker", 1.0)]),
-    "mouthLeft": ("non couvert", []), "mouthRight": ("non couvert", []),
+    "mouthLeft": ("approx", [("_jaw_side", 0.4)]), "mouthRight": ("approx", [("_jaw_side", -0.4)]),
     "mouthSmileLeft": ("direct", [("smile_L", 1.0)]), "mouthSmileRight": ("direct", [("smile_R", 1.0)]),
     "mouthFrownLeft": ("approx", [("mouth_down", 1.0)]), "mouthFrownRight": ("approx", [("mouth_down", 1.0)]),
     "mouthDimpleLeft": ("non couvert", []), "mouthDimpleRight": ("non couvert", []),
@@ -108,6 +111,10 @@ def arkit_to_pose(coefficients):
         for command, weight in ARKIT[name][1]:
             if command == "_jaw":
                 pose["_jaw"] = max(pose.get("_jaw", 0.0), value * weight * JAW_FULL_DEGREES)
+            elif command == "_jaw_side":  # translation latérale (mm, signée : gauche > 0) : les coefficients gauche et droit s'ajoutent (ils se compensent)
+                pose["_jaw_side"] = float(np.clip(pose.get("_jaw_side", 0.0) + value * weight * skeleton.JAW_SIDE_MM, -skeleton.JAW_SIDE_MM, skeleton.JAW_SIDE_MM))
+            elif command == "_jaw_forward":
+                pose["_jaw_forward"] = max(pose.get("_jaw_forward", 0.0), value * weight * skeleton.JAW_FORWARD_MM)
             elif command.startswith("_tongue:"):
                 tongue = pose.setdefault("_tongue", {})
                 tongue[command.split(":")[1]] = max(tongue.get(command.split(":")[1], 0.0), value * weight)
@@ -187,6 +194,20 @@ def read_pose(body):
         degrees = abs(math.degrees(pose_bone.rotation_euler[0]))
         if degrees > 0.01:
             pose["_jaw"] = round(degrees, 3)
+        offset = rigs[0].data.bones[skeleton.JAW].matrix_local.to_3x3() @ pose_bone.location  # translation de la mâchoire dans le repère de l'armature (m)
+        if abs(offset.x) > 1e-6:
+            pose["_jaw_side"] = round(offset.x * 1000.0, 3)
+        if abs(offset.y) > 1e-6:
+            pose["_jaw_forward"] = round(offset.y / skeleton.FORWARD[1] * 1000.0, 3)
+    if rigs and "eye.L" in rigs[0].pose.bones and "eye.R" in rigs[0].pose.bones:  # ANI-010 : le regard fait partie de la pose (sans lui, restaurer une pose laissait les yeux où ils étaient)
+        sign_yaw, sign_pitch = skeleton._gaze_axes(rigs[0])
+        eyes = [rigs[0].pose.bones["eye." + s] for s in ("L", "R")]
+        for eye in eyes:
+            eye.rotation_mode = "XYZ"
+        yaw = sum(sign_yaw * math.degrees(e.rotation_euler[2]) for e in eyes) / 2.0
+        pitch = sum(sign_pitch * math.degrees(e.rotation_euler[0]) for e in eyes) / 2.0
+        if abs(yaw) > 0.01 or abs(pitch) > 0.01:
+            pose["_gaze"] = [round(yaw, 3), round(pitch, 3)]
     tongue = _tongue_object(body)
     if tongue is not None and tongue.data.shape_keys is not None:
         values = {k.name: round(k.value, 4) for k in tongue.data.shape_keys.key_blocks if k.name in dental.TONGUE_SHAPES and k.value > 1e-6}
@@ -223,6 +244,7 @@ def apply_pose(body, pose):
             human.set_value(body, name, float(np.clip(pose.get(name, 0.0), 0.0, 1.0)))
             report["commandes"] += 1
     report["machoire"] = skeleton.open_jaw(body, float(pose.get("_jaw", 0.0)))
+    skeleton.move_jaw(body, float(pose.get("_jaw_side", 0.0)), float(pose.get("_jaw_forward", 0.0)))
     tongue = _tongue_object(body)
     if tongue is not None and tongue.data.shape_keys is not None:
         for key in tongue.data.shape_keys.key_blocks:
@@ -357,6 +379,8 @@ def build_clip(body, name, keys, start=1):
                     pb = armature.pose.bones.get(bone_name)
                     if pb is not None:
                         pb.keyframe_insert("rotation_euler", frame=frame)
+                        if bone_name == skeleton.JAW:
+                            pb.keyframe_insert("location", frame=frame)  # latéralité et propulsion de la mâchoire (jawLeft, jawRight, jawForward)
             if tongue is not None and tongue.data.shape_keys is not None:
                 for key in tongue.data.shape_keys.key_blocks:
                     if key.name in dental.TONGUE_SHAPES:

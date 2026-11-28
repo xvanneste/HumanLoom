@@ -77,6 +77,11 @@ check("I1a_import_pose_poids_et_armature", report["statut"] == "ok" and groups >
       {"rapport": report, "groupes_de_sommets": groups, "somme_des_poids_moyenne_200_premiers": round(float(np.mean(sample)), 3)})
 
 
+armature_names = [m.name for m in user.modifiers if m.type == "ARMATURE"]
+lbs_group, dqs_group = user.vertex_groups.get(skeleton.GROUP_LBS), user.vertex_groups.get(skeleton.GROUP_DQS)
+check("I1c_importee_en_deux_modificateurs_armature", armature_names == ["Armature", "Armature DQS"] and lbs_group is not None and dqs_group is not None, {"modificateurs": armature_names, "groupes_masque": [g is not None for g in (lbs_group, dqs_group)]})
+
+
 def set_pose():
     for pb in rig.pose.bones:
         pb.rotation_mode = "XYZ"
@@ -163,6 +168,60 @@ bpy.context.view_layer.objects.active = body
 before_count = len(leftovers())
 ok_operator = bpy.ops.humanloom.garment_import(filepath=str(path_ok), mode="pose") == {"FINISHED"} and len(leftovers()) == before_count + 1
 check("I5_operateur_d_import", ok_operator, {"importes": len(leftovers())})
+
+# I6 import transactionnel (GRM-003) : un fichier à deux pièces dont la seconde échoue n'en laisse AUCUNE (ni objet, ni maillage, ni matériau créé par l'import)
+def export_pair(name):
+    objects = []
+    for shift in (0.0, 1.2):
+        source = garments.add_garment(body, "chemise")
+        from extension.animation import correctives
+        correctives.detach_garment(source)
+        for v in source.data.vertices:
+            v.co = (v.co.x + shift, v.co.y, v.co.z)
+        for modifier in list(source.modifiers):
+            source.modifiers.remove(modifier)
+        source.parent = None
+        objects.append(source)
+    for other in bpy.context.view_layer.objects:
+        other.select_set(False)
+    for source in objects:
+        source.select_set(True)
+    bpy.context.view_layer.objects.active = objects[0]
+    path = work / (name + ".obj")
+    bpy.ops.wm.obj_export(filepath=str(path), export_selected_objects=True)
+    for source in objects:
+        mesh = source.data
+        bpy.data.objects.remove(source, do_unlink=True)
+        bpy.data.meshes.remove(mesh)
+    return path
+
+
+pair = export_pair("deux_pieces_dont_une_loin")
+objects_before, meshes_before, materials_before = {o.name for o in bpy.data.objects}, {m.name for m in bpy.data.meshes}, {m.name for m in bpy.data.materials}
+try:
+    garments.import_garment(body, pair, "pose")
+    pair_error = "PAS D'ERREUR"
+except ValueError as error:
+    pair_error = str(error)[:60]
+residue = {"objets": sorted({o.name for o in bpy.data.objects} - objects_before), "maillages": sorted({m.name for m in bpy.data.meshes} - meshes_before), "materiaux": sorted({m.name for m in bpy.data.materials} - materials_before)}
+check("I6_import_transactionnel_aucun_residu", pair_error.startswith("échec") and not any(residue.values()), {"erreur": pair_error, "residus": residue})
+
+# I7 tenue et pièce importée (GRM-001) : enregistrer / recharger une tenue avec une pièce importée ne lève plus KeyError et ne détruit pas la pièce importée
+bpy.context.view_layer.objects.active = body
+imported = [o for o in garments.garments_of(body) if o.get(garments.IMPORT_MARKER)]
+if not imported:
+    garments.import_garment(body, path_ok, "pose")
+    imported = [o for o in garments.garments_of(body) if o.get(garments.IMPORT_MARKER)]
+procedural_before = sorted(g[garments.MARKER] for g in garments.garments_of(body) if not g.get(garments.IMPORT_MARKER))
+try:
+    saved_outfit = garments.outfit_of(body)
+    outfit_error = None
+except KeyError as error:
+    saved_outfit, outfit_error = [], repr(error)
+garments.apply_outfit(body, saved_outfit)
+imported_after = [o for o in garments.garments_of(body) if o.get(garments.IMPORT_MARKER)]
+check("I7_tenue_avec_piece_importee", outfit_error is None and len(imported) >= 1 and len(imported_after) == len(imported) and all(p["piece"] in garments.GARMENTS for p in saved_outfit) and sorted(p["piece"] for p in saved_outfit) == procedural_before,
+      {"erreur": outfit_error, "importees_avant": len(imported), "importees_apres": len(imported_after), "pieces_enregistrees": [p["piece"] for p in saved_outfit]})
 
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False, default=str), encoding="utf-8")

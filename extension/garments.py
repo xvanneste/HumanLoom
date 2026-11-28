@@ -407,8 +407,9 @@ def _add_garment(body, key, color=None, offset_mm=None, clean_edges=True, *, rep
     wrap = obj.modifiers.new("Degagement", "SHRINKWRAP")
     wrap.target = body
     wrap.wrap_method = "NEAREST_SURFACEPOINT"
-    wrap.wrap_mode = "OUTSIDE_SURFACE"
+    wrap.wrap_mode = "OUTSIDE"  # GRM-007 : « OUTSIDE » repousse seulement les sommets qui PÉNÈTRENT le corps et conserve ceux qui sont déjà dehors ; « OUTSIDE_SURFACE » reprojetait toute la pièce sur la surface (couches comprimées)
     wrap.offset = definition["decalage_mm"] / 1000.0 * 0.6
+    wrap.show_render = False  # synchronisé avec la vue (comme `set_clearance`) : sinon le rendu appliquait la passe que la vue 3D n'appliquait pas
     wrap.show_viewport = False  # passe de dégagement (sous pose : repousse les sommets qui pénètrent le corps) : ~15 ms par pièce et par image (reconstruction de l'arbre du corps), donc coupée par défaut ; `set_clearance(obj, True)` l'active
     from .animation import correctives
     correctives.attach_garment(obj, body)  # correctifs de flexion du corps (clés de forme sur les mêmes sommets) ; sans effet si le corps n'en a pas
@@ -626,7 +627,8 @@ def set_color(obj, color):
 def outfit_of(body):
     """Tenue actuelle : liste ordonnée par couche de {pièce, couleur, décalage} (rechargeable à l'identique)."""
     pieces = []
-    for g in sorted(garments_of(body), key=lambda o: LAYERS[GARMENTS[o[MARKER]]["couche"]]):
+    # GRM-001 : une pièce IMPORTÉE (marqueur `import_<nom>`, absente du registre procédural) n'est pas recréable depuis son nom : elle n'entre pas dans la tenue enregistrée (et n'est pas touchée par son chargement).
+    for g in sorted((g for g in garments_of(body) if not g.get(IMPORT_MARKER)), key=lambda o: LAYERS[GARMENTS[o[MARKER]]["couche"]]):
         params = json.loads(g[PARAMS])
         pieces.append({"piece": g[MARKER], "couleur": params["couleur"], "decalage_mm": params["decalage_mm"]})
     return pieces
@@ -654,7 +656,8 @@ def apply_outfit(body, pieces):
             raise ValueError("Description de pièce invalide.") from error
         specs.append((key, color, offset))
         keys.add(key)
-    return _replace_garments(body, garments_of(body), specs, [])
+    imported = [g for g in garments_of(body) if g.get(IMPORT_MARKER)]  # GRM-003 : charger une tenue remplace les pièces PROCÉDURALES ; les pièces importées par l'utilisateur restent en place (aucune donnée perdue)
+    return _replace_garments(body, [g for g in garments_of(body) if not g.get(IMPORT_MARKER)], specs, imported)
 
 
 def _replace_garments(body, previous, specs, keep):
@@ -705,7 +708,27 @@ def _read_objects(filepath):
         for obj in target.objects:
             if obj is not None:
                 bpy.context.scene.collection.objects.link(obj)
-    return [o for o in bpy.data.objects if o not in before and o.type == "MESH"]
+    created = [o for o in bpy.data.objects if o not in before]
+    for other in [o for o in created if o.type != "MESH"]:  # GRM-003 : les objets non maillage du fichier (vides, caméras, lampes) ne sont pas des vêtements : retirés au lieu d'être laissés dans la scène
+        bpy.data.objects.remove(other, do_unlink=True)
+    return [o for o in created if o.type == "MESH" and o.name in bpy.data.objects]
+
+
+def _discard_imported(objects, materials_before):
+    """Retire des objets importés (et leur maillage et les matériaux créés par l'import et devenus orphelins)."""
+    for obj in objects:
+        try:
+            name = obj.name
+        except ReferenceError:
+            continue
+        if name not in bpy.data.objects:
+            continue
+        data = obj.data
+        bpy.data.objects.remove(obj, do_unlink=True)
+        if data is not None and data.users == 0:
+            bpy.data.meshes.remove(data)
+    for material in [m for m in bpy.data.materials if m not in materials_before and m.users == 0]:
+        bpy.data.materials.remove(material)
 
 
 def fit_report(body, obj, push_out_mm=2.0, apply=True):
@@ -756,36 +779,38 @@ def import_garment(body, filepath, mode="pose", push_out_mm=2.0):
     if mode == "pose" and not rigs:
         raise ValueError("Le corps n'a pas de squelette : posez-le d'abord (mode « pose »).")
     produced = []
-    for obj in _read_objects(filepath):
-        report = fit_report(body, obj, push_out_mm)
-        if report["statut"] != "ok":
-            data = obj.data
-            bpy.data.objects.remove(obj, do_unlink=True)
-            if data.users == 0:
-                bpy.data.meshes.remove(data)
-            raise ValueError(report["statut"] + " — " + json.dumps(report, ensure_ascii=False))
-        obj.parent = body
-        obj.matrix_parent_inverse = body.matrix_world.inverted()
-        key = "import_" + obj.name.split(".")[0]
-        obj[MARKER] = key
-        obj[IMPORT_MARKER] = True
-        obj[PARAMS] = json.dumps({"couleur": [0.6, 0.6, 0.6], "decalage_mm": push_out_mm, "sommets_du_corps": [], "mode": mode, "rapport_ajustement": report}, ensure_ascii=False)
-        if mode == "pose":
-            transfer = obj.modifiers.new("Poids du corps", "DATA_TRANSFER")
-            transfer.object = body
-            transfer.use_vert_data = True
-            transfer.data_types_verts = {"VGROUP_WEIGHTS"}
-            transfer.vert_mapping = "POLYINTERP_NEAREST"
-            bpy.context.view_layer.objects.active = obj
-            bpy.ops.object.datalayout_transfer(modifier=transfer.name)
-            bpy.ops.object.modifier_apply(modifier=transfer.name)
-            _add_armature_modifiers(obj, body, rigs[0])
-        else:
-            deform = obj.modifiers.new("Suivi de surface", "SURFACE_DEFORM")
-            deform.target = body
-            bpy.context.view_layer.objects.active = obj
-            bpy.ops.object.surfacedeform_bind(modifier=deform.name)
-        produced.append((obj, report))
+    materials_before = set(bpy.data.materials)
+    objects = _read_objects(filepath)
+    try:  # transaction (GRM-003) : un échec sur UNE pièce du fichier retire toutes les pièces de CET import (et leurs matériaux), jamais un import à moitié
+        for obj in objects:
+            report = fit_report(body, obj, push_out_mm)
+            if report["statut"] != "ok":
+                raise ValueError(report["statut"] + " — " + json.dumps(report, ensure_ascii=False))
+            obj.parent = body
+            obj.matrix_parent_inverse = body.matrix_world.inverted()
+            key = "import_" + obj.name.split(".")[0]
+            obj[MARKER] = key
+            obj[IMPORT_MARKER] = True
+            obj[PARAMS] = json.dumps({"couleur": [0.6, 0.6, 0.6], "decalage_mm": push_out_mm, "sommets_du_corps": [], "mode": mode, "rapport_ajustement": report}, ensure_ascii=False)
+            if mode == "pose":
+                transfer = obj.modifiers.new("Poids du corps", "DATA_TRANSFER")
+                transfer.object = body
+                transfer.use_vert_data = True
+                transfer.data_types_verts = {"VGROUP_WEIGHTS"}
+                transfer.vert_mapping = "POLYINTERP_NEAREST"
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.object.datalayout_transfer(modifier=transfer.name)
+                bpy.ops.object.modifier_apply(modifier=transfer.name)
+                _add_armature_modifiers(obj, body, rigs[0])
+            else:
+                deform = obj.modifiers.new("Suivi de surface", "SURFACE_DEFORM")
+                deform.target = body
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.object.surfacedeform_bind(modifier=deform.name)
+            produced.append((obj, report))
+    except Exception:
+        _discard_imported(objects, materials_before)
+        raise
     if not produced:
         raise ValueError("Aucun maillage dans le fichier.")
     return produced
@@ -830,3 +855,14 @@ def fingerprint(obj):
     """Empreinte d'une pièce : clé, couleur, décalage, nombre de sommets et de faces (pour vérifier un rechargement)."""
     params = json.loads(obj[PARAMS])
     return [obj[MARKER], [round(c, 4) for c in params["couleur"]], round(params["decalage_mm"], 3), len(obj.data.vertices), len(obj.data.polygons)]
+
+
+def crowd_outfit(body, value):
+    """Applicateur de la variante de foule « outfit » (`crowd.register_variant_applier`) : `value` est une clé de pièce ou une liste de clés (p. ex. `["t_shirt", "jean"]`). Chaque personnage reçoit ses pièces ; une clé inconnue lève ValueError.
+    COÛT (mesuré, voir docs/foule.md) : une pièce = un objet, un maillage, deux modificateurs Armature, un matériau ; la foule étant générée par un seul appel, les vêtements s'ajoutent au temps de génération par personnage."""
+    keys = [value] if isinstance(value, str) else list(value)
+    for key in keys:
+        if key not in GARMENTS:
+            raise ValueError("Pièce inconnue pour la foule : %r" % (key,))
+    for key in keys:
+        add_garment(body, key)

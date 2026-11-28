@@ -1,6 +1,14 @@
 # HumanLoom - Générateur humain pour Blender 5.2
 
-Générateur humain en développement : modélisation du corps et du visage, morphologies et âges, groom natif Blender. Cette branche fournit **HumanLoom 0.15.2**, schéma de formes **9**, avec cheveux et pilosité intégrés à l'interface. Cible exclusive : **Blender 5.2**. L'identifiant d'extension `human_modeling` est conservé pour permettre la mise à jour des installations et des scènes existantes.
+Générateur humain en développement : modélisation du corps et du visage, morphologies et âges, groom natif Blender. Cette branche fournit **HumanLoom 0.16.0**, schéma de formes **9** (ancien moteur ; le corps natif est au schéma 10), avec squelette natif, retargeting d'animations, visage, vêtements, accessoires, foule et tissu (voir la section « État de la branche »), avec cheveux et pilosité intégrés à l'interface. Cible exclusive : **Blender 5.2**. L'identifiant d'extension `human_modeling` est conservé pour permettre la mise à jour des installations et des scènes existantes.
+
+## État de la branche codex/natif (28 nov. 2026)
+
+Contenu livré (détails : `docs/guide-utilisateur.md`, `docs/foule.md`, `docs/groom.md`, `CONCEPTION_*.md`, `NOTES_DE_VERSION_0.16.md`) : corps humain natif (nœuds géométriques, sexe, âge, morphologie), squelette HumanLoom avec deux modificateurs Armature (linéaire et quaternions duals), mâchoire, yeux, dents et langue, retargeting analytique d'animations de VOTRE bibliothèque (aucun fichier tiers n'est livré), visage (poses, visèmes, correspondance ARKit à 56 % pondérée), vêtements procéduraux et importés, accessoires, foule (jusqu'à 150 personnages mesurés), tissu natif des robes (expérimental), groom.
+
+**Migration d'un fichier existant** : un squelette posé avant cette version est de version 1 ; il passe à l'état *À configurer* jusqu'à **Mettre à jour le squelette** (les poids sont sauvegardés dans le fichier d'abord ; `skeleton.restore_weights_backup` les restitue). Les retargetings DÉJÀ faits ne sont pas rejoués : refaites-les pour profiter du rythme scapulo-huméral (actif par défaut, désactivable). Les correctifs de flexion du coude et du genou sont coupés par défaut (bouton pour les activer). Dents et langue ne suivent une nouvelle morphologie qu'après **Mettre à jour le squelette**.
+
+**État de validation** : suite de tests (`python tools/run_tests.py`, Blender 5.2) : 77/78 tests requis OK au 28 nov. 2026, le seul en échec (`validate_groom_collision29`) est un travail en cours. Les mesures de foule, de tissu et de rendu sont celles d'UNE machine ; les formes de visage, les correctifs de flexion, le groom et le tissu restent à valider à l'œil par l'utilisateur ; l'épaule levée vers l'avant au-delà de 135° est une limite documentée (`CONCEPTION_RIG_CORRECTIFS.md` §12).
 
 ## Masque de peau sous les vêtements
 

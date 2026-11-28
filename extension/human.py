@@ -317,7 +317,7 @@ def duplicate_human(context, body, share_mesh=False, *, select=False):
     try:
         return duplicate(context, body, share_mesh, select)
     finally:
-        _count[0] = len(bpy.data.objects)
+        mark_objects_current()
         _duplicating -= 1
 
 
@@ -396,15 +396,31 @@ def ensure_unique_uuid(scene=None, depsgraph=None):
 
 
 _count = [0]
+_signature = [0]  # INT-002 : empreinte des objets (xor des session_uid) : un REMPLACEMENT d'objet à nombre constant (supprimer + copier) est détecté, ce que le seul nombre d'objets manquait
 _duplicating = 0
+
+
+def _objects_signature():
+    value = 0
+    for obj in bpy.data.objects:
+        value ^= obj.session_uid
+    return value
+
+
+def mark_objects_current():
+    """Enregistre l'état courant des objets comme « déjà traité » (appelé après les opérations internes qui créent ou retirent des objets : foule, duplication)."""
+    _count[0] = len(bpy.data.objects)
+    _signature[0] = _objects_signature()
 
 
 @bpy.app.handlers.persistent
 def _on_depsgraph(scene, depsgraph=None):
     """Détecte une duplication (le nombre d'objets change) et rend les UUID uniques."""
-    if not _duplicating and len(bpy.data.objects) != _count[0]:
-        _count[0] = len(bpy.data.objects)
-        ensure_unique_uuid()
+    if not _duplicating:
+        signature = _objects_signature()
+        if len(bpy.data.objects) != _count[0] or signature != _signature[0]:
+            _count[0], _signature[0] = len(bpy.data.objects), signature
+            ensure_unique_uuid()
 
 
 CLASSES = (HumanLoomProperties, HUMANLOOM_OT_create, HUMANLOOM_OT_assign_uuid, HUMANLOOM_OT_duplicate)

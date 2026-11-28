@@ -1,5 +1,6 @@
 """Measure evaluated geometry and compare stature with a published adult reference."""
 
+from contextlib import contextmanager
 from functools import lru_cache
 import hashlib
 import json
@@ -38,8 +39,39 @@ def reference_data():
     return data
 
 
+@contextmanager
+def _rest_pose(body, context):
+    """SCI-002 : mesure en POSE DE REPOS. Un corps posé (armature, quaternions duals, correctifs de flexion) voit son étendue sur Z devenir la projection de la silhouette posée : les opérateurs de stature la comparaient
+    alors à une stature debout. Les modificateurs Armature sont suspendus et les clés de correctifs coupées pendant la mesure, puis rétablis."""
+    from .animation import correctives
+    suspended = [(m, m.show_viewport) for m in body.modifiers if m.type == "ARMATURE" and m.show_viewport]
+    keys = body.data.shape_keys
+    muted = [(k, k.mute) for k in (keys.key_blocks if keys is not None else ()) if k.name.startswith(correctives.KEY_PREFIX) and not k.mute]
+    if not suspended and not muted:
+        yield
+        return
+    try:
+        for m, _state in suspended:
+            m.show_viewport = False
+        for k, _state in muted:
+            k.mute = True
+        context.view_layer.update()
+        yield
+    finally:
+        for m, state in suspended:
+            m.show_viewport = state
+        for k, state in muted:
+            k.mute = state
+        context.view_layer.update()
+
+
 def measure(body, context):
-    """Return evaluated extents projected onto the object's transformed local axes."""
+    """Return evaluated extents projected onto the object's transformed local axes (rest pose: armature and flexion correctives suspended)."""
+    with _rest_pose(body, context):
+        return _measure_evaluated(body, context)
+
+
+def _measure_evaluated(body, context):
     evaluated = body.evaluated_get(context.evaluated_depsgraph_get())
     mesh = evaluated.to_mesh()
     try:

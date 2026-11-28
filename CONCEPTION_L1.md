@@ -12,7 +12,7 @@ Branche `codex/natif`. D-34 : tout est écrit par nous ; D-35 : rien n'est prés
 | Lèvre inférieure abaissée (AU16) | `tools/build_face_lower_lip.py`, `b_f19` | F1–F7, P7 | 7 mm provisoire, réduit si faces retournées |
 | Dents du bas visibles (sourire large, rire) | présets `sourire_large`, `rire` | `validate_face_poses` P7 ; `tools/measure_lower_teeth.py` | mesure relative (part de sommets visibles de face) |
 | Visèmes (15) | `animation/face.py` `VISEMES` | P3 | liste de mémoire (MPEG-4), table non lue : « non vérifié » |
-| ARKit 52 | `face.ARKIT`, `arkit_report`, `arkit_to_pose` | P4 | noms de mémoire, correspondances nôtres ; 7 directs, 9 os, 1 langue, 23 approchés, 12 non couverts |
+| ARKit 52 | `face.ARKIT`, `arkit_report`, `arkit_to_pose` | P4 | noms de mémoire, correspondances nôtres ; 7 directs, 4 os (jawOpen, jawLeft, jawRight, jawForward depuis le 28 nov. 2026), 1 langue, 34 approchés (dont les 8 eyeLook*, reclassés : regard commun des deux yeux, ANI-009), 6 non couverts : couverture pondérée 0,5577 (avant : 0,548 avec 12 non couverts) |
 | Formes cuites (commandes + ARKit couverts) | `face.bake_shapes` | P5 | cage seule (topologie du corps, poids copiés) |
 | Galerie, favoris, mélangeur, clip NLA | `animation/face_ui.py`, `face.build_clip` | P1, P2, P6, P8 | — |
 

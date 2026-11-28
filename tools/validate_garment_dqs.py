@@ -72,11 +72,11 @@ def reset():
         b.location = (0.0, 0.0, 0.0)
 
 
-def skin_only(piece):
-    """Enveloppe de peau seule : seuls les modificateurs Armature restent actifs."""
+def skin_only(piece, clearance=False):
+    """Enveloppe de peau seule : seuls les modificateurs Armature restent actifs (plus la passe de dégagement Shrinkwrap si `clearance`)."""
     saved = [(m, m.show_viewport) for m in piece.modifiers]
     for m in piece.modifiers:
-        m.show_viewport = m.type == "ARMATURE"
+        m.show_viewport = m.type == "ARMATURE" or (clearance and m.name == "Degagement")
     return saved
 
 
@@ -110,7 +110,7 @@ def body_tree():
 
 def penetration(piece, tree, pivot, radius):
     points = evaluated(piece)
-    world = np.array([(piece.matrix_world @ __import__("mathutils").Vector(p))[:] for p in points]) if False else points
+    world = points  # sommets évalués dans le repère du monde (le vêtement est à l'identité de transformation)
     depth = []
     for p in world:
         if np.linalg.norm(p - pivot) > radius:
@@ -134,27 +134,33 @@ def linear_only(piece, state):
 
 
 report = {}
-worst_ratio = []
+clearance_report = {}
 for joint, piece_key, bone, radius in (("coude", "veste", "arm_lower.L", 0.18), ("genou", "jean", "leg_lower.L", 0.22)):
     piece = pieces[piece_key]
-    saved = skin_only(piece)
-    for angle in (90, 110, 135):
-        reset()
-        rig.pose.bones[bone].rotation_quaternion = Quaternion((1.0, 0.0, 0.0), math.radians(signs[joint] * angle))
-        bpy.context.view_layer.update()
-        pivot = np.array((rig.matrix_world @ rig.pose.bones[bone].head)[:])
-        tree = body_tree()
-        out = {}
-        for label, state in (("origine_lineaire", True), ("deux_modificateurs", False)):
-            linear_only(piece, state)
-            out[label] = penetration(piece, tree, pivot, radius)
-        report[f"{joint}_{angle}"] = out
-    for m, state in saved:
-        m.show_viewport = state
-    linear_only(piece, False)
+    for with_clearance in (False, True):
+        saved = skin_only(piece, with_clearance)
+        for angle in (90, 110, 135):
+            reset()
+            rig.pose.bones[bone].rotation_quaternion = Quaternion((1.0, 0.0, 0.0), math.radians(signs[joint] * angle))
+            bpy.context.view_layer.update()
+            pivot = np.array((rig.matrix_world @ rig.pose.bones[bone].head)[:])
+            tree = body_tree()
+            out = {}
+            for label, state in (("origine_lineaire", True), ("deux_modificateurs", False)):
+                if with_clearance and state:
+                    continue
+                linear_only(piece, state)
+                out[label] = penetration(piece, tree, pivot, radius)
+            (clearance_report if with_clearance else report).setdefault(f"{joint}_{angle}", {}).update(out)
+        for m, state in saved:
+            m.show_viewport = state
+        linear_only(piece, False)
 reset()
 ok = all(v["deux_modificateurs"]["profondeur_max_mm"] <= v["origine_lineaire"]["profondeur_max_mm"] + 0.5 and v["deux_modificateurs"]["au_dela_de_1mm"] <= v["origine_lineaire"]["au_dela_de_1mm"] for v in report.values())
 check("D2_non_traversee_coude_et_genou", ok, report)
+# D2b passe de dégagement (Shrinkwrap « OUTSIDE », opt-in : « Dégagement sous pose » du panneau) : le coude de la veste est ramené à 0 mm jusqu'à 110° et à moins de 7,5 mm à 135° ; le genou du jean à moins de 2,5 mm
+limits = {"coude_90": 1.0, "coude_110": 1.0, "coude_135": 7.5, "genou_90": 2.5, "genou_110": 2.5, "genou_135": 2.5}
+check("D2b_passe_de_degagement_coude_et_genou", all(clearance_report[k]["deux_modificateurs"]["profondeur_max_mm"] <= limits[k] for k in limits), {k: {"avec_degagement_mm": clearance_report[k]["deux_modificateurs"]["profondeur_max_mm"], "sans_mm": report[k]["deux_modificateurs"]["profondeur_max_mm"], "limite_mm": limits[k]} for k in limits})
 
 # D3 retrait propre : retirer le vêtement ne laisse aucun groupe ni objet
 before = len(bpy.data.objects)

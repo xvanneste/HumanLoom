@@ -200,7 +200,7 @@ def _evaluate(body):
 
 def generate(body, armature, joints=None):
     """GÉNÉRATEUR qui recalcule les correctifs sur la morphologie COURANTE du corps (cibles par optimisation, encodage exact par jacobienne de différences finies dans le pipeline réel) ; produit `(étiquette, étape, total)` après chaque angle
-    et retourne le dictionnaire de données (même format que `human_rig_hinges.npz`). Les clés de correctifs existantes doivent avoir été retirées avant (voir `rebuild_steps`). Remet les os dans leur pose d'origine à la fin."""
+    et retourne le dictionnaire de données (même format que `human_rig_hinges.npz`). Les clés de correctifs existantes doivent être coupées (muettes) ou retirées avant (voir `rebuild_steps`). Remet les os dans leur pose d'origine à la fin."""
     from . import skeleton
     mesh = body.data
     if mesh.shape_keys is None:
@@ -316,11 +316,31 @@ def generate(body, armature, joints=None):
 
 
 def rebuild_steps(body, armature):
-    """Générateur complet du recalcul : retire les correctifs en place, recalcule sur la morphologie courante, réinstalle ; produit `(étiquette, étape, total)`."""
+    """Générateur complet du recalcul, TRANSACTIONNEL (ANI-012) : les correctifs existants restent en place, seulement COUPÉS pendant le calcul (la génération mesure le corps sans eux) ; ils ne sont remplacés qu'une fois les
+    nouvelles données complètes. Annulation (`close()`), erreur ou interruption : les clés d'avant retrouvent leur état (coupé ou actif) et rien d'autre n'a changé (la pose et la clé temporaire sont rétablies par `generate`).
+    Au succès, l'état activé/coupé de l'utilisateur est conservé. Produit `(étiquette, étape, total)`."""
     from . import skeleton
-    remove(body, armature)
-    payload = yield from generate(body, armature)
-    install(body, armature, data=payload, source=skeleton.fingerprint(body))
+    was_enabled = enabled(body)
+    muted = [(key, key.mute) for key in keys_of(body.data)]
+    for key, _state in muted:
+        key.mute = True
+    bpy.context.view_layer.update()
+    try:
+        payload = yield from generate(body, armature)
+    except BaseException:  # GeneratorExit (annulation), exception du calcul : retour exact à l'état d'avant
+        for key, state in muted:
+            key.mute = state
+        bpy.context.view_layer.update()
+        raise
+    try:
+        remove(body, armature)
+        install(body, armature, data=payload, source=skeleton.fingerprint(body))
+        set_enabled(body, was_enabled)
+    except BaseException:
+        if not installed(body):
+            install(body, armature)  # les données génériques plutôt qu'aucun correctif
+            set_enabled(body, was_enabled)
+        raise
     return payload
 
 

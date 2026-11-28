@@ -27,6 +27,7 @@ OUT = ARGS[ARGS.index("--out") + 1] if "--out" in ARGS else None
 ENGINES = (ARGS[ARGS.index("--engines") + 1] if "--engines" in ARGS else "eevee,cycles").split(",")
 SIZES = [int(v) for v in (ARGS[ARGS.index("--sizes") + 1] if "--sizes" in ARGS else "1080,2160").split(",")]
 LOD = "--lod" in ARGS and ARGS[ARGS.index("--lod") + 1] == "1"  # niveaux de détail selon la distance à la caméra (crowd.auto_lod) avant les rendus
+CULL = "--cull" in ARGS and ARGS[ARGS.index("--cull") + 1] == "1"  # élimination hors caméra (crowd.cull) à l'image mesurée, après les niveaux de détail
 DEVICE = ARGS[ARGS.index("--device") + 1] if "--device" in ARGS else "gpu"  # GPU par défaut ; le CPU n'est qu'un repli documenté
 SAMPLES = int(ARGS[ARGS.index("--cycles-samples") + 1]) if "--cycles-samples" in ARGS else 32
 
@@ -129,6 +130,12 @@ if LOD:
     rows["niveaux_lod"] = {str(k): sum(1 for v in levels.values() if v == k) for k in (0, 1, 2, 3)}
     bpy.context.view_layer.update()
     print("LOD", rows["niveaux_lod"], flush=True)
+if CULL:
+    summary = crowd.cull(scene, frame_range=(30, 30))
+    rows["cull"] = {k: v for k, v in summary.items() if k != "jamais_visibles"}
+    rows["cull"]["jamais_visibles"] = len(summary["jamais_visibles"])
+    bpy.context.view_layer.update()
+    print("CULL", json.dumps(rows["cull"], ensure_ascii=False), flush=True)
 for engine in ENGINES:
     scene.render.engine = {"eevee": "BLENDER_EEVEE", "cycles": "CYCLES"}[engine]
     if engine == "cycles":

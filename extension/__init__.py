@@ -8,7 +8,7 @@ import bmesh
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 from . import anatomy, landmark_sets, character_presets, measurements, geometry_quality, surface_fix, body_profiles, age_shapes, skin_relief, groom, human
-from . import accessories_ui, cloth_ui, crowd_ui, garments_ui
+from . import accessories_ui, cloth_ui, crowd, crowd_ui, garments, garments_ui
 from .animation import ui as animation_ui
 from .proportions import BASE_ID, BODY_CONTROLS, FAT_CONTROLS, MUSCLE_CONTROLS, FACE_CONTROLS, CONTROLS, CURRENT_SCHEMA, FACE_COMMANDS, FACE_COMMAND_LABELS, FACE_PRESETS, bind_control, property_name
 
@@ -1209,6 +1209,7 @@ def register():
     human.register()
     animation_ui.register()
     crowd_ui.register()
+    crowd.register_variant_applier("outfit", garments.crowd_outfit)  # variante de foule « outfit » : clés de pièces procédurales
     garments_ui.register()
     accessories_ui.register()
     cloth_ui.register()
@@ -1219,6 +1220,7 @@ def unregister():
     cloth_ui.unregister()
     accessories_ui.unregister()
     garments_ui.unregister()
+    crowd.VARIANT_APPLIERS.pop("outfit", None)
     crowd_ui.unregister()
     animation_ui.unregister()
     human.unregister()

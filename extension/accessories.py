@@ -16,6 +16,7 @@ from .animation import skeleton
 
 MARKER = "hl_accessory"
 PARAMS = "hl_accessory_params"
+MATERIAL_OWNER = "hl_accessory_material"  # matériau créé pour UN accessoire (retiré avec lui)
 FINGERS = ("index", "middle", "ring", "pinky")
 
 # Poses de préhension : angle de flexion (degrés) de chaque phalange (01, 02, 03) par doigt ; valeurs de modélisation.
@@ -395,7 +396,8 @@ def add_accessory(body, key, color=None):
     obj = bpy.data.objects.new(definition["label"], mesh)
     for collection in body.users_collection:
         collection.objects.link(obj)
-    material = bpy.data.materials.get("HL " + key) or bpy.data.materials.new("HL " + key)
+    material = bpy.data.materials.new("HL " + key)  # un matériau PROPRE à l'accessoire (GRM-002) : réutiliser « HL <clé> » recolorait l'accessoire de tous les personnages
+    material[MATERIAL_OWNER] = True
     colour = tuple(color) if color is not None else definition["couleur"]
     material.diffuse_color = (*colour, 1.0)
     material.use_nodes = True
@@ -405,7 +407,8 @@ def add_accessory(body, key, color=None):
         shader.inputs["Roughness"].default_value = 0.6
     mesh.materials.append(material)
     if tags and any(tags):  # second matériau (écran du téléphone) : bleu nuit brillant
-        screen = bpy.data.materials.get("HL ecran") or bpy.data.materials.new("HL ecran")
+        screen = bpy.data.materials.new("HL ecran")
+        screen[MATERIAL_OWNER] = True
         screen.diffuse_color = (0.02, 0.05, 0.12, 1.0)
         screen.use_nodes = True
         shader = screen.node_tree.nodes.get("Principled BSDF")
@@ -437,19 +440,71 @@ def remove_accessory(obj):
     body = obj.parent.parent if obj.parent is not None else None
     params = json.loads(obj[PARAMS])
     mesh = obj.data
+    materials = {slot.material for slot in obj.material_slots if slot.material is not None}
     bpy.data.objects.remove(obj, do_unlink=True)
     if mesh.users == 0:
         bpy.data.meshes.remove(mesh)
+    for material in materials:
+        if material.get(MATERIAL_OWNER) and material.users == 0:
+            bpy.data.materials.remove(material)
     if body is not None and params.get("prehension") and not any(json.loads(a[PARAMS]).get("socket") == params["socket"] for a in accessories_of(body)):
         release_grasp(body, params["socket"][-1])
         if params["socket"].startswith("main.") and obj_key_is_umbrella(params):
             reset_hand(body, params["socket"][-1])
 
 
+# --- sauvegarde / restauration de la pose de l'utilisateur (GRM-010) ---------------------------------------------------------------------------------------
+POSE_BACKUP = "hl_accessory_pose_backup"
+
+
+def _pose_state(pose_bone):
+    return {"mode": pose_bone.rotation_mode, "quat": list(pose_bone.rotation_quaternion), "euler": list(pose_bone.rotation_euler), "axis_angle": list(pose_bone.rotation_axis_angle), "loc": list(pose_bone.location)}
+
+
+def _save_pose(armature, names, group):
+    """Mémorise (une seule fois par groupe) la pose COURANTE des os que l'accessoire va modifier : mode de rotation, quaternion, Euler, axe-angle, position. Restaurée par `_restore_pose` au retrait de l'accessoire."""
+    store = json.loads(armature.get(POSE_BACKUP, "{}"))
+    if group in store:
+        return
+    store[group] = {n: _pose_state(armature.pose.bones[n]) for n in names if n in armature.pose.bones}
+    armature[POSE_BACKUP] = json.dumps(store)
+
+
+def _restore_pose(armature, group):
+    """Remet les os du groupe dans l'état mémorisé ; retourne False s'il n'y a rien à restaurer (l'appelant remet alors à zéro, comme avant)."""
+    store = json.loads(armature.get(POSE_BACKUP, "{}"))
+    saved = store.pop(group, None)
+    if saved is None:
+        return False
+    for name, state in saved.items():
+        bone = armature.pose.bones.get(name)
+        if bone is None:
+            continue
+        bone.rotation_mode = state["mode"]
+        bone.rotation_quaternion = state["quat"]
+        bone.rotation_euler = state["euler"]
+        bone.rotation_axis_angle = state["axis_angle"]
+        bone.location = state["loc"]
+    if store:
+        armature[POSE_BACKUP] = json.dumps(store)
+    elif POSE_BACKUP in armature:
+        del armature[POSE_BACKUP]
+    return True
+
+
+def _hand_bones(side):
+    return [f"{finger}.0{n}.{side}" for finger in ("thumb",) + FINGERS for n in (1, 2, 3)]
+
+
+def _arm_bones(side):
+    return [f"arm_upper.{side}", f"arm_lower.{side}", f"hand.{side}"]
+
+
 # --- préhension de la main ------------------------------------------------------------------------------------------------------------------------------
 def _flexion_sign(armature, side, finger):
     """Signe de rotation locale X qui REFERME le doigt vers la paume : le bout se déplace du côté de la normale de la paume (mesuré)."""
     first = armature.pose.bones[f"{finger}.01.{side}"]
+    saved_state = _pose_state(first)  # mesure sans trace : le mode de rotation et les valeurs de l'utilisateur sont rétablis à la fin (GRM-010)
     first.rotation_mode = "XYZ"
     _, _, _, z = _hand_frame(armature, side, world=False)
     saved = tuple(first.rotation_euler)
@@ -460,6 +515,11 @@ def _flexion_sign(armature, side, finger):
     bpy.context.view_layer.update()
     bent = np.array(armature.pose.bones[f"{finger}.03.{side}"].tail)
     first.rotation_euler = saved
+    first.rotation_mode = saved_state["mode"]
+    first.rotation_quaternion = saved_state["quat"]
+    first.rotation_euler = saved_state["euler"]
+    first.rotation_axis_angle = saved_state["axis_angle"]
+    first.location = saved_state["loc"]
     bpy.context.view_layer.update()
     return 1.0 if float((bent - rest) @ z) > 0 else -1.0
 
@@ -469,6 +529,7 @@ def apply_grasp(body, side, pose="poignee", amount=1.0):
     if pose not in GRASPS:
         raise ValueError("Préhension inconnue : %r" % (pose,))
     armature = skeleton.rigs_of(body)[0]
+    _save_pose(armature, _hand_bones(side), "main." + side)
     for finger, angles in GRASPS[pose].items():
         if f"{finger}.01.{side}" not in armature.pose.bones:
             continue
@@ -484,6 +545,9 @@ def apply_grasp(body, side, pose="poignee", amount=1.0):
 
 def release_grasp(body, side):
     armature = skeleton.rigs_of(body)[0]
+    if _restore_pose(armature, "main." + side):  # la pose des doigts d'avant l'accessoire revient (GRM-010) ; sans sauvegarde : retour à zéro comme avant
+        bpy.context.view_layer.update()
+        return
     for finger in ("thumb",) + FINGERS:
         for n in (1, 2, 3):
             pose_bone = armature.pose.bones.get(f"{finger}.0{n}.{side}")
@@ -500,6 +564,7 @@ def grip_roll(body, side):
     elbow = armature.pose.bones["arm_lower." + side]
     hand = armature.pose.bones["hand." + side]
     shoulder = np.array(armature.pose.bones["arm_upper." + side].head)
+    _save_pose(armature, _arm_bones(side), "bras." + side)
     for bone in (elbow, hand):
         bone.rotation_mode = "XYZ"
     best = (-1.0, None)
@@ -528,6 +593,9 @@ def grip_roll(body, side):
 def reset_hand(body, side):
     """Remet à zéro la pose du poignet, du coude et de l'épaule de ce côté (annule `grip_roll` et `pose_phone_ear`)."""
     armature = skeleton.rigs_of(body)[0]
+    if _restore_pose(armature, "bras." + side):  # pose du bras d'avant l'accessoire (GRM-010)
+        bpy.context.view_layer.update()
+        return
     for name in ("hand", "arm_lower", "arm_upper"):
         pose_bone = armature.pose.bones.get(f"{name}.{side}")
         if pose_bone is not None:
@@ -562,6 +630,7 @@ def pose_phone_ear(body, side="R", iterations=500, seed=3):
     armature = skeleton.rigs_of(body)[0]
     target, head_centre = _ear_target_rig(body, armature, side)
     names = [f"arm_upper.{side}", f"arm_lower.{side}", f"hand.{side}"]
+    _save_pose(armature, names, "bras." + side)
     bones = [armature.pose.bones[n] for n in names]
     for bone in bones:
         bone.rotation_mode = "XYZ"

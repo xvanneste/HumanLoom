@@ -200,6 +200,87 @@ ok_clear = bpy.ops.humanloom.crowd_clear() == {"FINISHED"} and crowd.load(scene)
 ok_generate = bpy.ops.humanloom.crowd_generate(count=2, seed=4, frames=48) == {"FINISHED"} and len(crowd.members_of(scene)) == 2
 check("C12_operateurs_et_panneau", ok_poll and ok_member and ok_clear and ok_generate and hasattr(bpy.types, "HUMANLOOM_PT_crowd"), {"generer_refuse_si_foule": ok_poll, "regenerer_personnage": ok_member, "effacer": ok_clear, "generer_2": ok_generate})
 
+# C13 cadence (ANI-003) : la simulation suit la cadence de la scène ; à 30 i/s les vitesses restent en m/s dans leurs plages (sinon ×1,25 avec une simulation à 24 i/s lue à 30 i/s)
+crowd.clear(scene)
+scene.render.fps, scene.render.fps_base = 30, 1.0
+fast = crowd.default_spec(6, 3)
+fast["frames"] = 90
+fast["behaviors"] = {"walk": 1.0}
+fast["zones"] = []
+crowd.generate(bpy.context, fast)
+fast_loaded, fast_members = crowd.load(scene)
+fast_positions, _fast_yaws = crowd.simulate(fast_loaded, fast_members)
+step = np.linalg.norm(np.diff(fast_positions[:, :, :2], axis=0), axis=2) * fast_loaded["fps"]  # m/s à chaque image
+median_speed = float(np.median(step))
+low, high = fast_loaded["speed"]["walk"]
+check("C13_cadence_de_la_scene", abs(fast_loaded["fps"] - 30.0) < 1e-9 and 0.5 * low <= median_speed <= 1.1 * high, {"fps_enregistre": fast_loaded["fps"], "vitesse_mediane_m_s": round(median_speed, 2), "plage_marche": [low, high]})
+fixed = crowd.default_spec(2, 3)
+fixed.update(frames=24, fps=24, fps_scene=False)
+crowd.clear(scene)
+crowd.generate(bpy.context, fixed)
+check("C13b_cadence_imposee_conservee", crowd.load(scene)[0]["fps"] == 24, {"fps": crowd.load(scene)[0]["fps"]})
+scene.render.fps, scene.render.fps_base = 24, 1.0
+
+# C14 vêtements dans la foule : l'applicateur « outfit » de l'extension habille chaque personnage de ses pièces (clés de pièces procédurales), tirées dans les listes du spec
+from extension import garments  # noqa: E402
+crowd.clear(scene)
+crowd.register_variant_applier("outfit", garments.crowd_outfit)
+dressed_spec = crowd.default_spec(6, 9)
+dressed_spec["frames"] = 24
+dressed_spec["variants"] = {"outfit": [["t_shirt", "jean"], ["robe_courte"], "t_shirt"]}
+crowd.generate(bpy.context, dressed_spec)
+allowed = {("t_shirt", "jean"), ("robe_courte",), ("t_shirt",)}
+worn = [tuple(sorted(g[garments.MARKER] for g in garments.garments_of(b))) for b in crowd.members_of(scene)]
+has_rig_modifiers = all(any(m.type == "ARMATURE" for m in g.modifiers) for b in crowd.members_of(scene) for g in garments.garments_of(b))
+check("C14_vetements_dans_la_foule", all(w in {tuple(sorted(a)) for a in allowed} for w in worn) and all(worn) and len({w for w in worn}) >= 2 and has_rig_modifiers, {"tenues": [list(w) for w in worn]})
+try:
+    garments.crowd_outfit(crowd.members_of(scene)[0], ["inconnue"])
+    unknown_refused = False
+except ValueError:
+    unknown_refused = True
+check("C14b_piece_inconnue_refusee", unknown_refused)
+crowd.regenerate_member(bpy.context, 2)
+after_regen = [tuple(sorted(g[garments.MARKER] for g in garments.garments_of(b))) for b in crowd.members_of(scene)]
+crowd.clear(scene)
+leftover = [o.name for o in bpy.data.objects if o.get(garments.MARKER)]
+check("C14c_regeneration_et_effacement_avec_vetements", len(after_regen) == 6 and all(after_regen) and not leftover, {"apres_regeneration": [list(w) for w in after_regen], "pieces_restantes_apres_effacement": leftover})
+
+# C2b diversité non garantie (ANI-021) : une distance minimale impossible à tenir est SIGNALÉE (liste dans le résumé, drapeau par personnage), pas abandonnée en silence
+crowd.clear(scene)
+tight = crowd.default_spec(6, 2)
+tight["frames"] = 12
+tight["min_distance"] = 50.0
+tight_summary = crowd.generate(bpy.context, tight)
+tight_members = crowd.load(scene)[1]
+check("C2b_diversite_non_garantie_signalee", len(tight_summary["diversite_non_garantie"]) >= 4 and all(not m["diversite_garantie"] for m in tight_members if m["id"] in tight_summary["diversite_non_garantie"]) and tight_members[0]["diversite_garantie"],
+      {"non_garantie": tight_summary["diversite_non_garantie"], "premier_personnage_garanti": tight_members[0]["diversite_garantie"]})
+
+# C15 tissu actif (lot E) : effacer ou régénérer une foule dont une robe a la simulation de tissu ACTIVE est refusé AVANT toute modification, avec un message lisible ; après désactivation, l'effacement ne laisse rien
+from extension import cloth_sim  # noqa: E402
+crowd.clear(scene)
+baseline = {o.name for o in bpy.data.objects}
+cloth_spec = crowd.default_spec(2, 6)
+cloth_spec["frames"] = 12
+cloth_spec["variants"] = {"outfit": [["robe_courte"]]}
+crowd.generate(bpy.context, cloth_spec)
+cloth_dresses = [g for b in crowd.members_of(scene) for g in garments.garments_of(b)]
+for dress in cloth_dresses:
+    cloth_sim.enable(dress)
+names_before = {o.name for o in bpy.data.objects}
+messages = []
+for call in (lambda: crowd.clear(scene), lambda: crowd.regenerate_member(bpy.context, 0), lambda: crowd.regenerate_all(bpy.context)):
+    try:
+        call()
+        messages.append("PAS DE REFUS")
+    except ValueError as error:
+        messages.append(str(error)[:50])
+unchanged = {o.name for o in bpy.data.objects} == names_before and all(cloth_sim.is_enabled(d) for d in cloth_dresses)
+for dress in cloth_dresses:
+    cloth_sim.disable(dress)
+crowd.clear(scene)
+residue = [o.name for o in bpy.data.objects if o.name not in baseline] + [c.name for c in bpy.data.collections if c.name.startswith(cloth_sim.COLLECTION)]
+check("C15_tissu_actif_refus_clair_puis_effacement_propre", all(m.startswith("La simulation de tissu est active") for m in messages) and unchanged and not residue, {"messages": messages, "rien_modifie_au_refus": unchanged, "residus_apres_desactivation": residue})
+
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
 print("RESULT", "FAIL " + ", ".join(failures) if failures else "PASS")

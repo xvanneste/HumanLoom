@@ -22,6 +22,7 @@ from extension import crowd  # noqa: E402
 ARGS = sys.argv[sys.argv.index("--") + 1:]
 N = int(ARGS[ARGS.index("--n") + 1])
 OUT = ARGS[ARGS.index("--out") + 1] if "--out" in ARGS else None
+OUTFIT = "--outfit" in ARGS and ARGS[ARGS.index("--outfit") + 1] == "1"  # vêtements dans la foule (variante « outfit » : t-shirt + jean, avec chaussures ou robe)
 FRAMES = int(ARGS[ARGS.index("--frames") + 1]) if "--frames" in ARGS else 120
 
 
@@ -71,6 +72,8 @@ spec = crowd.default_spec(N, 12)
 spec["frames"] = FRAMES
 spec["zones"] = [{"kind": "sidewalk", "rect": [-12.0, 8.0, 12.0, 11.0]}, {"kind": "sidewalk", "rect": [-12.0, -11.0, 12.0, -8.0]}, {"kind": "crossing", "rect": [-1.5, -8.0, 1.5, 8.0]}]
 spec["behaviors"] = {"walk": 5.0, "run": 1.0, "wait": 2.0, "chat": 2.0, "jump": 0.3, "cross": 1.5}
+if OUTFIT:
+    spec["variants"] = {"outfit": [["t_shirt", "jean"], ["t_shirt", "jean", "chaussures"], ["robe_courte"]]}
 start = time.perf_counter()
 summary = crowd.generate(bpy.context, spec)
 generation = time.perf_counter() - start
@@ -81,7 +84,7 @@ scene.camera = camera
 camera.location = (0.0, -30.0, 1.7)
 bpy.context.view_layer.update()
 memory_after = memory_mb()
-row = {"personnages": N, "generation_s": round(generation, 1), "generation_par_personnage_s": round(generation / N, 2), "memoire_avant_mo": round(memory_before), "memoire_apres_mo": round(memory_after),
+row = {"vetements": OUTFIT, "personnages": N, "generation_s": round(generation, 1), "generation_par_personnage_s": round(generation / N, 2), "memoire_avant_mo": round(memory_before), "memoire_apres_mo": round(memory_after),
        "diversite_min": round(summary["diversite"].get("distance_min", 0.0), 3), "comportements": summary["comportements"], "images": FRAMES}
 path = Path(tempfile.mkdtemp(prefix="hl_perf_")) / "foule.blend"
 bpy.ops.wm.save_as_mainfile(filepath=str(path), compress=True)

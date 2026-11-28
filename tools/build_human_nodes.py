@@ -14,6 +14,7 @@ Principe (prototype `tools/audit/cproto3_1e4.py`, mesures `docs/audit/mesures-no
 - le fichier contient deux blocs : le groupe `HL Human` et le maillage `HL Human Base` (forme de base + couches). Pas d'objet.
 Expressions hors périmètre : yeux, cheveux, relief de peau (modificateur Displace), préréglages."""
 import ast
+import operator
 import hashlib
 import json
 import random
@@ -132,6 +133,9 @@ def math(op, a, b=None):
     return cache[key]
 
 
+CONSTANT_FOLDS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv}
+
+
 def compile_expression(node, env):
     if isinstance(node, ast.Expression):
         return compile_expression(node.body, env)
@@ -145,11 +149,22 @@ def compile_expression(node, env):
     if isinstance(node, ast.BinOp):
         a, b = compile_expression(node.left, env), compile_expression(node.right, env)
         if isinstance(a, float) and isinstance(b, float):
-            return {ast.Add: a + b, ast.Sub: a - b, ast.Mult: a * b, ast.Div: a / b}[type(node.op)]
+            fold = CONSTANT_FOLDS.get(type(node.op))  # SCI-004 : seul l'opérateur demandé est calculé (le dictionnaire de quatre résultats évaluait a / b même pour a + b : ZeroDivisionError si b = 0)
+            if fold is None:
+                raise ValueError("Opérateur non pris en charge : " + type(node.op).__name__)
+            if isinstance(node.op, ast.Div) and b == 0.0:
+                raise ValueError("Division par zéro dans l'expression")
+            return fold(a, b)
+        if type(node.op) not in OPS:
+            raise ValueError("Opérateur non pris en charge : " + type(node.op).__name__)
         return math(OPS[type(node.op)], a, b)
     if isinstance(node, ast.Call):
-        name = node.func.id
+        name = node.func.id if isinstance(node.func, ast.Name) else None
+        if name not in ("abs", "max", "min"):  # liste blanche : tout autre appel était interprété comme « min »
+            raise ValueError("Fonction non autorisée dans une expression : %r" % (name,))
         args = [compile_expression(a, env) for a in node.args]
+        if (name == "abs" and len(args) != 1) or (name != "abs" and len(args) != 2):
+            raise ValueError("%s : nombre d'arguments invalide (%d)" % (name, len(args)))
         if name == "abs":
             return abs(args[0]) if isinstance(args[0], float) else math("ABSOLUTE", args[0])
         if all(isinstance(a, float) for a in args):

@@ -32,6 +32,8 @@ class HUMANLOOM_OT_crowd_generate(bpy.types.Operator):
             self.report({"ERROR"}, f"Génération de la foule interrompue : {error}")
             return {"CANCELLED"}
         self.report({"INFO"}, f"{summary['personnages']} personnages ; distance minimale de diversité {summary['diversite'].get('distance_min', 0):.2f}.")
+        if summary.get("diversite_non_garantie"):
+            self.report({"WARNING"}, f"Diversité non garantie pour {len(summary['diversite_non_garantie'])} personnage(s) (aucun tirage assez différent en 50 essais) : élargissez les plages ou réduisez la distance minimale.")
         return {"FINISHED"}
 
 
@@ -104,6 +106,42 @@ class HUMANLOOM_OT_crowd_lod(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class HUMANLOOM_OT_crowd_cull(bpy.types.Operator):
+    bl_idname = "humanloom.crowd_cull"
+    bl_label = "Masquer hors caméra"
+    bl_description = ("Masque (clés de visibilité au rendu et dans la vue) les personnages entièrement hors du champ de la caméra, image par image (caméra animée prise en compte). "
+                      "Réduit surtout le TEMPS ET LA MÉMOIRE DU RENDU ; le coût de la vue 3D ne baisse pas avec une visibilité animée. À refaire si la caméra ou les trajets changent")
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return bool(context.scene.get(crowd.KEY)) and context.scene.camera is not None
+
+    def execute(self, context):
+        try:
+            summary = crowd.cull(context.scene)
+        except ValueError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        self.report({"INFO"}, f"{summary['masques_par_image_moyen']:.1f} personnages masqués en moyenne par image ; {summary['toujours_visibles']} toujours visibles, {len(summary['jamais_visibles'])} jamais visibles")
+        return {"FINISHED"}
+
+
+class HUMANLOOM_OT_crowd_uncull(bpy.types.Operator):
+    bl_idname = "humanloom.crowd_uncull"
+    bl_label = "Tout afficher"
+    bl_description = "Retire les clés de visibilité de « Masquer hors caméra » : tous les personnages redeviennent visibles"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return bool(context.scene.get(crowd.KEY)) and crowd.CULL_KEY in context.scene
+
+    def execute(self, context):
+        crowd.uncull(context.scene)
+        return {"FINISHED"}
+
+
 class HUMANLOOM_OT_crowd_clear(bpy.types.Operator):
     bl_idname = "humanloom.crowd_clear"
     bl_label = "Effacer la foule"
@@ -151,11 +189,14 @@ class HUMANLOOM_PT_crowd(bpy.types.Panel):
         layout.operator("humanloom.crowd_regenerate_member", icon="FILE_REFRESH")
         layout.operator("humanloom.crowd_lod", icon="MOD_DECIM")
         row = layout.row(align=True)
+        row.operator("humanloom.crowd_cull", icon="HIDE_ON")
+        row.operator("humanloom.crowd_uncull", icon="HIDE_OFF")
+        row = layout.row(align=True)
         row.operator("humanloom.crowd_regenerate_all", icon="FILE_REFRESH")
         row.operator("humanloom.crowd_clear", icon="TRASH")
 
 
-CLASSES = (HUMANLOOM_OT_crowd_generate, HUMANLOOM_OT_crowd_regenerate_member, HUMANLOOM_OT_crowd_regenerate_all, HUMANLOOM_OT_crowd_lod, HUMANLOOM_OT_crowd_clear, HUMANLOOM_PT_crowd)
+CLASSES = (HUMANLOOM_OT_crowd_generate, HUMANLOOM_OT_crowd_regenerate_member, HUMANLOOM_OT_crowd_regenerate_all, HUMANLOOM_OT_crowd_lod, HUMANLOOM_OT_crowd_cull, HUMANLOOM_OT_crowd_uncull, HUMANLOOM_OT_crowd_clear, HUMANLOOM_PT_crowd)
 
 
 def register():

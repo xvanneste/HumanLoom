@@ -62,7 +62,7 @@ def convert(context, entry, action_name):
         raise ValueError("Conflit dans le mapping : une même source sert plusieurs os.")
     options = retarget.Options(pose_mode=wm.hl_ret_pose, root_motion=wm.hl_ret_root, translation_scale=wm.hl_ret_scale if wm.hl_ret_scale > 0 else None,
                                ik_limbs=("arm", "leg") if wm.hl_ret_ik_arms else ("leg",), clavicle_scale=wm.hl_ret_clavicle,
-                               clavicle_mode="rythme" if wm.hl_ret_rhythm else "source")
+                               clavicle_mode="rythme" if wm.hl_ret_rhythm else "source", neck_twist=1.0 if wm.hl_ret_neck else 0.0, tibial_rotation=20.0 if wm.hl_ret_tibia else 0.0)
     with bpy.data.libraries.load(str(blend), link=False) as (_available, wanted):  # une seule action par chargement
         wanted.actions = [action_name]
     loaded = wanted.actions[0]
@@ -82,9 +82,13 @@ def convert(context, entry, action_name):
         retarget_bpy.cache_save(directory, key, result)
     else:
         result.report.update(noms_cibles=list(target.names))
-    if wm.hl_ret_speed != 1.0 or wm.hl_ret_trim_start > 0 or wm.hl_ret_trim_end > 0:
-        shaped = retarget.trim_and_speed(result, wm.hl_ret_trim_start, wm.hl_ret_trim_end if wm.hl_ret_trim_end > 0 else None, wm.hl_ret_speed)
-        shaped.report.update(cache=result.report.get("cache"))
+    # Cadence (ANI-003) : l'action est écrite à UNE clé par image de la scène ; une source à une autre cadence est rééchantillonnée (durée en secondes conservée), sinon une animation à 30 i/s lue dans une scène à 24 i/s durerait 25 % de plus.
+    scene_fps = context.scene.render.fps / context.scene.render.fps_base
+    rate = motion.fps / scene_fps
+    speed = wm.hl_ret_speed * rate
+    if abs(speed - 1.0) > 1e-9 or wm.hl_ret_trim_start > 0 or wm.hl_ret_trim_end > 0:
+        shaped = retarget.trim_and_speed(result, wm.hl_ret_trim_start, wm.hl_ret_trim_end if wm.hl_ret_trim_end > 0 else None, speed)
+        shaped.report.update(cache=result.report.get("cache"), cadence_source=motion.fps, cadence_scene=scene_fps)
         result = shaped
     converted = retarget_bpy.write_action(rig_object, result, f"{entry['name']}@HumanLoom", first_frame=first)
     return converted, result, time.perf_counter() - started
@@ -304,6 +308,8 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
         column.prop(wm, "hl_ret_root", text="Root motion")
         column.prop(wm, "hl_ret_ik_arms", text="IK des bras (contacts mains-objets)")
         column.prop(wm, "hl_ret_rhythm")
+        column.prop(wm, "hl_ret_neck")
+        column.prop(wm, "hl_ret_tibia")
         sub = column.column(align=True)
         sub.active = not wm.hl_ret_rhythm
         sub.prop(wm, "hl_ret_clavicle", slider=True)
@@ -327,7 +333,7 @@ class HUMANLOOM_PT_animation_apply(bpy.types.Panel):
 
 
 CLASSES = (HUMANLOOM_OT_animation_apply, HUMANLOOM_OT_animation_publish_favorites, HUMANLOOM_OT_animation_thumbnails, HUMANLOOM_PT_animation_apply)
-WINDOW_PROPERTIES = ("hl_ret_euler_order", "hl_ret_pose", "hl_ret_ik_arms", "hl_ret_clavicle", "hl_ret_rhythm", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
+WINDOW_PROPERTIES = ("hl_ret_euler_order", "hl_ret_pose", "hl_ret_ik_arms", "hl_ret_clavicle", "hl_ret_rhythm", "hl_ret_neck", "hl_ret_tibia", "hl_ret_root", "hl_ret_speed", "hl_ret_trim_start", "hl_ret_trim_end", "hl_ret_scale")
 
 
 def register():
@@ -349,6 +355,8 @@ def register():
     wm.hl_ret_trim_start = IntProperty(name="Début", default=0, min=0, description="Première image conservée (0 = début)")
     wm.hl_ret_trim_end = IntProperty(name="Fin", default=0, min=0, description="Dernière image conservée (0 = fin)")
     wm.hl_ret_clavicle = FloatProperty(name="Rotation des clavicules", default=1.0, min=0.0, max=1.0, description="Part de la rotation des clavicules de la source conservée (1 = fidèle). Réduire (0,5) limite le haussement d'épaule et ses plis du cou et du trapèze (mesuré sur 30 actions : plis en zone large −27 % à 0,5) ; l'orientation du bras et des autres os est conservée (positions relatives à la racine du membre inchangées)")
+    wm.hl_ret_tibia = BoolProperty(name="Rotation tibiale couplée", default=False, description="Ajoute une rotation interne du tibia couplée à la flexion du genou (20° à 120° de flexion, valeur publiée Johal et al. 2005) ; l'orientation du pied est conservée. Non validée à l'œil : inactive par défaut")
+    wm.hl_ret_neck = BoolProperty(name="Rotation du cou répartie", default=False, description="Répartit la rotation axiale de la tête sur le cou (un tiers sur neck.01, un tiers sur neck.02, le reste sur la tête) : l'orientation de la tête est conservée ; moins de plis du cou aux grandes rotations (mesuré : 70° : 13/17 plis -> 6/5). Inactif par défaut")
     wm.hl_ret_rhythm = BoolProperty(name="Rythme scapulo-huméral", default=True, description="La clavicule est calculée d'après l'élévation du bras (la clavicule monte et pivote quand le bras dépasse 60° ; l'orientation du bras est conservée ; la main monte d'environ 4 cm à 135°). Remplace la rotation des clavicules de la source et le réglage ci-dessous. Réduit les plis de l'aisselle au-delà de 120° ; en flexion vers l'avant le gain est faible")
     wm.hl_ret_ik_arms = BoolProperty(name="IK des bras", default=False, description="Contacts mains-objets (parapluie, téléphone) : les mains sont replacées par IK à la position de celles de la source (mesuré : fidélité de pose moins bonne, mains à 2,4 % / 6,9 % contre 0,8 % / 1,8 %) ; décoché (défaut), les bras copient les directions de la source")
     wm.hl_ret_scale = FloatProperty(name="Échelle", default=0.0, min=0.0, description="Échelle des translations du bassin (0 = rapport automatique des hauteurs de bassin)")

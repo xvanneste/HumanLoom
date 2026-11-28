@@ -111,6 +111,23 @@ try:
     frame_count = int(round(shaped.frame_range[1] - shaped.frame_range[0])) + 1
     wm.hl_ret_speed, wm.hl_ret_trim_start, wm.hl_ret_trim_end = 1.0, 0, 0
     check("R9_reglages_vitesse_et_decoupe", frame_count == 11, {"images_après_découpe_4_24_et_vitesse_2": frame_count, "attendu": 11})
+    # R13 cadence (ANI-003) : une source à 30 i/s dans une scène à 24 i/s est rééchantillonnée, durée en secondes conservée (sans cela elle durerait 25 % de plus)
+    bpy.context.scene.render.fps, bpy.context.scene.render.fps_base = 24, 1.0
+    original_read = retarget_bpy.read_action
+
+    def read_at_30(*args, **kwargs):
+        motion, first = original_read(*args, **kwargs)
+        return retarget.Motion(motion.loc, motion.quat, 30.0), first
+
+    retarget_bpy.read_action = read_at_30
+    try:
+        bpy.ops.humanloom.animation_apply(action="REPLACE")
+    finally:
+        retarget_bpy.read_action = original_read
+    resampled = rig.animation_data.action
+    resampled_frames = int(round(resampled.frame_range[1] - resampled.frame_range[0])) + 1
+    source_seconds = (frames - 1) / 30.0
+    check("R13_cadence_source_rééchantillonnée", resampled_frames == 24 and abs((resampled_frames - 1) / 24.0 - source_seconds) <= 1 / 24.0, {"images": resampled_frames, "attendu": 24, "durée_s": round((resampled_frames - 1) / 24.0, 3), "durée_source_s": round(source_seconds, 3)})
     # pagination et grille
     check("R10_pagination", wm.hl_anim_page == 0 and bpy.ops.humanloom.animation_page(delta=1) == {"FINISHED"} and wm.hl_anim_page == 0, {"page": wm.hl_anim_page, "résultats": len(wm.hl_anim_results)})
     # vignettes hors processus

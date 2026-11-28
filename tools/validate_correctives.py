@@ -257,6 +257,60 @@ crowd.generate(bpy.context, spec)
 members = crowd.members_of(bpy.context.scene)
 check("C6_foule_sans_correctifs", members and all(not correctives.keys_of(m.data) for m in members), {"personnages": len(members)})
 
+# C10 recalcul TRANSACTIONNEL (ANI-012) : annulation ou erreur en cours de calcul laissent les correctifs d'avant exactement comme ils étaient (clés, valeurs, pilotes, état activé/coupé, pose) ; avant, ils étaient retirés dès le départ et
+# remplacés par les données génériques
+body, rig = fresh({})
+correctives.set_enabled(body, True)
+for pb in rig.pose.bones:
+    pb.rotation_mode = "QUATERNION"
+
+
+def correctives_state():
+    keys = correctives.keys_of(body.data)
+    drivers = body.data.shape_keys.animation_data.drivers if body.data.shape_keys.animation_data else []
+    return {"cles": [(k.name, bool(k.mute), round(float(np.abs(correctives._co(k.data)).sum()), 5)) for k in keys], "pilotes": len(drivers), "actif": correctives.enabled(body), "source": str(rig.get(correctives.SOURCE_PROP)),
+            "temporaire": correctives.TEMP_KEY in body.data.shape_keys.key_blocks.keys(), "pose": [tuple(round(v, 6) for v in pb.rotation_quaternion) for pb in rig.pose.bones]}
+
+
+reference_state = correctives_state()
+steps = correctives.rebuild_steps(body, rig)
+for _ in range(3):
+    next(steps)
+muted_during = all(k.mute for k in correctives.keys_of(body.data))
+steps.close()
+after_cancel = correctives_state()
+check("C10a_annulation_conserve_les_correctifs", muted_during and after_cancel == reference_state and len(reference_state["cles"]) > 30, {"coupes_pendant_le_calcul": muted_during, "identique": after_cancel == reference_state, "cles": len(reference_state["cles"])})
+
+original_generate = correctives.generate
+
+
+def failing_generate(body_, armature_, joints=None):
+    yield "coude_L", 1, 10
+    yield "coude_R", 2, 10
+    raise RuntimeError("panne simulée")
+
+
+correctives.generate = failing_generate
+raised = False
+try:
+    steps = correctives.rebuild_steps(body, rig)
+    for _ in steps:
+        pass
+except RuntimeError:
+    raised = True
+finally:
+    correctives.generate = original_generate
+after_error = correctives_state()
+check("C10b_erreur_conserve_les_correctifs", raised and after_error == reference_state, {"erreur_propagee": raised, "identique": after_error == reference_state})
+
+correctives.set_enabled(body, False)
+off_reference = correctives_state()
+steps = correctives.rebuild_steps(body, rig)
+next(steps)
+steps.close()
+check("C10c_etat_coupe_conserve", correctives_state() == off_reference and not correctives.enabled(body), {"actif": correctives.enabled(body)})
+correctives.set_enabled(body, True)
+
 # C7 recalcul sur la morphologie courante
 if REBUILD and REBUILD != "none":
     body, rig = fresh(ALL[REBUILD])

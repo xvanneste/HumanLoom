@@ -56,6 +56,20 @@ check("P2_application_et_melange", abs(got["smile_duchenne"] - 0.75 * a["smile_d
       and face.mix_poses(a, b, 0.0)["smile_duchenne"] == a["smile_duchenne"] and face.mix_poses(a, b, 1.0)["brow_up"] == b["brow_up"], {"lu": got})
 face.apply_pose(body, {})
 check("P2b_neutre_remet_a_zero", face.read_pose(body) == {}, face.read_pose(body))
+# P2c le regard fait partie de la pose lue (ANI-010) : lecture, mélange et restauration exacts
+face.apply_pose(body, {"_gaze": [20.0, 10.0], "smile_L": 0.5})
+read_with_gaze = face.read_pose(body)
+saved_gaze = dict(read_with_gaze)
+face.apply_pose(body, {})
+face.apply_pose(body, {"_gaze": [0.0, 0.0]})
+after_reset = face.read_pose(body)
+face.apply_pose(body, saved_gaze)
+restored = face.read_pose(body)
+check("P2c_regard_dans_la_pose_lue", abs(read_with_gaze.get("_gaze", [0, 0])[0] - 20.0) < 0.05 and abs(read_with_gaze.get("_gaze", [0, 0])[1] - 10.0) < 0.05 and "_gaze" not in after_reset and restored == saved_gaze,
+      {"lu": read_with_gaze.get("_gaze"), "apres_remise_a_zero": after_reset.get("_gaze"), "restaure": restored.get("_gaze")})
+face.apply_pose(body, {"_gaze": [0.0, 0.0]})
+face.apply_pose(body, {})
+
 
 # P3
 visemes = {k: v for k, v in face.builtin_poses().items() if v["categorie"] == "visème"}
@@ -80,6 +94,41 @@ check("P4_arkit_couverture", report["total"] == 52 and sum(report["par_categorie
       {"par_categorie": report["par_categorie"], "couverture_ponderee": report["couverture_ponderee"], "non_couverts": report["non_couverts"]})
 face.apply_pose(body, pose)
 check("P4b_arkit_applique", face.read_pose(body).get("smile_L") == 1.0 and "_tongue" in face.read_pose(body))
+
+# P4c mâchoire latérale et propulsion (jawLeft / jawRight / jawForward) : translations de l'os `jaw`, mesurées sur la pointe du menton (sommet JAW_CHIN) de la cage posée
+face.apply_pose(body, {})
+skeleton_points = lambda: skeleton.cage_points(body)  # cage de repos (sans pose) : repère de comparaison
+bpy.context.view_layer.update()
+
+
+def chin_world():
+    saved = [(m, m.show_viewport) for m in body.modifiers]
+    for m in body.modifiers:
+        m.show_viewport = m.name in ("HL Human", "HL Rig", "HL Rig DQS")
+    bpy.context.view_layer.update()
+    ev = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    me = ev.to_mesh()
+    point = np.array(me.vertices[skeleton.JAW_CHIN].co[:])
+    ev.to_mesh_clear()
+    for m, state in saved:
+        m.show_viewport = state
+    return point
+
+
+rest_chin = chin_world()
+rows_jaw = {}
+for label, coefficients in (("gauche", {"jawLeft": 1.0}), ("droite", {"jawRight": 1.0}), ("avant", {"jawForward": 1.0}), ("gauche_et_droite_se_compensent", {"jawLeft": 1.0, "jawRight": 1.0}), ("demi_gauche", {"jawLeft": 0.5})):
+    face.apply_pose(body, face.arkit_to_pose(coefficients))
+    moved = (chin_world() - rest_chin) * 1000.0
+    rows_jaw[label] = {"dx_mm": round(float(moved[0]), 2), "dy_mm": round(float(moved[1]), 2), "dz_mm": round(float(moved[2]), 2), "lue": {k: v for k, v in face.read_pose(body).items() if k.startswith("_jaw_")}}
+face.apply_pose(body, {})
+back = (chin_world() - rest_chin) * 1000.0
+# le menton suit l'os à ~85 % (poids de peau de la pointe du menton < 1 : 6,41 mm pour 7,5 mm d'os, 7,18 pour 8,4) : critère = entre 80 et 100 % de l'excursion de l'os, dans le bon sens
+side_ok = 0.8 * skeleton.JAW_SIDE_MM <= rows_jaw["gauche"]["dx_mm"] <= skeleton.JAW_SIDE_MM and -skeleton.JAW_SIDE_MM <= rows_jaw["droite"]["dx_mm"] <= -0.8 * skeleton.JAW_SIDE_MM
+forward_ok = -skeleton.JAW_FORWARD_MM <= rows_jaw["avant"]["dy_mm"] <= -0.8 * skeleton.JAW_FORWARD_MM
+check("P4c_machoire_lateral_et_propulsion", side_ok and forward_ok and abs(rows_jaw["gauche_et_droite_se_compensent"]["dx_mm"]) < 0.5 and 0.35 * skeleton.JAW_SIDE_MM <= rows_jaw["demi_gauche"]["dx_mm"] <= 0.55 * skeleton.JAW_SIDE_MM and float(np.abs(back).max()) < 0.01
+      and abs(rows_jaw["gauche"]["lue"].get("_jaw_side", 0.0) - skeleton.JAW_SIDE_MM) < 0.01, rows_jaw)
+
 face.apply_pose(body, {})
 
 # P5

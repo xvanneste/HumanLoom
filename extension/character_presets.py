@@ -67,7 +67,7 @@ def validate(payload):
             identifier: number(controls.get(identifier, 0.0), label, -1, 1)
             for identifier, label in CONTROLS
         },
-        "scale": [number(value, "L’échelle") for value in scale],
+        "scale": [number(value, "L’échelle", 0.01, 100.0) for value in scale],
         "measurement_reference": reference,
         "landmarks": landmark_sets.validate(payload["landmarks"]) if payload.get("landmarks") is not None else None,
     }

@@ -101,8 +101,39 @@ objs = [garments.add_garment(body, k) for k in stack]
 offsets = [json.loads(o[garments.PARAMS])["decalage_mm"] for o in objs]
 layers_ok = all(b - a >= 3.0 for a, b in zip(offsets, offsets[1:])) and all(garments.LAYERS[garments.GARMENTS[a]["couche"]] < garments.LAYERS[garments.GARMENTS[b]["couche"]] for a, b in zip(stack, stack[1:]))
 shared = set(json.loads(objs[0][garments.PARAMS])["sommets_du_corps"]) & set(json.loads(objs[1][garments.PARAMS])["sommets_du_corps"])
-gap = min(np.linalg.norm(np.array(objs[1].data.vertices[i].co) - np.array(objs[0].data.vertices[j].co)) for i, j in list(zip(range(5), range(5)))) if False else None
-check("G3_couches_decalage_cumulatif", layers_ok and len(shared) > 100, {"decalages_mm": offsets, "sommets_communs_t_shirt_chemise": len(shared)})
+# GRM-013 : preuve GÉOMÉTRIQUE de l'empilement (l'ancien test ne vérifiait que l'ordre des décalages et des indices communs) : pour chaque paire de couches successives, les sommets de la peau de la couche EXTÉRIEURE qui longent la
+# couche du dessous (à moins de 20 mm) ne sont pas à l'intérieur de la surface ÉVALUÉE de celle-ci (épaisseur comprise).
+from mathutils.bvhtree import BVHTree as _BVH  # noqa: E402
+
+
+def surface_of(garment):
+    """Surface ÉVALUÉE de la pièce au repos (épaisseur incluse ; passe de dégagement coupée par défaut)."""
+    bpy.context.view_layer.update()
+    ev = garment.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    me = ev.to_mesh()
+    verts = [garment.matrix_world @ v.co for v in me.vertices]
+    tree = _BVH.FromPolygons(verts, [tuple(p.vertices) for p in me.polygons])
+    ev.to_mesh_clear()
+    return tree, verts
+
+
+stack_rows = []
+for inner, outer, names in zip(objs, objs[1:], zip(stack, stack[1:])):
+    tree_inner, _ = surface_of(inner)
+    outer_base = [outer.matrix_world @ v.co for v in outer.data.vertices]  # peau de référence de la couche extérieure (avant épaisseur)
+    close, inside, minimum = 0, 0, 1e9
+    for v in outer_base:
+        location, normal, _i, distance = tree_inner.find_nearest(v)
+        if location is None or distance > 0.02:
+            continue
+        close += 1
+        signed = (v - location).dot(normal)
+        minimum = min(minimum, signed)
+        if signed < 0.0:
+            inside += 1
+    stack_rows.append({"couches": "/".join(names), "sommets_proches": close, "a_l_interieur_de_la_couche_du_dessous": inside, "ecart_min_mm": round(minimum * 1000, 2) if close else None})
+stack_ok = all(r["sommets_proches"] > 100 and r["a_l_interieur_de_la_couche_du_dessous"] <= 0.02 * r["sommets_proches"] for r in stack_rows)
+check("G3_couches_decalage_cumulatif", layers_ok and len(shared) > 100 and stack_ok, {"decalages_mm": offsets, "sommets_communs_t_shirt_chemise": len(shared), "geometrie_des_couches": stack_rows, "critere": "<= 2 % des sommets de la peau de la couche extérieure, proches de la couche du dessous, sont à l'intérieur de sa surface évaluée (épaisseur comprise)"})
 
 # G4 pénétration sous poses : avant / après passe de dégagement
 rig = skeleton.rigs_of(body)[0]
@@ -203,8 +234,8 @@ worst_after = max(a[0] for _, a in table.values()), max(a[1] for _, a in table.v
 rows = {f"{p}/{k}": {"avant": [round(b[0] * 100, 2), round(b[1], 1)], "apres": [round(a[0] * 100, 2), round(a[1], 1)]} for (p, k), (b, a) in table.items() if max(b[0], a[0]) > 0.0005}
 check("G4_penetration_sous_6_poses_avec_degagement_part_des_sommets", worst_after[0] <= 0.005,
       {"critere": "apres degagement : <= 0,5 % des sommets en penetration de plus de 1 mm", "pire_avant_(part_%, mm)": [round(worst_before[0] * 100, 2), round(worst_before[1], 1)], "pire_apres_(part_%, mm)": [round(worst_after[0] * 100, 2), round(worst_after[1], 1)], "cas_hors_zero": rows})
-results["G4b_profondeur_max_INFO"] = {"ok": True, "detail": {"statut": "NON atteint : profondeur maximale %.1f mm apres degagement (critere V-2 : <= 2 mm)" % worst_after[1], "cause": "sous l'epaule flechie ou levee le corps lui-meme s'auto-intersecte a l'aisselle : quelques sommets de la piece y restent a l'interieur", "pire_apres_mm": round(worst_after[1], 1)}}
-print("INFO V-2 profondeur : NON atteint (%.1f mm > 2 mm)" % worst_after[1])
+results["G4b_profondeur_max_INFO"] = {"ok": True, "critere_valide": bool(worst_after[1] <= 2.0), "informatif": True, "detail": {"statut": "NON atteint : profondeur maximale %.1f mm apres degagement (critere V-2 : <= 2 mm)" % worst_after[1], "cause": "sous l'epaule flechie ou levee le corps lui-meme s'auto-intersecte a l'aisselle : quelques sommets de la piece y restent a l'interieur", "pire_apres_mm": round(worst_after[1], 1)}}
+print("INFO V-2 profondeur : %s (%.1f mm ; critère <= 2 mm) : résultat INFORMATIF, non compté comme validation (GRM-013)" % ("atteint" if worst_after[1] <= 2.0 else "NON ATTEINT", worst_after[1]))
 
 # G6 tenue enregistrable
 outfit = garments.outfit_of(body)
@@ -311,10 +342,22 @@ def evaluation_ms(obj_body):
     return float(np.mean(times))
 
 
+dressed = fresh({})
+naked_ms = evaluation_ms(dressed)
+for key in ("t_shirt", "jean", "chaussures"):
+    garments.add_garment(dressed, key)
+without_clearance = evaluation_ms(dressed)  # défaut : passe de dégagement coupée
+for g in garments.garments_of(dressed):
+    garments.set_clearance(g, True)
+with_clearance = evaluation_ms(dressed)
+results["G9_evaluation_personnage_habille_INFO"] = {"ok": True, "critere_valide": bool(without_clearance <= 33.0), "informatif": True, "detail": {"corps_seul_ms": round(naked_ms, 1), "habille_3_pieces_avec_degagement_ms": round(with_clearance, 1), "habille_3_pieces_sans_degagement_ms": round(without_clearance, 1),
+                                                    "critere_V5": "<= 33 ms par personnage habillé", "atteint_par_defaut_sans_degagement": bool(without_clearance <= 33.0), "atteint_avec_degagement": bool(with_clearance <= 33.0), "remarque": "le dégagement reconstruit l'arbre du corps pour chaque pièce (~15 ms par pièce) : coupé par défaut, à activer pour les gros plans"}}
+print("INFO G9 évaluation : corps seul %.1f ms ; habillé avec dégagement %.1f ms ; sans %.1f ms (critère V-5 : <= 33 ms)" % (naked_ms, with_clearance, without_clearance))
+
 # G10 dégagement (GRM-007) : le mode « OUTSIDE » ne reprojette PAS les sommets déjà dehors ; la passe est coupée à la vue ET au rendu par défaut
-set_pose([])
-tree_rest = posed_body_tree()
-probe = placed["t_shirt"]
+probe_body = fresh({})
+tree_rest = rest_cage_bvh(probe_body)[0]
+probe = garments.add_garment(probe_body, "t_shirt")
 check("G10a_degagement_coupe_a_la_vue_et_au_rendu_par_defaut", probe.modifiers["Degagement"].wrap_mode == "OUTSIDE" and not probe.modifiers["Degagement"].show_viewport and not probe.modifiers["Degagement"].show_render,
       {"mode": probe.modifiers["Degagement"].wrap_mode, "vue": probe.modifiers["Degagement"].show_viewport, "rendu": probe.modifiers["Degagement"].show_render})
 
@@ -336,21 +379,10 @@ garments.set_clearance(probe, True)
 with_wrap = evaluated_points(probe)
 garments.set_clearance(probe, False)
 gap_before = np.array([tree_rest.find_nearest(Vector(p))[3] for p in without])
-outside_far = gap_before > 0.012  # sommets nettement hors du corps (plus loin que le décalage de la passe, 0,6 x décalage de pièce)
+wrap_offset = probe.modifiers["Degagement"].offset
+outside_far = gap_before > wrap_offset + 0.002  # sommets déjà dehors de plus de 2 mm au-delà de la distance de la passe : un mode « surface » les ramènerait vers elle
 moved = np.linalg.norm(with_wrap - without, axis=1)
-check("G10b_sommets_deja_dehors_conserves", int(outside_far.sum()) > 50 and float(moved[outside_far].max()) < 0.0005, {"sommets_loin": int(outside_far.sum()), "deplacement_max_mm": round(float(moved[outside_far].max()) * 1000, 3) if outside_far.any() else None, "deplacement_max_tous_mm": round(float(moved.max()) * 1000, 2)})
-
-dressed = fresh({})
-naked_ms = evaluation_ms(dressed)
-for key in ("t_shirt", "jean", "chaussures"):
-    garments.add_garment(dressed, key)
-without_clearance = evaluation_ms(dressed)  # défaut : passe de dégagement coupée
-for g in garments.garments_of(dressed):
-    garments.set_clearance(g, True)
-with_clearance = evaluation_ms(dressed)
-results["G9_evaluation_personnage_habille_INFO"] = {"ok": True, "detail": {"corps_seul_ms": round(naked_ms, 1), "habille_3_pieces_avec_degagement_ms": round(with_clearance, 1), "habille_3_pieces_sans_degagement_ms": round(without_clearance, 1),
-                                                    "critere_V5": "<= 33 ms par personnage habillé", "atteint_par_defaut_sans_degagement": bool(without_clearance <= 33.0), "atteint_avec_degagement": bool(with_clearance <= 33.0), "remarque": "le dégagement reconstruit l'arbre du corps pour chaque pièce (~15 ms par pièce) : coupé par défaut, à activer pour les gros plans"}}
-print("INFO G9 évaluation : corps seul %.1f ms ; habillé avec dégagement %.1f ms ; sans %.1f ms (critère V-5 : <= 33 ms)" % (naked_ms, with_clearance, without_clearance))
+check("G10b_sommets_deja_dehors_conserves", int(outside_far.sum()) > 50 and float(moved[outside_far].max()) < 0.0005, {"decalage_passe_mm": round(wrap_offset * 1000, 2), "sommets_loin": int(outside_far.sum()), "deplacement_max_mm": round(float(moved[outside_far].max()) * 1000, 3) if outside_far.any() else None, "deplacement_max_tous_mm": round(float(moved.max()) * 1000, 2)})
 
 if OUT:
     Path(OUT).write_text(json.dumps(results, indent=1, ensure_ascii=False, default=str), encoding="utf-8")

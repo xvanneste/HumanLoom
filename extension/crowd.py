@@ -263,15 +263,17 @@ def vector(params):
 
 def sample_member(spec, index, existing=()):
     """Tire le personnage `index` (déterministe). Un tirage trop proche d'un existant (distance < `min_distance`) est retiré, au plus 50 fois."""
+    diverse = False
     for attempt in range(50):
         rng = np.random.default_rng([spec["seed"], spec.get("regeneration", 0), index, attempt])
         params = {k: float(rng.uniform(*spec["ranges"][k])) for k in spec["ranges"]}
         guard(params)
         v = vector(params)
         if all(np.linalg.norm(v - vector(o["params"])) >= spec["min_distance"] for o in existing):
+            diverse = True
             break
     behavior = _weighted(rng, spec["behaviors"])
-    member = {"id": index, "attempt": attempt, "params": params, "expression": _weighted(rng, spec["expressions"]), "behavior": behavior, "phase": float(rng.uniform(0, 1)),
+    member = {"id": index, "attempt": attempt, "diversite_garantie": diverse, "params": params, "expression": _weighted(rng, spec["expressions"]), "behavior": behavior, "phase": float(rng.uniform(0, 1)),
               "variants": {cat: values[int(rng.integers(len(values)))] for cat, values in sorted(spec["variants"].items()) if values}}
     low, high = spec["speed"].get("run" if behavior == "run" else "walk", [1.0, 1.4])
     member["speed"] = float(rng.uniform(low, high)) if behavior in ("walk", "run", "cross") else 0.0
@@ -796,7 +798,7 @@ def _crowd_changes():
         if index is not None and handler not in handlers:
             # La prochaine actualisation seule ne doit pas traiter les mutations
             # internes de Crowd comme une duplication hors de l'opération.
-            human._count[0] = len(bpy.data.objects)
+            human.mark_objects_current()
             handlers.insert(index, handler)
 
 
@@ -952,6 +954,15 @@ def _discard_staging(context, previous_ids):
     bpy.data.batch_remove(ids=allocated)
 
 
+def _refuse_active_cloth(bodies):
+    """Lot E : la simulation de tissu d'une robe (modificateur « Tissu », collection « HL Colliders », cache cuit) vit hors des collections de la foule ; effacer ou régénérer le personnage la laisserait en objets orphelins (mesuré :
+    « La foule contient des objets liés à une autre scène… » sans cause lisible, 4 collections de collision laissées). Refus clair AVANT toute modification : désactiver la simulation (panneau Tissu) puis recommencer."""
+    from . import cloth_sim, garments
+    active = [g.name for b in bodies for g in garments.garments_of(b) if cloth_sim.is_enabled(g)]
+    if active:
+        raise ValueError("La simulation de tissu est active sur %d robe(s) de la foule (%s) : désactivez-la (panneau Tissu) avant d'effacer ou de régénérer." % (len(active), ", ".join(active[:3])))
+
+
 @_crowd_changes()
 def _replace(context, spec, members, prepared, positions, yaws, old_bodies, result):
     """Prépare les candidats dans le graphe, publie les liens et le JSON, puis retire les IDs devenus inutiles."""
@@ -959,6 +970,7 @@ def _replace(context, spec, members, prepared, positions, yaws, old_bodies, resu
         if not np.isfinite(member["start"]).all() or np.max(np.abs(member["start"])) > BLENDER_COORD_LIMIT:
             raise ValueError(f"Personnage {member['id']} : position de départ non représentable dans Blender.")
     scene, view = context.scene, context.view_layer
+    _refuse_active_cloth(old_bodies)
     initial_users = bpy.data.user_map()
     old_links, external_collections = _old_links(scene, old_bodies, initial_users)
     old_objects = set(old_links)
@@ -1051,6 +1063,10 @@ def generate(context, spec, replace=False):
     scene = context.scene
     if scene.get(KEY) and not replace:
         raise ValueError("Une foule figée existe déjà : « Régénérer » est la seule façon de la modifier.")
+    if isinstance(spec, dict) and spec.get("fps_scene", True):
+        # Cadence (ANI-003) : les clés de trajet sont posées à UNE image de scène par pas de simulation ; la simulation doit donc tourner à la cadence de la scène, sinon les personnages marchent plus vite ou plus lentement
+        # que leurs vitesses (m/s) dans une scène à 30 ou 60 i/s. `fps_scene` à faux conserve le `fps` du spec (cadence de simulation imposée).
+        spec = dict(spec, fps=scene.render.fps / scene.render.fps_base)
     _validate_spec(spec)
     members = plan(spec, sample_members(spec))
     if spec["rig"]:
@@ -1061,7 +1077,7 @@ def generate(context, spec, replace=False):
     old = members_of(scene) if scene.get(KEY) else ()
 
     def summary():
-        return {"personnages": len(members), "diversite": diversity_report(members),
+        return {"personnages": len(members), "diversite": diversity_report(members), "diversite_non_garantie": [m["id"] for m in members if not m.get("diversite_garantie", True)],  # ANI-021 : après 50 essais le dernier tirage est gardé même trop proche d'un autre ; la liste le dit au lieu de le taire
                 "comportements": {b: sum(1 for m in members if m["behavior"] == b) for b in BEHAVIORS}}
 
     return _replace(context, spec, members, members, positions, yaws, old, summary)
@@ -1080,6 +1096,7 @@ def clear(scene):
     """Supprime les personnages de la foule et l'enregistrement."""
     if bpy.context.scene == scene and bpy.context.mode != "OBJECT":
         raise ValueError("L'effacement de la foule requiert le mode Objet.")
+    _refuse_active_cloth(members_of(scene))
     links, _ = _old_links(scene, members_of(scene), bpy.data.user_map())
     if any(obj.mode != "OBJECT" for obj in links):
         raise ValueError("L'effacement de la foule requiert le mode Objet.")
@@ -1216,3 +1233,129 @@ def auto_lod(scene, camera=None):
             pass
         out[body[OBJECT_KEY]] = lod_of(body)
     return out
+
+
+# --- élimination hors caméra (culling) -------------------------------------------------------------------------------------------------------------------------
+CULL_KEY = "humanloom_crowd_cull"
+CULL_PROPERTIES = ("hide_viewport", "hide_render")
+
+
+def _body_family(body):
+    return [body, *body.children_recursive]
+
+
+def _location_curves(body):
+    """Courbes d'animation de la position du corps (trajet figé de la foule) : {indice d'axe: courbe}."""
+    animation = body.animation_data
+    action = animation.action if animation else None
+    if action is None:
+        return {}
+    channelbag = action_get_channelbag_for_slot(action, animation.action_slot)
+    if channelbag is None:
+        return {}
+    return {c.array_index: c for c in channelbag.fcurves if c.data_path == "location"}
+
+
+def _trajectory(body, frames):
+    """Position du corps à chaque image demandée, lue sur les courbes (sans changer d'image : aucune évaluation du graphe)."""
+    curves = _location_curves(body)
+    base = np.array(body.location, float)
+    out = np.tile(base, (len(frames), 1))
+    for axis, curve in curves.items():
+        out[:, axis] = [curve.evaluate(f) for f in frames]
+    return out
+
+
+def uncull(scene):
+    """Retire l'élimination hors caméra : supprime les clés de visibilité des personnages et de leurs enfants et les remet visibles. Retourne le nombre de courbes retirées."""
+    removed = 0
+    for body in members_of(scene):
+        for obj in _body_family(body):
+            animation = obj.animation_data
+            action = animation.action if animation else None
+            if action is not None:
+                channelbag = action_get_channelbag_for_slot(action, animation.action_slot)
+                if channelbag is not None:
+                    for curve in [c for c in channelbag.fcurves if c.data_path in CULL_PROPERTIES]:
+                        channelbag.fcurves.remove(curve)
+                        removed += 1
+                if obj is not body and not any(True for layer in action.layers for strip in layer.strips for bag in strip.channelbags for _ in bag.fcurves):
+                    animation.action = None
+                    if action.users == 0:
+                        bpy.data.actions.remove(action)
+            obj.hide_viewport = obj.hide_render = False
+    if CULL_KEY in scene:
+        del scene[CULL_KEY]
+    return removed
+
+
+def _sphere_corners(center, radius):
+    offsets = np.array([(sx, sy, sz) for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)], float) * radius
+    return np.vstack([center[None, :], center[None, :] + offsets])
+
+
+def cull(scene, camera=None, margin=0.05, extra_m=2.0, viewport=True, render=True, frame_range=None):
+    """Élimination hors caméra : pour chaque image, un personnage dont la sphère englobante (rayon 1,1 m + `extra_m`, pour les ombres et reflets proches) est ENTIÈREMENT hors du champ de la caméra (marge normalisée `margin`)
+    ou derrière elle est masqué (`hide_viewport` et/ou `hide_render`, clés CONSTANTES sur le corps et ses enfants). Blender n'évalue pas les objets masqués : le coût par image baisse avec le nombre de personnages
+    hors champ. La caméra peut être animée. Le résultat est FIGÉ comme le reste de la foule : à refaire (ou `uncull`) si la caméra ou les trajets changent ; régénérer un personnage supprime ses clés de visibilité.
+    Retourne {"personnages": n, "images": nombre d'images, "masques_par_image_moyen": ..., "jamais_visibles": [...], "toujours_visibles": n}."""
+    from bpy_extras.object_utils import world_to_camera_view
+    from mathutils import Vector
+    camera = camera or scene.camera
+    if camera is None:
+        raise ValueError("Aucune caméra : définir la caméra de la scène.")
+    bodies = members_of(scene)
+    if not bodies:
+        raise ValueError("Aucune foule dans la scène.")
+    if bpy.context.mode != "OBJECT":
+        raise ValueError("L'élimination hors caméra requiert le mode Objet.")
+    uncull(scene)
+    start, end = frame_range or (scene.frame_start, scene.frame_end)
+    frames = list(range(int(start), int(end) + 1))
+    original = scene.frame_current
+    families = {b.name: _body_family(b) for b in bodies}
+    saved = [(o, o.hide_viewport, o.hide_render) for fam in families.values() for o in fam]
+    for obj, _v, _r in saved:  # foule masquée pendant le balayage des images : le changement d'image n'évalue que le reste de la scène
+        obj.hide_viewport = True
+    trajectories = {b.name: _trajectory(b, frames) for b in bodies}
+    hidden = {b.name: np.zeros(len(frames), bool) for b in bodies}
+    try:
+        for k, frame in enumerate(frames):
+            scene.frame_set(frame)
+            for b in bodies:
+                p = trajectories[b.name][k]
+                points = _sphere_corners(np.array([p[0], p[1], p[2] + 0.95]), 1.1 + extra_m)
+                views = np.array([world_to_camera_view(scene, camera, Vector(q)) for q in points])
+                x, y, z = views[:, 0], views[:, 1], views[:, 2]
+                outside = bool((z < 0.0).all() or (x < -margin).all() or (x > 1.0 + margin).all() or (y < -margin).all() or (y > 1.0 + margin).all())
+                hidden[b.name][k] = outside
+    finally:
+        for obj, v, r in saved:
+            obj.hide_viewport, obj.hide_render = v, r
+    props = [p for p in CULL_PROPERTIES if (p == "hide_viewport" and viewport) or (p == "hide_render" and render)]
+    keyframe = bpy.context.preferences.edit
+    old = keyframe.keyframe_new_interpolation_type
+    keyframe.keyframe_new_interpolation_type = "CONSTANT"
+    changed = 0
+    try:
+        for b in bodies:
+            states = hidden[b.name]
+            if not states.any():
+                continue
+            changes = [0] + [k for k in range(1, len(frames)) if states[k] != states[k - 1]]
+            for obj in families[b.name]:
+                for k in changes:
+                    for prop in props:
+                        setattr(obj, prop, bool(states[k]))
+                        obj.keyframe_insert(prop, frame=frames[k])
+                for prop in props:
+                    setattr(obj, prop, bool(states[0]))
+            changed += 1
+    finally:
+        keyframe.keyframe_new_interpolation_type = old
+    scene.frame_set(original)
+    never = [int(b[OBJECT_KEY]) for b in bodies if hidden[b.name].all()]
+    summary = {"personnages": len(bodies), "images": len(frames), "masques_par_image_moyen": round(float(np.sum([h for h in hidden.values()], axis=0).mean()), 2), "jamais_visibles": never,
+               "toujours_visibles": int(sum(1 for b in bodies if not hidden[b.name].any())), "personnages_a_cles_de_visibilite": changed, "camera": camera.name, "marge": margin, "marge_m": extra_m}
+    scene[CULL_KEY] = json.dumps(summary)
+    return summary

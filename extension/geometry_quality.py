@@ -26,7 +26,8 @@ def segment_hits(starts, ends, triangles):
     return usable & (u > tolerance) & (v > tolerance) & (u + v < 1 - tolerance) & (along > tolerance) & (along < 1 - tolerance)
 
 
-def intersections(coords, triangles, triangle_budget=250_000):
+def intersections(coords, triangles, triangle_budget=250_000, sample_limit=200):
+    """`sample_limit` : nombre de paires de triangles retournées dans `sample_triangle_pairs` (200 par défaut ; None = TOUTES, pour les tests qui localisent les croisements : SCI-010)."""
     if len(triangles) > triangle_budget:
         return {"status": "not_computed", "reason": "Triangle budget exceeded", "triangle_budget": triangle_budget}
     tree = BVHTree.FromPolygons([Vector(point) for point in coords], triangles.tolist(), all_triangles=True)
@@ -50,7 +51,7 @@ def intersections(coords, triangles, triangle_budget=250_000):
         regions[region] = regions.get(region, 0) + 1
     return {"status": "computed", "crossing_triangle_pairs": len(crossing),
             "approximate_regions": regions,
-            "bvh_candidates": len(candidates), "sample_triangle_pairs": crossing[:200].tolist(),
+            "bvh_candidates": len(candidates), "sample_triangle_pairs": (crossing if sample_limit is None else crossing[:sample_limit]).tolist(),
             "limitations": "Strict transverse crossings of triangles without shared vertices. Coplanar contact, nested closed shells and adjacent-face foldovers are not detected."}
 
 

@@ -43,15 +43,21 @@ for label, values in cases:
     for name, value in values.items():
         human.set_value(body, name, value)
     points = skeleton.cage_points(body)
-    result = geometry_quality.intersections(points, triangles)
+    result = geometry_quality.intersections(points, triangles, sample_limit=None)  # SCI-010 : TOUTES les paires, pas les 200 premières
     head = result.get("approximate_regions", {}).get("head", 0)
     centers = np.array([[float(v) for v in points[triangles[list(pair)].reshape(-1)].mean(0)] for pair in result["sample_triangle_pairs"]]).reshape(-1, 3)
     eye_positions = []
-    for eye in skeleton.eyes_of(body):
-        eye_mesh = eye.data
-        eye_positions.append(np.mean([np.array(eye.matrix_world @ v.co) for v in eye_mesh.vertices], axis=0))
+    eye_shift = 0.0
+    bpy.context.view_layer.update()
+    for eye in skeleton.eyes_of(body):  # SCI-010 : centre de l'œil ÉVALUÉ (aux âges jeunes, `eye.data` garde la base adulte)
+        evaluated_eye = eye.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        eye_mesh = evaluated_eye.to_mesh()
+        eye_positions.append(np.mean([np.array(evaluated_eye.matrix_world @ v.co) for v in eye_mesh.vertices], axis=0))
+        evaluated_eye.to_mesh_clear()
+        raw_centre = np.mean([np.array(eye.matrix_world @ v.co) for v in eye.data.vertices], axis=0)  # ancien calcul (données non évaluées), conservé pour MONTRER l'écart
+        eye_shift = max(eye_shift, float(np.linalg.norm(eye_positions[-1] - raw_centre)) * 1000)
     near_eyes = int(sum(1 for c in centers if any(np.linalg.norm(c - e) < 0.03 for e in eye_positions)))
-    rows.append({"cas": label, "croisements_total": result["crossing_triangle_pairs"], "croisements_tete": head, "croisements_a_moins_de_3_cm_d_un_oeil": near_eyes})
+    rows.append({"ecart_centre_oeil_evalue_vs_donnee_mm": round(eye_shift, 2), "paires_examinees": len(result["sample_triangle_pairs"]), "paires_total": result["crossing_triangle_pairs"], "cas": label, "croisements_total": result["crossing_triangle_pairs"], "croisements_tete": head, "croisements_a_moins_de_3_cm_d_un_oeil": near_eyes})
     if near_eyes != 0:
         failures.append(label)
     print("PAUPIERES", json.dumps(rows[-1], ensure_ascii=False))

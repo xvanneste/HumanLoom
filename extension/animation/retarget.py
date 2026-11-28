@@ -67,6 +67,8 @@ class Options:
     ik_limbs: tuple = ("leg",)  # membres corrigés par l'IK en mode absolu+IK : défaut « jambes seules » (validé à l'œil le 2026-11-24) ; ajouter « arm » pour les contacts mains-objets
     clavicle_scale: float = 1.0       # facteur sur la rotation (monde) des CLAVICULES par rapport au repos : 1 = fidèle à la source ; < 1 réduit le haussement d'épaule (moins de plis du cou et du trapèze) ; l'orientation du bras et de tous les autres os est CONSERVÉE (positions relatives à la racine du membre inchangées, mesuré 0,00 mm sur 30 actions)
     clavicle_mode: str = "rythme"     # DÉFAUT (décision de l'utilisateur, 27 nov. 2026) : "rythme" : la clavicule est CALCULÉE d'après l'élévation du bras (rythme scapulo-huméral) ; "source" : clavicule de la source (× clavicle_scale) ; "rythme" : la clavicule est CALCULÉE d'après l'élévation du bras (rythme scapulo-huméral, voir clavicle_rhythm) : la rotation de la source et clavicle_scale sont alors IGNORÉES (pas de double comptage) ; l'orientation du bras est conservée
+    neck_twist: float = 0.0           # DÉFAUT 0 (inactif) : part (0 à 1) de la rotation axiale (torsion) de la TÊTE répartie sur neck.01 et neck.02 (1 : un tiers chacun, la tête garde le dernier tiers) ; l'orientation monde de la tête est CONSERVÉE exactement. Mesuré à 70 degrés : plis du cou 13/17 -> 6/5, retournées 4/5 -> 0/3 (docs/anatomie_articulations.md §2 : la rotation du cou se répartit sur plusieurs étages, pas sur un seul os)
+    tibial_rotation: float = 0.0      # DÉFAUT 0 (inactif) : rotation interne COUPLÉE du tibia à la flexion du genou, en degrés à 120 degrés de flexion (0 à 20 ; publié : environ 20 degrés de 0 à 120 degrés, Johal et al. 2005, docs/anatomie_articulations.md §7) ; l'orientation du pied est CONSERVÉE. Mesuré sur la peau : sans effet sur les plis du genou à 30 degrés, 2 -> 4 plis à 60 degrés, 15 -> 11 plis à 90 degrés (20 degrés) : option non validée à l'oeil, inactive
     limb_blend: float = 0.0           # mode absolu+IK : 0 = la main/le pied vise la position de la source mise à l'échelle du BASSIN ; 1 = à l'échelle de la LONGUEUR DU MEMBRE (rapport des longueurs de segments), depuis l'épaule/la hanche
 
 
@@ -363,6 +365,10 @@ def retarget(source, target, mapping, motion, options=None, main_child=None):
             positions[:, r] = target.rest[r, :3, 3] + root_loc
     if options.pose_mode == ABSOLUTE_IK and pelvis in mapping:
         report["membres_ik"] = limb_ik(source, target, mapping, s_world, rotations, positions, report["echelle_translation"], local_rest, options.limb_blend, options.ik_limbs)
+    if options.tibial_rotation > 0:
+        report["rotation_tibiale"] = couple_tibial_rotation(target, rotations, local_rest, options.tibial_rotation)
+    if options.neck_twist > 0 and all(n in target.index for n in ("neck.01", "neck.02", "head")):
+        report["torsion_du_cou"] = distribute_neck_twist(target, rotations, local_rest, options.neck_twist)
     loc, quat, _ = world_to_basis(target, rotations, positions)
     if root in target.index and options.root_motion != EXTRACT:
         loc[:, target.index[root]] = 0
@@ -389,6 +395,55 @@ def trim_and_speed(result, start=0, end=None, speed=1.0):
         loc = loc[low] * (1 - t) + loc[high] * t
     report = dict(result.report, decoupe=[start, end], vitesse=speed)
     return Result(quat, loc, report)
+
+
+def distribute_neck_twist(rig, rotations, local_rest, share):
+    """Répartit une part `share` (0 à 1) de la torsion de la TÊTE (rotation autour de son axe Y local, relative à neck.02) sur neck.01 et neck.02 (`share` x torsion / 3 chacun, la tête garde le dernier tiers) ; modifie `rotations` (orientations monde) sur place.
+    L'orientation monde de la tête (et donc de ses enfants) n'est PAS modifiée : seule l'orientation intermédiaire de neck.01 et neck.02 change. Retourne {torsion_max_deg, part_deplacee_deg}."""
+    n01, n02, head = rig.index["neck.01"], rig.index["neck.02"], rig.index["head"]
+    rest_head = np.asarray(local_rest[head])[:3, :3]
+    relative = np.einsum("ij,fjk,fkl->fil", rest_head.T, np.swapaxes(rotations[:, n02], 1, 2), rotations[:, head])  # base locale de la tête
+    q = matrix_to_quat(relative)
+    twist = 2.0 * np.arctan2(q[:, 2], q[:, 0])
+    twist = (twist + np.pi) % (2 * np.pi) - np.pi
+    moved = share * twist / 3.0
+    def turn_about_y(angle):
+        c, s_ = np.cos(angle), np.sin(angle)
+        turn = np.zeros((len(angle), 3, 3))
+        turn[:, 0, 0], turn[:, 0, 2], turn[:, 1, 1], turn[:, 2, 0], turn[:, 2, 2] = c, s_, 1.0, -s_, c
+        return turn
+
+    # neck.01 tourne de `moved` ; neck.02 (enfant) de 2 x `moved` en monde (sa torsion RELATIVE à neck.01 est donc `moved`) ; la tête garde le dernier tiers
+    rotations[:, n01] = np.einsum("fij,fjk->fik", rotations[:, n01], turn_about_y(moved))
+    rotations[:, n02] = np.einsum("fij,fjk->fik", rotations[:, n02], turn_about_y(2.0 * moved))
+    return {"torsion_tete_max_deg": float(np.degrees(np.abs(twist).max())), "part_deplacee_par_os_max_deg": float(np.degrees(np.abs(moved).max()))}
+
+
+def couple_tibial_rotation(rig, rotations, local_rest, degrees):
+    """Rotation interne couplée du tibia : à chaque image, leg_lower tourne autour de son axe Y local de `degrees` x min(flexion, 120) / 120 dans le sens qui tourne la pointe du pied vers la ligne médiane ; l'orientation monde du pied et des os en dessous est conservée (le contact au sol la définit),
+    celle de la cuisse aussi. Retourne {rotation_max_deg par côté}."""
+    report = {}
+    for side in (".L", ".R"):
+        upper, lower = rig.index.get("leg_upper" + side), rig.index.get("leg_lower" + side)
+        if upper is None or lower is None:
+            continue
+        rest_lower = np.asarray(local_rest[lower])[:3, :3]
+        relative = np.einsum("ij,fjk,fkl->fil", rest_lower.T, np.swapaxes(rotations[:, upper], 1, 2), rotations[:, lower])
+        q = matrix_to_quat(relative)
+        flexion = np.degrees(np.abs(2.0 * np.arctan2(q[:, 1], np.abs(q[:, 0]))))
+        angle = np.radians(degrees) * np.clip(flexion, 0.0, 120.0) / 120.0
+        # sens : celui qui rapproche de la ligne médiane l'axe « avant » de l'os (l'axe local le plus aligné avec -Y monde au repos)
+        frame = rig.rest[lower][:3, :3]
+        axis = int(np.argmax(np.abs(frame[1])))
+        forward = frame[:, axis] * (-1.0 if frame[1, axis] > 0 else 1.0)
+        trial = np.array([[np.cos(0.1), 0, np.sin(0.1)], [0, 1, 0], [-np.sin(0.1), 0, np.cos(0.1)]])
+        direction = 1.0 if abs((frame @ trial @ frame.T @ forward)[0]) < abs(forward[0]) else -1.0
+        turn = np.zeros((len(angle), 3, 3))
+        c, s_ = np.cos(direction * angle), np.sin(direction * angle)
+        turn[:, 0, 0], turn[:, 0, 2], turn[:, 1, 1], turn[:, 2, 0], turn[:, 2, 2] = c, s_, 1.0, -s_, c
+        rotations[:, lower] = np.einsum("fij,fjk->fik", rotations[:, lower], turn)
+        report[side] = float(np.degrees(np.abs(angle).max()))
+    return report
 
 
 def limb_ik(source, target, mapping, s_world, rotations, positions, scale, local_rest, limb_blend=0.0, ik_limbs=("leg",)):
@@ -477,5 +532,5 @@ def foot_slide(foot_positions, foot_height, stature, fps, height_limit=0.03, spe
 
 def signature(source, mapping, options, action_key):
     """Clé de cache : action, mapping et options."""
-    text = json.dumps({"algorithme": 2, "action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs), options.clavicle_scale, options.clavicle_mode], "source": list(source.names)}, sort_keys=True)
+    text = json.dumps({"algorithme": 2, "action": action_key, "mapping": sorted(mapping.items()), "options": [options.pose_mode, options.root_motion, options.translation_scale, options.limb_blend, list(options.ik_limbs), options.clavicle_scale, options.clavicle_mode, options.neck_twist, options.tibial_rotation], "source": list(source.names)}, sort_keys=True)
     return hashlib.sha1(text.encode()).hexdigest()[:20]

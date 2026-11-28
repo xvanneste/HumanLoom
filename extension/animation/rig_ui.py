@@ -120,13 +120,15 @@ class HUMANLOOM_OT_correctives_rebuild(bpy.types.Operator):
         wm.event_timer_remove(self._timer)
         wm.progress_end()
 
+    def _finish(self, context):
+        context.workspace.status_text_set(None)
+        self._end(context)
+
     def modal(self, context, event):
         if event.type == "ESC":
-            self._steps.close()  # le « finally » du générateur remet la pose et retire la clé temporaire
-            if not correctives.installed(self._body):
-                correctives.install(self._body, self._rig)
-            self._end(context)
-            self.report({"WARNING"}, "Recalcul annulé : correctifs génériques remis.")
+            self._steps.close()  # annulation : `rebuild_steps` rend aux clés d'avant leur état, `generate` remet la pose et retire la clé temporaire
+            self._finish(context)
+            self.report({"WARNING"}, "Recalcul annulé : les correctifs précédents sont conservés.")
             return {"CANCELLED"}
         if event.type != "TIMER":
             return {"RUNNING_MODAL"}
@@ -136,10 +138,14 @@ class HUMANLOOM_OT_correctives_rebuild(bpy.types.Operator):
             context.workspace.status_text_set(f"Correctifs de flexion : {done}/{total} ({label})")
             return {"RUNNING_MODAL"}
         except StopIteration:
-            context.workspace.status_text_set(None)
-            self._end(context)
+            self._finish(context)
             self.report({"INFO"}, "Correctifs de flexion recalculés pour cette morphologie.")
             return {"FINISHED"}
+        except Exception as error:  # ANI-012 : une exception ne laisse ni minuterie, ni barre de progression, ni texte d'état ; les correctifs précédents sont conservés
+            self._steps.close()
+            self._finish(context)
+            self.report({"ERROR"}, f"Recalcul interrompu par une erreur ({error}) : les correctifs précédents sont conservés.")
+            return {"CANCELLED"}
 
 
 class HUMANLOOM_OT_gaze_set(bpy.types.Operator):

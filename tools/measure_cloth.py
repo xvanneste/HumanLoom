@@ -128,7 +128,6 @@ result["penetration"] = {"part_max_pourcent": round(max(p[0] for p in penetratio
 result["cout_par_image_ms"] = {"moyenne": round(float(np.mean(times[1:])), 1), "mediane": round(float(np.median(times[1:])), 1), "max": round(float(np.max(times[1:])), 1), "premiere_image": round(times[0], 1)}
 
 # reproductibilité : deuxième passage depuis la première image (cache libéré)
-bpy.ops.ptcache.free_bake_all() if False else None
 cloth.point_cache.frame_start = 1
 scene.frame_set(1)
 positions_two, _, _ = run_pass()

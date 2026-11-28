@@ -121,6 +121,50 @@ check("Q1c_rythme_scapulo_humeral", rhythm_diff < 1e-5 and orthonormal and retar
       and abs(law_angles[".L"] - law_angles[".R"]).max() < 1e-6,
       {"ecart_orientation_monde_autres_os": float(rhythm_diff), "angle_clavicule_selon_elevation_deg": [round(float(a), 1) for a in law_angles[".L"]], "defaut": retarget.Options().clavicle_mode})
 
+# Q1d : rotation du cou répartie (option, inactive par défaut) — l'orientation monde de la tête (et de tous les os hors neck.01/neck.02) est conservée EXACTEMENT ; la torsion de la tête se répartit d'un tiers sur neck.01 et neck.02
+plain = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_mode="source"))
+spread = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_mode="source", neck_twist=1.0))
+world_plain, world_spread = retarget.forward_kinematics(target, plain.loc, plain.quat), retarget.forward_kinematics(target, spread.loc, spread.quat)
+neck_indices = {target.index["neck.01"], target.index["neck.02"]}
+kept = [i for i in range(count) if i not in neck_indices]
+kept_diff = float(np.abs(world_plain[:, kept, :3, :3] - world_spread[:, kept, :3, :3]).max())
+
+
+def local_twist(result, name):
+    q = result.quat[:, target.index[name]]
+    return np.degrees(2.0 * np.arctan2(q[:, 2], q[:, 0]))
+
+
+head_before, head_after, n01, n02 = local_twist(plain, "head"), local_twist(spread, "head"), local_twist(spread, "neck.01") - local_twist(plain, "neck.01"), local_twist(spread, "neck.02") - local_twist(plain, "neck.02")
+loud = np.abs(head_before) > 10.0
+share_ok = bool(loud.any()) and float(np.abs(n01[loud] - head_before[loud] / 3.0).max()) < 1.0 and float(np.abs(n02[loud] - head_before[loud] / 3.0).max()) < 1.0
+check("Q1d_rotation_du_cou_repartie", kept_diff < 1e-6 and share_ok and retarget.Options().neck_twist == 0.0 and float(np.abs(world_plain[:, neck_indices.copy().pop(), :3, :3] - world_spread[:, neck_indices.copy().pop(), :3, :3]).max()) > 1e-3,
+      {"ecart_orientation_monde_hors_neck_01_02": kept_diff, "images_avec_torsion_tete_sup_10_deg": int(loud.sum()), "part_neck_01_deg_max": round(float(np.abs(n01[loud] - head_before[loud] / 3.0).max()), 3), "defaut": retarget.Options().neck_twist,
+       "torsion_tete_avant_apres_max_deg": [round(float(np.abs(head_before).max()), 1), round(float(np.abs(head_after).max()), 1)]})
+
+# Q1e : rotation tibiale couplée (option, inactive par défaut) — seule la jambe (leg_lower) change ; la torsion ajoutée vaut 20 x min(flexion, 120) / 120 degrés, vers la ligne médiane ; pied et cuisse inchangés
+tibia = retarget.retarget(source, target, mapping, motion, retarget.Options(pose_mode=retarget.ABSOLUTE, root_motion=retarget.KEEP, clavicle_mode="source", tibial_rotation=20.0))
+world_tibia = retarget.forward_kinematics(target, tibia.loc, tibia.quat)
+lowers = {target.index["leg_lower.L"], target.index["leg_lower.R"]}
+untouched = [i for i in range(count) if i not in lowers]
+untouched_diff = float(np.abs(world_plain[:, untouched, :3, :3] - world_tibia[:, untouched, :3, :3]).max())
+errors, inward_rows = [], []
+for side in (".L", ".R"):
+    lower, upper = target.index["leg_lower" + side], target.index["leg_upper" + side]
+    q_plain = plain.quat[:, lower]
+    flexion = np.degrees(np.abs(2.0 * np.arctan2(q_plain[:, 1], np.abs(q_plain[:, 0]))))
+    expected = 20.0 * np.clip(flexion, 0, 120) / 120.0
+    delta = np.degrees(np.arccos(np.clip((np.trace(np.einsum("fji,fjk->fik", world_plain[:, lower, :3, :3], world_tibia[:, lower, :3, :3]), axis1=-2, axis2=-1) - 1) / 2, -1, 1)))
+    errors.append(float(np.abs(delta - expected).max()))
+    frame = target.rest[lower][:3, :3]
+    axis = int(np.argmax(np.abs(frame[1])))
+    forward_before = world_plain[:, lower, :3, :3][:, :, axis] * (-1.0 if frame[1, axis] > 0 else 1.0)
+    forward_after = world_tibia[:, lower, :3, :3][:, :, axis] * (-1.0 if frame[1, axis] > 0 else 1.0)
+    moved = (np.abs(forward_before[:, 0]) - np.abs(forward_after[:, 0]))[expected > 3.0]
+    inward_rows.append(float(moved.mean()) if len(moved) else 0.0)
+check("Q1e_rotation_tibiale_couplee", untouched_diff < 1e-5 and max(errors) < 0.5 and all(v > 0 for v in inward_rows) and retarget.Options().tibial_rotation == 0.0,
+      {"ecart_orientation_monde_autres_os": untouched_diff, "ecart_a_la_torsion_attendue_max_deg": [round(e, 3) for e in errors], "rapprochement_de_la_ligne_mediane_moyen": [round(v, 4) for v in inward_rows], "defaut": retarget.Options().tibial_rotation})
+
 # Q7 : gestionnaire de root motion
 by_mode = {}
 for mode in (retarget.IN_PLACE, retarget.KEEP, retarget.EXTRACT):

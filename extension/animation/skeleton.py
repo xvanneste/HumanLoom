@@ -623,6 +623,26 @@ def attach_mouth_driver(body, armature):
     return True
 
 
+JAW_SIDE_MM = 7.5  # excursion latérale maximale de l'incisive (jeunes adultes à occlusion idéale : Campillo et al. 2017, résumé lu ; docs/anatomie_articulations.md §9)
+JAW_FORWARD_MM = 8.4  # propulsion maximale (même source)
+
+
+def move_jaw(body, side_mm=0.0, forward_mm=0.0):
+    """Translation de la mâchoire (os `jaw`) : `side_mm` > 0 vers la GAUCHE du personnage (+x, comme les os .L), < 0 vers sa droite ; `forward_mm` > 0 vers l'avant (propulsion). Translations dans le repère de l'armature, converties dans
+    l'axe local de l'os. 0 et 0 : retour à la position de repos. Retourne False sans squelette."""
+    rigs = rigs_of(body)
+    if not rigs:
+        return False
+    armature = rigs[0]
+    pose = armature.pose.bones.get(JAW)
+    if pose is None:
+        return False
+    delta = Vector((side_mm / 1000.0, FORWARD[1] * forward_mm / 1000.0, 0.0))  # FORWARD : direction du visage dans le repère de l'armature
+    pose.location = armature.data.bones[JAW].matrix_local.to_3x3().inverted() @ delta if (side_mm or forward_mm) else Vector((0.0, 0.0, 0.0))
+    bpy.context.view_layer.update()
+    return True
+
+
 def open_jaw(body, degrees):
     """Ouvre (ou ferme avec 0) la mâchoire de `degrees` degrés par la pose de l'os `jaw` ; le sens de rotation est celui qui descend la pointe de l'os. Retourne False sans squelette."""
     rigs = rigs_of(body)

@@ -130,7 +130,7 @@ for name in candidates:
         if "clavicle" + side not in links:
             continue
         ci, ai = target.index["clavicle" + side], target.index["arm_upper" + side]
-        local = np.einsum("fji,fjk,kl->fil", thorax_delta, candidate[:, ci, :3, :3], target.rest[ci][:3, :3].T) if False else np.einsum("fji,fjk->fik", thorax_delta, np.einsum("fij,jk->fik", candidate[:, ci, :3, :3], target.rest[ci][:3, :3].T))
+        local = np.einsum("fji,fjk->fik", thorax_delta, np.einsum("fij,jk->fik", candidate[:, ci, :3, :3], target.rest[ci][:3, :3].T))
         rhythm_clavicle.append(float(np.degrees(np.arccos(np.clip((np.trace(local, axis1=-2, axis2=-1) - 1) / 2, -1, 1))).max()))
         offset = np.einsum("fji,fj->fi", thorax_delta, candidate[:, ai, :3, 3] - candidate[:, thorax, :3, 3]) - (target.rest[ai][:3, 3] - target.rest[thorax][:3, 3])
         rhythm_hand.append(float(np.linalg.norm(offset, axis=-1).max()))

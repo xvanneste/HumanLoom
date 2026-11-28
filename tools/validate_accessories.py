@@ -215,6 +215,58 @@ for key in ("parapluie_ferme", "parapluie_ouvert"):
 hand_rest = np.array([float(a) for a in rigu.pose.bones["arm_lower.R"].rotation_euler])
 check("A11_parapluie_tenu_vertical", all(r["vertical"] for r in rows.values()) and float(np.abs(hand_rest).max()) < 1e-6, {**rows, "bras_remis_a_zero": float(np.abs(hand_rest).max()) < 1e-6})
 
+# A12 matériaux PROPRES à chaque accessoire (GRM-002) : le même accessoire, de deux couleurs, sur deux personnages ne se recolore pas mutuellement ; le retrait libère son matériau
+for obj in list(bpy.data.objects):
+    bpy.data.objects.remove(obj, do_unlink=True)
+bpy.ops.humanloom.create()
+body_a = bpy.context.object
+rig_a = skeleton.install(body_a)
+bpy.ops.humanloom.create()
+body_b = bpy.context.object
+rig_b = skeleton.install(body_b)
+red, blue = (0.8, 0.1, 0.1), (0.1, 0.1, 0.8)
+bag_a = A.add_accessory(body_a, "sac_a_dos", red)
+bag_b = A.add_accessory(body_b, "sac_a_dos", blue)
+mat_a, mat_b = bag_a.material_slots[0].material, bag_b.material_slots[0].material
+base_a = tuple(round(v, 3) for v in mat_a.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value[:3])
+base_b = tuple(round(v, 3) for v in mat_b.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value[:3])
+name_b = mat_b.name
+A.remove_accessory(bag_b)
+check("A12_materiaux_propres_a_chaque_accessoire", mat_a is not mat_b and base_a == tuple(round(v, 3) for v in red) and base_b == tuple(round(v, 3) for v in blue) and bpy.data.materials.get(name_b) is not mat_b and mat_a.name in bpy.data.materials,
+      {"couleur_a": base_a, "couleur_b": base_b, "materiau_b_libere": bpy.data.materials.get(name_b) is not mat_b})
+
+# A13 pose de l'utilisateur conservée (GRM-010) : ajouter puis retirer un accessoire tenu en main (préhension + coude/poignet du parapluie) restitue EXACTEMENT les modes de rotation et les valeurs d'avant
+for obj in list(bpy.data.objects):
+    bpy.data.objects.remove(obj, do_unlink=True)
+bpy.ops.humanloom.create()
+body_p = bpy.context.object
+rig_p = skeleton.install(body_p)
+tracked = ["index.01.R", "index.02.R", "thumb.01.R", "hand.R", "arm_lower.R", "arm_upper.R"]
+rig_p.pose.bones["index.01.R"].rotation_mode = "QUATERNION"
+rig_p.pose.bones["index.01.R"].rotation_quaternion = (0.9659, 0.2588, 0.0, 0.0)
+rig_p.pose.bones["index.02.R"].rotation_mode = "ZXY"
+rig_p.pose.bones["index.02.R"].rotation_euler = (0.2, 0.1, -0.05)
+rig_p.pose.bones["thumb.01.R"].rotation_mode = "AXIS_ANGLE"
+rig_p.pose.bones["thumb.01.R"].rotation_axis_angle = (0.3, 0.0, 1.0, 0.0)
+rig_p.pose.bones["hand.R"].rotation_mode = "XYZ"
+rig_p.pose.bones["hand.R"].rotation_euler = (0.1, 0.2, 0.3)
+rig_p.pose.bones["arm_lower.R"].rotation_mode = "QUATERNION"
+rig_p.pose.bones["arm_lower.R"].rotation_quaternion = (0.9, 0.0, 0.0, 0.4359)
+rig_p.pose.bones["arm_upper.R"].location = (0.0, 0.0, 0.0)
+bpy.context.view_layer.update()
+
+
+def pose_snapshot():
+    return {n: (rig_p.pose.bones[n].rotation_mode, tuple(round(v, 6) for v in rig_p.pose.bones[n].rotation_quaternion), tuple(round(v, 6) for v in rig_p.pose.bones[n].rotation_euler), tuple(round(v, 6) for v in rig_p.pose.bones[n].rotation_axis_angle)) for n in tracked}
+
+
+before_pose = pose_snapshot()
+umbrella_p = A.add_accessory(body_p, "parapluie_ferme")
+changed_pose = pose_snapshot() != before_pose
+A.remove_accessory(umbrella_p)
+after_pose = pose_snapshot()
+check("A13_pose_de_l_utilisateur_conservee", changed_pose and after_pose == before_pose and A.POSE_BACKUP not in rig_p, {"la_pose_change_pendant_l_accessoire": changed_pose, "identique_apres_retrait": after_pose == before_pose, "differences": {n: (before_pose[n], after_pose[n]) for n in tracked if before_pose[n] != after_pose[n]}})
+
 # A8 aucun nom de tiers
 text = (ROOT / "extension" / "accessories.py").read_text(encoding="utf-8")
 check("A8_aucun_asset_tiers", not any(w in text for w in ("mixamo", "Epic", "Marvelous", "CLO3D", "Daz", "Unreal", "import_scene", "obj_import")), "formes générées par le code")
